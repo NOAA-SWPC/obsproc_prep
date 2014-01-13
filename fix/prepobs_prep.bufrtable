@@ -292,6 +292,7 @@
 |          |        |                                                          |
 | ELEV     | 007021 | SATELLITE ELEVATION (ZENITH ANGLE)                       |
 | SOEL     | 007022 | SOLAR ELEVATION (ZENITH ANGLE)                           |
+| SAZA     | 007024 | SATELLITE ZENITH ANGLE                                   |
 | DBSS     | 007062 | DEPTH BELOW SEA SURFACE                                  |
 | POB      | 007245 | PRESSURE OBSERVATION                                     |
 | PQM      | 007246 | PRESSURE (QUALITY) MARKER                                |
@@ -315,7 +316,8 @@
 | CHPT     | 010063 | CHARACTERISTIC OF PRESSURE TENDENCY                      |
 | PRSS     | 010195 | SURFACE PRESSURE OBSERVATION                             |
 | PMO      | 010243 | MEAN SEA-LEVEL PRESSURE OBSERVATION                      |
-| PMQ      | 010244 | MEAN SEA-LVL PRESSURE (QUALITY) MARKER                   |
+| PMQ      | 010244 | MEAN SEA-LEVEL PRESSURE (QUALITY) MARKER                 |
+| PMIN     | 010245 | MEAN SEA-LEVEL INDICATOR                                 |
 | ZQM      | 010246 | HEIGHT (QUALITY) MARKER                                  |
 | ZPC      | 010247 | HEIGHT EVENT PROGRAM CODE                                |
 | ZRC      | 010248 | HEIGHT EVENT REASON CODE                                 |
@@ -573,7 +575,7 @@
 |          |                                                                   |
 | AIRCFT   | HEADR  <ACID_SEQ>  {PRSLEVLA}  <LATCORSQ>  <LONCORSQ>             |
 |          |                                                                   |
-| SATWND   | HEADR   SAID        PRSLEVEL   <PCCF_SEQ>                         |
+| SATWND   | HEADR   SAID        PRSLEVEL   <PCCF_SEQ>   SAZA                  |
 |          |                                                                   |
 | PROFLR   | HEADR  {PRSLEVEL}                                                 |
 |          |                                                                   |
@@ -588,9 +590,10 @@
 | ADPSFC   |        <VISB1SEQ>  <PSTWXSEQ>  <PKWNDSEQ>  <GUST1SEQ>  <TPRECSEQ> |
 | ADPSFC   |        <SUNSHSEQ>  <CLOU2SEQ>  <SNOW_SEQ>  <WAVE_SEQ>  <PTENDSEQ> |
 |          |                                                                   |
-| SFCSHP   | HEADR   PRSLEVEL   <PMSL_SEQ>  <SST_INFO>  <PREWXSEQ>  {CLOUDSEQ} |
-| SFCSHP   |        {SWELLSEQ}  <VISB2SEQ>  <PSTWXSEQ>  <PKWNDSEQ>  <GUST1SEQ> |
-| SFCSHP   |        <CLOU2SEQ>  <XWSPDSEQ>  <WAVE_SEQ>  <SHIP_SEQ>  <PTENDSEQ> |
+| SFCSHP   | HEADR   PRSLEVEL   <PMSL_SEQ>  <WSPD_SEQ>  <SST_INFO>  <PREWXSEQ> |
+| SFCSHP   |        {CLOUDSEQ}  {SWELLSEQ}  <VISB2SEQ>  <PSTWXSEQ>  <PKWNDSEQ> |
+| SFCSHP   |        <GUST1SEQ>  <CLOU2SEQ>  <XWSPDSEQ>  <WAVE_SEQ>  <SHIP_SEQ> |
+| SFCSHP   |        <PTENDSEQ>                                                 |
 |          |                                                                   |
 | SFCBOG   | HEADR   PRSLEVEL                                                  |
 |          |                                                                   |
@@ -603,8 +606,8 @@
 |          |                                                                   |
 | QKSWND   | HEADR   CAT  SAID   CTCN ATRN   SPRR       <P___INFO>  <W___INFO> |
 |          |                                                                   |
-| MSONET   | HEADR   PRVSTG      SPRVSTG     PRSLEVEL   <ALTIMSEQ>  {TOPC_SEQ} |
-| MSONET   |        <GUST2SEQ>                                                 |
+| MSONET   | HEADR   PRVSTG      SPRVSTG     PRSLEVEL   <PMSL_SEQ>  <ALTIMSEQ> |
+| MSONET   |        <WSPD_SEQ>   {TOPC_SEQ}   <GUST2SEQ>                       |
 |          |                                                                   |
 | GPSIPW   | HEADR   CAT         PW__INFO                                      |
 |          |                                                                   |
@@ -656,7 +659,7 @@
 | PCCF_SEQ | RFFL       QIFY    QIFN     EEQF                                  |
 | ACFT_SEQ | PCAT       POAF                                                   |
 | RSRD_SEQ | RSRD       EXPRSRD                                                |
-| PMSL_SEQ | PMO        PMQ                                                    |
+| PMSL_SEQ | PMO        PMQ     PMIN                                           |
 | ALTIMSEQ | ALSE                                                              |
 | WSPD_SEQ | SOB        SQM                                                    |
 | TOPC_SEQ | .DTHTOPC   TOPC                                                   |
@@ -796,7 +799,7 @@
 |          |      |             |     |                          |-------------|
 | TYP      |    0 |           0 |  10 | CODE TABLE               |-------------|
 | T29      |    0 |           0 |  10 | CODE TABLE               |-------------|
-| TSB      |    0 |           0 |  10 | CODE TABLE               |-------------|
+| TSB      |    0 |           0 |  14 | CODE TABLE               |-------------|
 |          |      |             |     |                          |-------------|
 | PRVSTG   |    0 |           0 |  64 | CCITT IA5                |-------------|
 | SPRVSTG  |    0 |           0 |  64 | CCITT IA5                |-------------|
@@ -826,6 +829,7 @@
 |          |      |             |     |                          |-------------|
 | ELEV     |    2 |       -9000 |  15 | DEGREE                   |-------------|
 | SOEL     |    2 |       -9000 |  15 | DEGREE                   |-------------|
+| SAZA     |    2 |       -9000 |  15 | DEGREES                  |-------------|
 | DBSS     |    1 |           0 |  17 | METER                    |-------------|
 | POB      |    1 |           0 |  14 | MB                       |-------------|
 | PQM      |    0 |           0 |   5 | CODE TABLE               |-------------|
@@ -850,6 +854,7 @@
 | PRSS     |   -1 |           0 |  14 | PASCALS                  |-------------|
 | PMO      |    1 |           0 |  14 | MB                       |-------------|
 | PMQ      |    0 |           0 |   5 | CODE TABLE               |-------------|
+| PMIN     |    0 |           0 |   3 | CODE TABLE               |-------------|
 | ZQM      |    0 |           0 |   5 | CODE TABLE               |-------------|
 | ZPC      |    0 |           0 |   5 | CODE TABLE               |-------------|
 | ZRC      |    0 |           0 |  10 | CODE TABLE               |-------------|
