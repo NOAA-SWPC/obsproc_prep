@@ -42,7 +42,8 @@ OBJS =  cqcvad.o
 FC = ifort
 #LDFLAGS = -Xlinker -t
 #LDFLAGS = -Xlinker -M
-LIBS = -L/nwprod/lib -lw3nco_4 -lbufr_4_64
+#LIBS = -L/nwprod/lib -lw3nco_4 -lbufr_4_64
+LIBS = ${W3NCO_LIB4} ${BUFR_LIB4}
 CMD = prepobs_cqcvad
 
 ##DEBUG =		 -ftrapuv -check all -check nooutput_conversion -fp-stack-check -fstack-protector

@@ -342,7 +342,7 @@ C
 C$$$
       SUBROUTINE COMSTAT
 
-      PARAMETER (NL=34,NTIM=5,NTIMES=6,NRPT=160000,NSTN=200)
+      PARAMETER (NL=34,NTIM=5,NTIMES=6,NRPT=500000,NSTN=200)
       PARAMETER (NLEV=35,NINC=3)
       INTEGER N12(0:NL,0:NTIM)
       REAL    U1(0:NL,0:NTIM),   V1(0:NL,0:NTIM),
@@ -1043,8 +1043,8 @@ C
 C$$$
       SUBROUTINE EVNOUT(NUM1,NUM2,NLV)
 
-      PARAMETER (NRPT=160000,NSTN=200,NLEV=35)
-      parameter (nevnt=160000)
+      PARAMETER (NRPT=500000,NSTN=200,NLEV=35)
+      parameter (nevnt=500000)
       REAL(8)   BMISS
 
       COMMON /SINGLE/ ZOB(NRPT), ITM(NRPT),TIM(NRPT),
@@ -1297,7 +1297,7 @@ C
 C$$$
       SUBROUTINE GETDAT(ITIME)
 
-      PARAMETER (NRPT=160000,NSTN=200,NLEV=35,NTIMES=6,NINC=3)
+      PARAMETER (NRPT=500000,NSTN=200,NLEV=35,NTIMES=6,NINC=3)
       PARAMETER (MLV=255)         ! no. of possible levels
       INTEGER IDAT(8), JDAT(8), ITIMES(8,4)
       REAL    TDIF(5,4), RINC(5)
@@ -1720,6 +1720,10 @@ C       ADDED DIAGNOSTIC OUTPUT STATEMENTS WHEN LIMITS ARE EXCEEDED.
 C       RENAMED NE TO NME TO EASE NAVIGATION AND FOR CLARIFICATION AS
 C       NE IS USED FOR INEQUALITY TESTING (.NE.). INCREASED NRPT FROM
 C       80000 TO 160000 TO ACCOMMODATE LEVEL2 FORMAT VADWND DATA.
+C 2012-07-23  S. MELCHIOR Added integer "icntmx" to define the max
+C       value of icnt in the 4-nested do loop that hinges on the
+C       number of levels (NLEV), the number of stations (NST), the
+C       number of times (NTIMES), and the number of increments (NINC).
 C
 C USAGE:    CALL INCDIST
 C
@@ -1733,7 +1737,7 @@ C
 C$$$
       SUBROUTINE INCDIST
 
-      PARAMETER (NRPT=160000,NSTN=200,NLEV=35,NDIV=23,NTIMES=6,NINC=3)
+      PARAMETER (NRPT=500000,NSTN=200,NLEV=35,NDIV=23,NTIMES=6,NINC=3)
 
       COMMON /STN/    SLAT(NSTN), SLON(NSTN), SIDS(NSTN), STNID(NRPT),
      &                ZSTN(NSTN)
@@ -1758,13 +1762,14 @@ C$$$
       REAL        XMS(NLEV,2,NSTN),SDS(NLEV,2,NSTN)
 
       INTEGER     NMS(NDIV,NLEV,2,NSTN),NCS(NLEV,2,NSTN),ICNTS(NSTN)
-      INTEGER     NM(NDIV,NLEV,2),MSK(1000),NC(NLEV,2)
+      INTEGER     NM(NDIV,NLEV,2),MSK(1000),NC(NLEV,2),icntmx
       LOGICAL BYSTN
       BYSTN = .TRUE.
       DATA XMSG /99999./
       XLIM(1) = -12.
       XLIM(2) =  12.
       MSK = 0
+      icntmx = nst*ntimes*ninc
       DO L=1,NLEV
 
 C  PUT DATA INTO WORK ARRAY
@@ -1782,8 +1787,8 @@ C  ------------------------
               DO N=1,NIN(L,IT,IS) !  nin(L,IT,IS) max is 3
                 IF(IQC(L,IT,N,IS).EQ.0) THEN
                   ICNT = ICNT + 1
-                  if(icnt.gt.1000) then
-                    print *, 'WARNING: ICNT>1000, EXIT LOOP'
+                  if(icnt.gt.icntmx) then
+                    print *, 'WARNING: ICNT>',icntmx,' EXIT LOOP'
                     icnt = icnt - 1
                     exit LOOP1n1
                   endif
@@ -1910,7 +1915,7 @@ C
 C$$$
       SUBROUTINE INCR
 
-      PARAMETER (NRPT=160000,NSTN=200,NLEV=35,NTIMES=6,NINC=3)
+      PARAMETER (NRPT=500000,NSTN=200,NLEV=35,NTIMES=6,NINC=3)
 
       REAL(8)  BMISS
 
@@ -2316,8 +2321,8 @@ C
 C$$$
       SUBROUTINE DMA(HONOR_FLAGS)
 
-      PARAMETER (NRPT=160000,NSTN=200,NLEV=35,NTIMES=6,NINC=3)
-      PARAMETER (nevnt=160000)
+      PARAMETER (NRPT=500000,NSTN=200,NLEV=35,NTIMES=6,NINC=3)
+      PARAMETER (nevnt=500000)
       CHARACTER*8 SIDS, STNID, SIDEV
 
       REAL(8)   BMISS
@@ -2607,6 +2612,10 @@ C       PARAMETERS NDIV=23, NTIMES=6, NINC=3 TO TIDY UP THE CODE.
 C       ADDIED DIAGNOSTIC OUTPUT STATEMENTS FOR INSTANCES WHEN LIMITS
 C       ARE EXCEEDED. RENAMED NE TO NME FOR EASE OF NAVIGATION AND 
 C       FOR CLARIFICATION AS NE IS USED FOR INEQUALITY TESTING (.NE.).
+C 2012-07-23  S. MELCHIOR Added integer "icntmx" to define the max
+C       value of icnt in the 4-nested do loop that hinges on the
+C       number of levels (NLEV), the number of stations (NST), the
+C       number of times (NTIMES), and the number of increments (NINC).
 C
 C USAGE:    CALL RESDIST
 C
@@ -2639,10 +2648,11 @@ C$$$
       COMMON /DATET/  IDATE(4), ITIM(6)
       COMMON /DMATYP/ IQC(NLEV,NTIMES,NINC,NSTN)
       REAL        UW(1000),VW(1000),XM(NLEV,2),SD(NLEV,2),XLIM(2)
-      INTEGER     NM(NDIV,NLEV,2),MSK(1000),NC(NLEV,2)
+      INTEGER     NM(NDIV,NLEV,2),MSK(1000),NC(NLEV,2),icntmx
       DATA XLIM /-5.,5./, XMSG /99999./
 
       MSK = 0
+      icntmx = nst*ntimes*ninc
 
       DO L=1,NLEV ! nlev max is 35
 
@@ -2658,8 +2668,8 @@ C  ------------------------
               DO N=1,NIN(L,IT,IS) !  nin(L,IT,IS) max is 3
                 IF(IQC(L,IT,N,IS).EQ.0) THEN
                   ICNT = ICNT + 1
-                  if(icnt.gt.1000) then
-                    print *, 'WARNING: ICNT > 1000, EXIT LOOP'
+                  if(icnt.gt.icntmx) then
+                    print *, 'WARNING: ICNT >',icntmx,' EXIT LOOP'
                     icnt = icnt - 1
                     exit LOOP1
                   endif

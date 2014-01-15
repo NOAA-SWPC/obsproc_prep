@@ -43,7 +43,8 @@ FC = ifort
 #LDFLAGS = -Xlinker -t -mkl
 #LDFLAGS = -Xlinker -M -mkl
 LDFLAGS = -mkl
-LIBS = -L/nwprod/lib -lw3nco_4 -lw3emc_4 -lbufr_4_64 -lsigio_4 -lsp_4 -lbacio_4
+#LIBS = -L/nwprod/lib -lw3nco_4 -lw3emc_4 -lbufr_4_64 -lsigio_4 -lsp_4 -lbacio_4
+LIBS = ${W3NCO_LIB4} ${W3EMC_LIB4} ${BUFR_LIB4} ${SIGIO_LIB4} ${SP_LIB4} ${BACIO_LIB4}
 CMD = prepobs_prepdata
 
 ##DEBUG =		 -ftrapuv -check all -check nooutput_conversion -fp-stack-check -fstack-protector
