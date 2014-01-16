@@ -6,7 +6,7 @@
 # Script name:         prepobs_makeprepbufr.sh
 # Script description:  Prepares & quality controls PREPBUFR file
 #
-# Author:        D.A. Keyser        Org: NP22         Date: 2013-03-05
+# Author:        D.A. Keyser        Org: NP22         Date: 2014-01-15
 #
 # Abstract: This script creates the PREPBUFR file containing observational data
 #   assimilated by all versions of NCEP analyses.  It points to BUFR
@@ -171,6 +171,18 @@
 #      to poe which is not ready on WCOSS); touches all dump files not included
 #      in BUFRLIST so that they will not cause a read error if PREPOBS_PREPDATA
 #      tries to read them
+# 2014-01-15  S. Melchior -- Placed into new OBSPROC_PREP vertical directory
+#      structure/environmental equivalence paradigm.  As a result: imports new
+#      environment variable $HOMEobsproc_prep which points to directory path for
+#      generic prep subdirectories under version control (in production this is
+#      normally /nwprod/obsproc_prepv.vX.Y.Z where X.Y.Z is version number being
+#      used, usually the latest); and imports new environment variable
+#      $HOMEobsproc_network which points to directory path for network-specific
+#      prep subdirectories under version control (in production this is normally
+#      /nwprod/obsproc_NETWORK.vX.Y.Z where NETWORK is, e.g., global, namp, rap,
+#      rtma, urma, and X.Y.Z is version number being used, usually the latest) -
+#      these replace /nw${envir} in order to point to files moved from 
+#      horizontal to vertical directory structure.
 #     
 #
 # Usage:  prepobs_makeprepbufr.sh yyyymmddhh
@@ -221,6 +233,17 @@
 #     job         - String indicating job name (e.g., 'gdas_prep_12')
 #                   NOTE : This is required ONLY if the imported shell variable
 #                          SENDDBN is "YES" (see below)
+#     $HOMEobsproc_prep    - string indicating directory path to generic prep
+#                            subdirectories under version control
+#                            (in production this is normally
+#                            /nwprod/obsproc_prep.vX.Y.Z where X.Y.Z is
+#                            version number being used, usually the latest)
+#     $HOMEobsproc_network - string indicating directory path to network-
+#                            specific prep subdirectories under version control
+#                            (in production this is normally
+#                            /nwprod/obsproc_NETWORK.vX.Y.Z where NETWORK is,
+#                            e.g., global, nam, rap, rtma, urma, and X.Y.Z is
+#                            version number being used, usually the latest)
 #
 #     These will be set to their default value in this script if not exported
 #      to this script by the parent script --
@@ -300,32 +323,32 @@
 #     USHSYND       String indicating directory path for SYNDATA ush file
 #                   Default is "${HOMEALL}/ush"
 #     USHPREV       String indicating directory path for PREVENTS ush file
-#                   Default is "${HOMEALL}/ush"
+#                   Default is "${HOMEobsproc_prep}/ush"
 #     USHCQC        String indicating directory path for CQCBUFR ush file
-#                   Default is "${HOMEALL}/ush"
+#                   Default is "${HOMEobsproc_prep}/ush"
 #     USHPQC        String indicating directory path for PROFCQC ush file
-#                   Default is "${HOMEALL}/ush"
+#                   Default is "${HOMEobsproc_prep}/ush"
 #     USHVQC        String indicating directory path for CQCVAD ush file
-#                   Default is "${HOMEALL}/ush"
+#                   Default is "${HOMEobsproc_prep}/ush"
 #     USHAQC        String indicating directory path for PREPACQC ush file
-#                   Default is "${HOMEALL}/ush"
+#                   Default is "${HOMEobsproc_prep}/ush"
 #     USHOIQC       String indicating directory path for OIQCBUFR ush file
-#                   Default is "${HOMEALL}/ush"
+#                   Default is "${HOMEobsproc_prep}/ush"
 #     EXECPREP      String indicating directory path for PREPOBS executables
-#                   Default is "${HOMEALL}/exec"
+#                   Default is "${HOMEobsproc_prep}/exec"
 #     PARMPREP      String indicating directory path for PREPOBS parm files
-#                   Default is "${HOMEALL}/parm"
+#                   Default is "${HOMEobsproc_network}/parm"
 #     FIXPREP       String indicating directory path for PREPOBS fix-field
 #                   files
-#                   Default is "${HOMEALL}/fix"
+#                   Default is "${HOMEobsproc_prep}/fix"
 #     DICTPREP      String indicating directory path for PREPOBS dictionary
 #                   files
 #                   Default is "${HOMEALL}/dictionaries"
 #     EXECSYND      String indicating directory path for SYNTHETIC data
 #                   executables
-#                   Default is "${HOMEALL}/exec"
+#                   Default is "${HOMEobsproc_prep}/exec"
 #     PARMSYND      String indicating directory path for SYNTHETIC parm files
-#                   Default is "${HOMEALL}/parm"
+#                   Default is "${HOMEobsproc_network}/parm"
 #     FIXSYND       String indicating directory path for SYNTHETIC data fix-
 #                   field files
 #                   Default is "${HOMEALL}/fix"
@@ -453,13 +476,13 @@
 #                   programs (used by GBLEVENTS subroutine)
 #                   NOTE: Only read by gdas, gfs, cdas, cdc and nam networks
 #                   If imported "NET=gdas" or "NET=gfs", default is
-#                   "$FIXPREP/prepobs_errtable.global";
+#                   "$HOMEobproc_network/fix/prepobs_errtable.global";
 #                   if imported "NET=cdas", default is
-#                   "$FIXPREP/prepobs_errtable.cdas";
-#                   if imported "NET=cdc", default is
-#                   "$FIXPREP/prepobs_errtable.cdccdas";
+#                   "$HOMEobsproc_network/fix/prepobs_errtable.cdas";
+#                   if imported "NET=cdc", default is       # remove?
+#                   "$FIXPREP/prepobs_errtable.cdccdas";    # remove?
 #                   if imported "NET=nam", default is
-#                   "$FIXPREP/prepobs_errtable.nam"
+#                   "$HOMEobsproc_network/fix/prepobs_errtable.nam"
 #                   otherwise, default is "$DATA/scratch.PRVT" a null file
 #     LISTHDX       String indicating executable path for PREPOBS_LISTHEADERS
 #                   program
@@ -513,10 +536,10 @@
 #     OIQCT         String indicating observational error table file path for
 #                   PREPOBS_OIQCBUFR program
 #                   NOTE: If imported "NET=cdas", default is
-#                   "$FIXPREP/prepobs_oiqc.oberrs.cdas"; if imported
-#                   "NET=cdc", default is
+#                   "$HOMEobsproc_network/fix/prepobs_oiqc.oberrs.cdas"; 
+#                   if imported "NET=cdc", default is      # remove?
 #                   "$FIXPREP/prepobs_oiqc.oberrs.cdccdas"; otherwise default
-#                   is "$FIXPREP/prepobs_oiqc.oberrs"
+#                   is "$HOMEobsproc_network/fix/prepobs_oiqc.oberrs"
 #
 #     These do not have to be exported to this script.  If they are, they will
 #      be used by the script.  If they are not, they will be skipped
@@ -668,8 +691,8 @@
 #          PREPOBS_MONOPREPBUFR - executable: $MONOBFRX
 #          SYNDAT_SYNDATA       - executable: $SYNDX
 #                                 T126 gaussian land/sea mask:
-#                                          $FIXSYND/syndat_slmask.t126.gaussian
-#                                 weights: $FIXSYND/syndat_weight
+#                                   $FIXPREP/syndat_syndata.slmask.t126.gaussian
+#                                 weights: $FIXPREP/syndat_weight
 #                                 obs. error table: $PRVT
 #                                 data cards: $SYNDC
 #          PREPOBS_PREVENTS     - executable: $PREX
@@ -856,21 +879,21 @@ fi
 
 USHGETGES=${USHGETGES:-${HOMEALL}/util/ush}
 USHSYND=${USHSYND:-${HOMEALL}/ush}
-USHPREV=${USHPREV:-${HOMEALL}/ush}
-USHCQC=${USHCQC:-${HOMEALL}/ush}
-USHPQC=${USHPQC:-${HOMEALL}/ush}
-USHVQC=${USHVQC:-${HOMEALL}/ush}
-USHAQC=${USHAQC:-${HOMEALL}/ush}
-USHNQC=${USHNQC:-${HOMEALL}/ush}
-USHOIQC=${USHOIQC:-${HOMEALL}/ush}
+USHPREV=${USHPREV:-${HOMEobsproc_prep}/ush}
+USHCQC=${USHCQC:-${HOMEobsproc_prep}/ush}
+USHPQC=${USHPQC:-${HOMEobsproc_prep}/ush}
+USHVQC=${USHVQC:-${HOMEobsproc_prep}/ush}
+USHAQC=${USHAQC:-${HOMEobsproc_prep}/ush}
+USHNQC=${USHNQC:-${HOMEALL}/ush}          # No longer used?
+USHOIQC=${USHOIQC:-${HOMEobsproc_prep}/ush}
 
-EXECPREP=${EXECPREP:-${HOMEALL}/exec}
-PARMPREP=${PARMPREP:-${HOMEALL}/parm}
-FIXPREP=${FIXPREP:-${HOMEALL}/fix}
+EXECPREP=${EXECPREP:-${HOMEobsproc_prep}/exec}
+PARMPREP=${PARMPREP:-${HOMEobsproc_network}/parm}
+FIXPREP=${FIXPREP:-${HOMEobsproc_prep}/fix}
 DICTPREP=${DICTPREP:-${HOMEALL}/dictionaries}
 
-EXECSYND=${EXECSYND:-${HOMEALL}/exec}
-PARMSYND=${PARMSYND:-${HOMEALL}/parm}
+EXECSYND=${EXECSYND:-${HOMEobsproc_prep}/exec}
+PARMSYND=${PARMSYND:-${HOMEobsproc_network}/parm}
 FIXSYND=${FIXSYND:-${HOMEALL}/fix}
 
 if [ $MACHINE != sgi ]; then
@@ -904,13 +927,13 @@ PRPT=${PRPT:-$FIXPREP/prepobs_prep.bufrtable}
 cp $PRPT prep.bufrtable
 LANDC=${LANDC:-$FIXPREP/prepobs_landc}
 if [ "$NET" = 'gdas' -o "$NET" = 'gfs' ]; then
-   PRVT=${PRVT:-$FIXPREP/prepobs_errtable.global}
+   PRVT=${PRVT:-$HOMEobsproc_network/fix/prepobs_errtable.global}
 elif [ "$NET" = 'cdas' ]; then
-   PRVT=${PRVT:-$FIXPREP/prepobs_errtable.cdas}
-elif [ "$NET" = 'cdc' ]; then
-   PRVT=${PRVT:-$FIXPREP/prepobs_errtable.cdccdas}
+   PRVT=${PRVT:-$HOMEobsproc_network/fix/prepobs_errtable.cdas}
+elif [ "$NET" = 'cdc' ]; then                       # remove?
+   PRVT=${PRVT:-$FIXPREP/prepobs_errtable.cdccdas}  # remove?
 elif [ "$NET" = 'nam' ]; then
-   PRVT=${PRVT:-$FIXPREP/prepobs_errtable.nam}
+   PRVT=${PRVT:-$HOMEobsproc_network/fix/prepobs_errtable.nam}
 else
    cp /dev/null $DATA/scratch.PRVT
    PRVT=${PRVT:-$DATA/scratch.PRVT}
@@ -933,11 +956,11 @@ CQCC=${CQCC:-$PARMPREP/prepobs_cqcbufr.${NET}.parm}
 CQCS=${CQCS:-$FIXPREP/prepobs_cqc_statbge}
 OIQCX=${OIQCX:-$EXECPREP/prepobs_oiqcbufr}
 if [ "$NET" = 'cdas' ]; then
-   OIQCT=${OIQCT:-$FIXPREP/prepobs_oiqc.oberrs.cdas}
-elif [ "$NET" = 'cdc' ]; then
-   OIQCT=${OIQCT:-$FIXPREP/prepobs_oiqc.oberrs.cdccdas}
+   OIQCT=${OIQCT:-$HOMEobsproc_network/fix/prepobs_oiqc.oberrs.cdas}
+elif [ "$NET" = 'cdc' ]; then                            # remove?
+   OIQCT=${OIQCT:-$FIXPREP/prepobs_oiqc.oberrs.cdccdas}  # remove?
 else
-   OIQCT=${OIQCT:-$FIXPREP/prepobs_oiqc.oberrs}
+   OIQCT=${OIQCT:-$HOMEobsproc_network/fix/prepobs_oiqc.oberrs}
 fi
 TIMEIT=${TIMEIT:-""}
 [ -s $DATA/time ] && TIMEIT="$DATA/time -p"
