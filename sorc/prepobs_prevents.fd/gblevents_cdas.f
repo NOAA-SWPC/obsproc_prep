@@ -1,7 +1,7 @@
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    GBLEVENTS_CDAS  PRE/POST PROCESSING OF PREPBUFR EVENTS 
-C   PRGMMR: D. A. KEYSER     ORG: NP22       DATE: 2013-02-13
+C   PRGMMR: J.Whiting        ORG: EMC        DATE: 2014-01-24
 C
 C ABSTRACT: THIS IS A FROZEN VERSION OF THE 2006-07-14 VERSION OF W3LIB
 C   (LATER W3NCO) ROUTINE GBLEVENTS (OTHER THAN CHANGES TO RENAME
@@ -170,6 +170,9 @@ C     HARDWIRING IT TO 10E10 (10E10 CAN CAUSE INTEGER OVERFLOW ON
 C     WCOSS - SEE CALLING PROGRAM FOR MORE INFO); USE FORMATTED PRINT
 C     STATEMENTS WHERE PREVIOUSLY UNFORMATTED PRINT WAS > 80
 C     CHARACTERS; RENAME ALL REAL(8) VARIABLES AS *_8
+C 2014-01-24 JWhiting - added logic to trap input XOB=360.0 values and
+C     reset them to zero; left untrapped, this value leads to out of 
+c     bounds referencing of IAR_8 array in the CGBLEVN06() subroutine.
 C
 C USAGE:    CALL GBLEVENTS_CDAS(IDATEP,IUNITF,IUNITE,IUNITP,IUNITS,
 C          $                    SUBSET,NEWTYP)
@@ -430,9 +433,7 @@ C -------------------------------
          IFIRST = 1
          PRINT 700
   700 FORMAT(/1X,100('#')/' =====> SUBROUTINE GBLEVENTS_CDAS INVOKED ',
-     $ 'FOR THE FIRST TIME - VERSION LAST UPDATED 2013-02-13'/9X,
-     $ '(FROZEN VERSION OF THE 2006-07-14 VERSION OF W3LIB/W3NCO ',
-     $ 'ROUTINE GBLEVENTS)'/)
+     $ 'FOR THE FIRST TIME - VERSION LAST UPDATED 2014-01-24'/)
 
 C  INITIALIZE NAMELIST SWITCHES TO DEFAULT VALUES
 C  ----------------------------------------------
@@ -601,6 +602,15 @@ C  ----------------------------------------------------------------
       CALL UFBINT(-IUNITP,HDR_8,10,  1,IRET,HEADR)
       SID_8 = HDR_8(1)
       XOB   = HDR_8(2)
+
+c Trap cases where XOB comes in w/ a value of 360.0 and reset to 0.0
+      fuzzy_bound = XOB-360.0
+      if (fuzzy_bound .ge. -0.0001 .and. fuzzy_bound .le. .0001) then 
+c        print*, 'xob fuzzb:',xob,fuzzy_bound
+c        write(*,*) 'failed the fuzzy check', xob
+         XOB=0.0
+      endif
+
       YOB   = HDR_8(3)
       DHR   = HDR_8(4)
       TYP   = HDR_8(5)
