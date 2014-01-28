@@ -15189,8 +15189,6 @@ c come here to store wind dir obs in word 5 of mobs wind level 1 and
 c wind speed obs in word 6 of mobs wind level 1.
          mobs(1,5,1) = nint(rdata(l+2))
          MOBS(1,6,1) = RDATA(L+3)
-      print 4446, mobs(1,5,1),mobs(1,6,1),stnid
- 4446 format('DIR = ',F5.2,' WSPD = ',F4.1,' station: ',A8)
       END IF
 C SET REPORT SEQ. NUMBER TO "ISQNUM(1)" IF SURFACE LAND (EXCL.
 C  MESONETS), TO "ISQNUM(2) IF SURFACE MARINE, OR TO "ISQNUM(3)" IF
@@ -17925,13 +17923,8 @@ c                   0.1; otherwise, no multiplying factor.
                     if(subset.eq.'ADPSFC'.or.subset.eq.'SFCSHP'.or.
      $              subset.eq.'MSONET') then
                       obs(11,nlv) = obs6 * 0.1
-      print 4447, obs6,obs(11,nlv),stnid
- 4447 format('here sfc: WSPD ... obs6 = ',F4.1,' obs(11,nlv) = ',
-     $ F4.1,' station: ',A8)
                     else
                       obs(11,nlv) = obs6
-      print 4448, obs6,obs(11,nlv),stnid
- 4448 format('here not sfc: WSPD = ',F4.1,' station: ',A8)
                     end if
                     qms(6,nlv) = qms4
                   end if
