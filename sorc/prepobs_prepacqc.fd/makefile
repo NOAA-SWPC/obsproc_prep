@@ -67,4 +67,4 @@ void:	clobber
 	-rm -f $(SRCS) makefile
 
 install:
-	mv $(CMD) ../../exec
+	mv $(CMD) ../../exec/
