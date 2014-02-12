@@ -878,7 +878,7 @@ echo
 fi
 
 USHGETGES=${USHGETGES:-${HOMEALL}/util/ush}
-USHSYND=${USHSYND:-${HOMEALL}/ush}
+USHSYND=${USHSYND:-${HOMEobsproc_prep}/ush}
 USHPREV=${USHPREV:-${HOMEobsproc_prep}/ush}
 USHCQC=${USHCQC:-${HOMEobsproc_prep}/ush}
 USHPQC=${USHPQC:-${HOMEobsproc_prep}/ush}
