@@ -102,7 +102,7 @@ fi
 export FORT11=$VITL
 echo "      $CDATE10" > cdate10.dat
 export FORT13=cdate10.dat
-export FORT14=$FIXSYND/syndat_slmask.t126.gaussian
+export FORT14=$FIXSYND/syndat_syndata.slmask.t126.gaussian
 export FORT15=bogdomn.wrk${suffix_char}
 export FORT16=stmtrk.wrk${suffix_char}
 export FORT17=rawdat.wrk${suffix_char}
