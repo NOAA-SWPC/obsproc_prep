@@ -17269,7 +17269,8 @@ cdak           AERS_8=AERS
 cdak           CALL UFBINT(IUNITP,AERS_8,12,1,IRET,
 cdak $                            'A1 A2 A3 B1 B2 B3 S1 S2 S3 E1 E2 E3')
 cdak        END IF
-            IF(HHDR(6).EQ.188.OR.HHDR(6).EQ.288)  THEN
+            IF(HHDR(6).EQ.188.OR.HHDR(6).EQ.288
+     $     .or.hhdr(6).eq.195.or.hhdr(6).eq.295) THEN
 C.......................................................................
 C     MESONET SURFACE REPORTS ENCODE PROVIDER AND SUBPROVIDER ID
 C                         CHARACTER STRINGS
