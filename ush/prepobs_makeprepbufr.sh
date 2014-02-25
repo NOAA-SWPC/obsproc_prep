@@ -209,12 +209,12 @@
 #                          environment), and the imported shell variable
 #                          PREPDATA=YES (see below)
 #     NET           String indicating system network {either "gfs", "gdas",
-#                   "cdas", "cdc", "nam", "rap" (replacing "ruc") or "rtma"}
+#                   "cdas", "nam", "rap", "rtma" or "urma"}
 #                   NOTE : NET is changed to gdas in the parent Job script for
 #                          the RUN=gdas1 (was gfs - NET remains gfs for RUN=gfs)
 #     RUN           String indicating model run {either "gfs", "gdas1", "cdas",
-#                         "nam", "ndas", "rap" (replacing "ruc2a"), "rap_p",
-#                         "rap_e"  or "rtma"}
+#                         "nam", "ndas", "rap", "rap_p", "rap_e", "rtma" or
+#                         "urma"}
 #     cycle         String indicating the center cycle hour for PREPBUFR
 #                   processing {"txxz", where xx is two-digit hour of the day
 #                   (UTC)}
@@ -321,7 +321,7 @@
 #                   file
 #                   Default is "${HOMEALL}/util/ush"
 #     USHSYND       String indicating directory path for SYNDATA ush file
-#                   Default is "${HOMEALL}/ush"
+#                   Default is "${HOMEobsproc_prep}/ush"
 #     USHPREV       String indicating directory path for PREVENTS ush file
 #                   Default is "${HOMEobsproc_prep}/ush"
 #     USHCQC        String indicating directory path for CQCBUFR ush file
@@ -474,13 +474,11 @@
 #     PRVT          String indicating observational error table file path for
 #                   PREPOBS_PREPDATA, SYNDAT_SYNDATA and PREPOBS_PREVENTS
 #                   programs (used by GBLEVENTS subroutine)
-#                   NOTE: Only read by gdas, gfs, cdas, cdc and nam networks
+#                   NOTE: Only read by gdas, gfs, cdas and nam networks
 #                   If imported "NET=gdas" or "NET=gfs", default is
 #                   "$HOMEobproc_network/fix/prepobs_errtable.global";
 #                   if imported "NET=cdas", default is
 #                   "$HOMEobsproc_network/fix/prepobs_errtable.cdas";
-#                   if imported "NET=cdc", default is       # remove?
-#                   "$FIXPREP/prepobs_errtable.cdccdas";    # remove?
 #                   if imported "NET=nam", default is
 #                   "$HOMEobsproc_network/fix/prepobs_errtable.nam"
 #                   otherwise, default is "$DATA/scratch.PRVT" a null file
@@ -537,9 +535,8 @@
 #                   PREPOBS_OIQCBUFR program
 #                   NOTE: If imported "NET=cdas", default is
 #                   "$HOMEobsproc_network/fix/prepobs_oiqc.oberrs.cdas"; 
-#                   if imported "NET=cdc", default is      # remove?
-#                   "$FIXPREP/prepobs_oiqc.oberrs.cdccdas"; otherwise default
-#                   is "$HOMEobsproc_network/fix/prepobs_oiqc.oberrs"
+#                   otherwise default is
+#                   "$HOMEobsproc_network/fix/prepobs_oiqc.oberrs"
 #
 #     These do not have to be exported to this script.  If they are, they will
 #      be used by the script.  If they are not, they will be skipped
@@ -884,7 +881,6 @@ USHCQC=${USHCQC:-${HOMEobsproc_prep}/ush}
 USHPQC=${USHPQC:-${HOMEobsproc_prep}/ush}
 USHVQC=${USHVQC:-${HOMEobsproc_prep}/ush}
 USHAQC=${USHAQC:-${HOMEobsproc_prep}/ush}
-USHNQC=${USHNQC:-${HOMEALL}/ush}          # No longer used?
 USHOIQC=${USHOIQC:-${HOMEobsproc_prep}/ush}
 
 EXECPREP=${EXECPREP:-${HOMEobsproc_prep}/exec}
@@ -930,8 +926,6 @@ if [ "$NET" = 'gdas' -o "$NET" = 'gfs' ]; then
    PRVT=${PRVT:-$HOMEobsproc_network/fix/prepobs_errtable.global}
 elif [ "$NET" = 'cdas' ]; then
    PRVT=${PRVT:-$HOMEobsproc_network/fix/prepobs_errtable.cdas}
-elif [ "$NET" = 'cdc' ]; then                       # remove?
-   PRVT=${PRVT:-$FIXPREP/prepobs_errtable.cdccdas}  # remove?
 elif [ "$NET" = 'nam' ]; then
    PRVT=${PRVT:-$HOMEobsproc_network/fix/prepobs_errtable.nam}
 else
@@ -957,8 +951,6 @@ CQCS=${CQCS:-$FIXPREP/prepobs_cqc_statbge}
 OIQCX=${OIQCX:-$EXECPREP/prepobs_oiqcbufr}
 if [ "$NET" = 'cdas' ]; then
    OIQCT=${OIQCT:-$HOMEobsproc_network/fix/prepobs_oiqc.oberrs.cdas}
-elif [ "$NET" = 'cdc' ]; then                            # remove?
-   OIQCT=${OIQCT:-$FIXPREP/prepobs_oiqc.oberrs.cdccdas}  # remove?
 else
    OIQCT=${OIQCT:-$HOMEobsproc_network/fix/prepobs_oiqc.oberrs}
 fi
