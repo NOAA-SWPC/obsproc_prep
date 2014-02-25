@@ -351,7 +351,7 @@
 #                   Default is "${HOMEobsproc_network}/parm"
 #     FIXSYND       String indicating directory path for SYNTHETIC data fix-
 #                   field files
-#                   Default is "${HOMEALL}/fix"
+#                   Default is "${HOMEobsproc_prep}/fix"
 #     utilexec      String indicating directory path for utility program
 #                   executables
 #                   If the imported variable MACHINE!=sgi, then the default is
@@ -894,7 +894,7 @@ DICTPREP=${DICTPREP:-${HOMEALL}/dictionaries}
 
 EXECSYND=${EXECSYND:-${HOMEobsproc_prep}/exec}
 PARMSYND=${PARMSYND:-${HOMEobsproc_network}/parm}
-FIXSYND=${FIXSYND:-${HOMEALL}/fix}
+FIXSYND=${FIXSYND:-${HOMEobsproc_prep}/fix}
 
 if [ $MACHINE != sgi ]; then
    utilexec=${utilexec:-/nwprod/util/exec}
