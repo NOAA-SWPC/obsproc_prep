@@ -6,7 +6,7 @@
 # Script name:         prepobs_makeprepbufr.sh
 # Script description:  Prepares & quality controls PREPBUFR file
 #
-# Author:        D.A. Keyser        Org: NP22         Date: 2014-01-15
+# Author:        Keyser/Melchior    Org: NP22         Date: 2014-02-25
 #
 # Abstract: This script creates the PREPBUFR file containing observational data
 #   assimilated by all versions of NCEP analyses.  It points to BUFR
@@ -183,6 +183,13 @@
 #      rtma, urma, and X.Y.Z is version number being used, usually the latest) -
 #      these replace /nw${envir} in order to point to files moved from 
 #      horizontal to vertical directory structure.
+# 2014-02-25  D.A. Keyser -- Removed all references to RUC.  Removed option
+#      to run on MACHINE=sgi - this is obsolete (as a result variables $MACHINE
+#      and $HOMEALL are no longer used in this script).  Replaced variable
+#      $EXECUTIL with $utilexec for directory path to utility program ndate
+#      (both were exported from job scripts with same value, $EXECUTIL has now
+#      been removed from all job scripts).  Removed all references to "cdc"
+#      network (this is obsolete).
 #     
 #
 # Usage:  prepobs_makeprepbufr.sh yyyymmddhh
@@ -190,9 +197,7 @@
 #   Input script positional parameters:
 #     1             String indicating the center date/time for the PREPBUFR
 #                   processing <yyyymmddhh> - if missing, then this time
-#                   is obtained from the /com/date/$cycle file unless
-#                   the imported variable MACHINE=sgi in which case the
-#                   script exits abnormally
+#                   is obtained from the /com/date/$cycle file
 #
 #   Imported Shell Variables:
 #
@@ -252,8 +257,6 @@
 #                   the NWS/TOC (= "YES" - invoke alert; anything else - do not
 #                   invoke alert)
 #                   Default is "NO"
-#     MACHINE       String indicating machine on which this job is running
-#                   Default is "`hostname -s | cut -c 1-3`"
 #     NPROCS        Number of poe tasks to use (must be .GE. $NSPLIT)
 #                   NOTE : This is applicable ONLY if the imported shell
 #                          variable POE is not "NO" (see below) and the
@@ -262,11 +265,6 @@
 #     envir         String indicating environment under which job runs ('prod'
 #                   or 'test')
 #                   Default is "prod"
-#     HOMEALL       String indicating parent directory path for all files under
-#                   which job runs
-#                   If the imported variable MACHINE!=sgi, then the default is
-#                   "/nw${envir}"; otherwise the default is
-#                   "/disk1/users/snake/prepobs"
 #     envir_getges  String indicating environment under which GETGES utility
 #                   ush runs (see documentation in $USHGETGES/getges.sh for
 #                   more information)
@@ -306,20 +304,19 @@
 #                   MP_PREPDATA (would then perform the PREPBUFR processing in
 #                   parallel) (= "NO" - do not invoke invoke poe; anything else
 #                   - invoke poe)
-#                   If the imported variable MACHINE!=sgi, then the default is
-#                   "YES"; otherwise POE IS HARDWIRED AS "NO" (no default)
+#                   Default is "YES"
 #     POE_OPTS      String indicating options to use with poe command
 #                   Default is "-pgmmodel mpmd -ilevel 2 -labelio yes \
 #                   -stdoutmode ordered"
 #                   NOTE : This is applicable only if the imported shell
 #                          variable POE is not "NO"
 #     BACK          String indicating whether or not to run background shells
-#                   (on the same task) for the PREPBUFR processing (on any
-#                   machine) (= "YES" - run background shells; anything else -
-#                   do not run background shells)
+#                   (on the same task) for the PREPBUFR processing (= "YES" -
+#                   run background shells; anything else - do not run
+#                   background shells)
 #     USHGETGES     String indicating directory path for GETGES utility ush
 #                   file
-#                   Default is "${HOMEALL}/util/ush"
+#                   Default is "/nw${envir}/util/ush"
 #     USHSYND       String indicating directory path for SYNDATA ush file
 #                   Default is "${HOMEobsproc_prep}/ush"
 #     USHPREV       String indicating directory path for PREVENTS ush file
@@ -343,7 +340,7 @@
 #                   Default is "${HOMEobsproc_prep}/fix"
 #     DICTPREP      String indicating directory path for PREPOBS dictionary
 #                   files
-#                   Default is "${HOMEALL}/dictionaries"
+#                   Default is "/nw${envir}/dictionaries"
 #     EXECSYND      String indicating directory path for SYNTHETIC data
 #                   executables
 #                   Default is "${HOMEobsproc_prep}/exec"
@@ -354,9 +351,7 @@
 #                   Default is "${HOMEobsproc_prep}/fix"
 #     utilexec      String indicating directory path for utility program
 #                   executables
-#                   If the imported variable MACHINE!=sgi, then the default is
-#                   "/nwprod/util/exec"; otherwise the default is
-#                   "${HOMEALL}/util/exec"
+#                   Default is "/nwprod/util/exec"
 #     GETGUESS      String: if = "YES" will encode first guess (background)
 #                   values interpolated by the program PREPOBS_PREPDATA to
 #                   observation locations in the PREPBUFR file for use by the
@@ -368,14 +363,14 @@
 #                   by the program PREPOBS_PREPDATA and occurs when the
 #                   PREPBUFR date/time hour is not a multiple of 3, e.g. rap,
 #                   rap_p or rap_e runs at 02Z).  This file (or these files)
-#                   may be obtained in one of three ways:
-#                       1) regardless of the machine, from pre-existing files
-#                          in the working directory $DATA called sgesprep and
-#                          sgesprepA (either copied there prior to the
-#                          execution of this script, or copied there earlier in
-#                          this script from either $tstsp, or if not found
-#                          there, $COMSP which was populated by the previous
-#                          running of tropical cyclone relocation processing
+#                   may be obtained in one of two ways:
+#                       1) From pre-existing files in the working directory
+#                          $DATA called sgesprep and sgesprepA (either copied
+#                          there prior to the execution of this script, or
+#                          copied there earlier in this script from either
+#                          $tstsp, or if not found there, $COMSP which was
+#                          populated by the previous running of tropical
+#                          cyclone relocation processing
 #                           NOTE 1: sgesprepA is needed only when the PREPBUFR
 #                                   processing date/time is not a multiple of
 #                                   3-hrs and spanning guess files are needed
@@ -385,24 +380,13 @@
 #                                   previous tropical cyclone relocation
 #                                   processing is not run in rap, rap_p or
 #                                   rap_e runs
-#                       2) if the imported variable MACHINE!=sgi, via the
-#                          execution of the GETGES utility ush to obtain
-#                          sgesprep (if pre-existing file $DATA/sgesprep does
-#                          not exist), and possibly via the execution of the
-#                          GETGES utility ush to obtain sgesprepA (if PREPBUFR
-#                          processing date/time is not a multiple of 3-hrs and
-#                          the pre-existing file $DATA/sgesprepA does not
-#                          exist)
-#                       3) if the imported variable MACHINE=sgi, via a copy
-#                          from ${COMSP}sgesprep.$tmmark or
-#                          ${tstsp}sgesprep.$tmmark to $DATA/sgesprep (if a
-#                          pre-existing file $DATA/sgesprep does not exist),
-#                          and possibly via a copy from
-#                          ${COMSP}sgesprepA.$tmmark or
-#                          ${tstsp}sgesprepA.$tmmark to $DATA/sgesprepA (if
+#                       2) Via the execution of the GETGES utility ush to
+#                          obtain sgesprep (if pre-existing file $DATA/sgesprep
+#                          does not exist), and possibly via the execution of
+#                          the GETGES utility ush to obtain sgesprepA (if
 #                          PREPBUFR processing date/time is not a multiple of
-#                          3-hrs and if a pre-existing file $DATA/sgesprepA
-#                          does not exist)
+#                          3-hrs and the pre-existing file $DATA/sgesprepA does
+#                          not exist)
 #                   Default is "YES"
 #                   NOTE: If GETGUESS=NO, then the program PREPOBS_PREPDATA
 #                         will NOT call w3emc routine GBLEVENTS to perform
@@ -620,9 +604,8 @@
 #                       between this guess file and the guess file indicated
 #                       by SGESA below (see case 2 for SGESA) will be performed
 #                       by the program PREPOBS_PREPDATA and encoded into the
-#                       PREPBUFR file for use by the q.c. programs.  If the
-#                       imported variable MACHINE!=sgi, the SGES file is always
-#                       from the GFS in this case.
+#                       PREPBUFR file for use by the q.c. programs.  The SGES
+#                       file is always from the GFS in this case.
 #                     NOTE 1: Only case 1 above is valid when tropical cyclone
 #                       relocation processing previously occurred.
 #                     NOTE 2: Case 2 above is necessary because global sigma
@@ -640,11 +623,10 @@
 #                       this guess file and the guess file indicated by SGES
 #                       above (see case 2 for SGES) will be performed by the
 #                       program PREPOBS_PREPDATA and encoded into the PREPBUFR
-#                       file for use by the q.c. programs.  If the imported
-#                       variable MACHINE!=sgi, the SGESA file is always from
-#                       the GFS in this case and its forecast hour is 3-hrs
-#                       later than the SGES file (thus both initiate at the
-#                       same time).
+#                       file for use by the q.c. programs.  The SGESA file is
+#                       always from the GFS in this case and its forecast hour
+#                       is 3-hrs later than the SGES file (thus both initiate
+#                       at the same time).
 #                     NOTE 1: Only case 1 above is valid when tropical cyclone
 #                       relocation processing previously occurred.
 #                     NOTE 2: Case 2 above is necessary because global sigma
@@ -715,15 +697,13 @@
 #
 # Attributes:
 #   Language: Korn shell under linux
-#   Machine:  NCEP WCOSS, or SGI
+#   Machine:  NCEP WCOSS
 #
 ####
 
 set -aux
 
 SENDDBN=${SENDDBN:-NO}
-
-MACHINE=${MACHINE:-`hostname -s | cut -c 1-3`}
 
 if [ ! -d $DATA ] ; then mkdir -p $DATA ;fi
 
@@ -736,13 +716,9 @@ qid=$$
 #  ---------------------------------------------------
 
 if [ $# -ne 1 ] ; then
-   if [ $MACHINE != sgi ]; then
-      cp /com/date/$cycle ncepdate
-      err0=$?
-      CDATE10=`cut -c7-16 ncepdate`
-   else
-      err0=1
-   fi
+   cp /com/date/$cycle ncepdate
+   err0=$?
+   CDATE10=`cut -c7-16 ncepdate`
 else 
    CDATE10=$1
    if [ "${#CDATE10}" -ne '10' ]; then
@@ -788,12 +764,6 @@ set -x
 
 envir=${envir:-prod}
 
-if [ $MACHINE != sgi ]; then
-   HOMEALL=${HOMEALL:-/nw${envir}}
-else
-   HOMEALL=${HOMEALL:-/disk1/users/snake/prepobs}
-fi
-
 envir_getges=${envir_getges:-$envir}
 if [ $modhr -eq 0 ]; then
    network_getges=${network_getges:-global}
@@ -816,14 +786,10 @@ if [ "$PREPDATA" != 'YES' ] ; then
    POE=NO
    BACK=NO
 else
-   if [ $MACHINE != sgi ]; then
-      set +u
-      [ -z "$POE" -a "$BACK" = 'YES' ]  &&  POE=NO
-      set -u
-      POE=${POE:-YES}
-   else
-      POE=NO
-   fi
+   set +u
+   [ -z "$POE" -a "$BACK" = 'YES' ]  &&  POE=NO
+   set -u
+   POE=${POE:-YES}
    set +u
    if [ "$POE" != 'NO' -a "$BACK" = 'YES' ]; then
    set -u
@@ -874,7 +840,7 @@ echo
 # fi for PREPDATA != YES
 fi
 
-USHGETGES=${USHGETGES:-${HOMEALL}/util/ush}
+USHGETGES=${USHGETGES:-/nw${envir}/util/ush}
 USHSYND=${USHSYND:-${HOMEobsproc_prep}/ush}
 USHPREV=${USHPREV:-${HOMEobsproc_prep}/ush}
 USHCQC=${USHCQC:-${HOMEobsproc_prep}/ush}
@@ -886,17 +852,13 @@ USHOIQC=${USHOIQC:-${HOMEobsproc_prep}/ush}
 EXECPREP=${EXECPREP:-${HOMEobsproc_prep}/exec}
 PARMPREP=${PARMPREP:-${HOMEobsproc_network}/parm}
 FIXPREP=${FIXPREP:-${HOMEobsproc_prep}/fix}
-DICTPREP=${DICTPREP:-${HOMEALL}/dictionaries}
+DICTPREP=${DICTPREP:-/nw${envir}/dictionaries}
 
 EXECSYND=${EXECSYND:-${HOMEobsproc_prep}/exec}
 PARMSYND=${PARMSYND:-${HOMEobsproc_network}/parm}
 FIXSYND=${FIXSYND:-${HOMEobsproc_prep}/fix}
 
-if [ $MACHINE != sgi ]; then
-   utilexec=${utilexec:-/nwprod/util/exec}
-else
-   utilexec=${utilexec:-${HOMEALL}/util/exec}
-fi
+utilexec=${utilexec:-/nwprod/util/exec}
 
 GETGUESS=${GETGUESS:-YES}
 
@@ -1160,10 +1122,8 @@ if [ "$PREPDATA" = 'YES' -o "$SYNDATA" = 'YES' -o "$PREVENTS" = 'YES' ]; then
 #    this will be interpolated to observation locations by PREPDATA and encoded
 #    into the PREPBUFR file for use by the q.c. programs; if a non-zero length
 #    file sgesprep exists in the working directory, then this guess is used -
-#    otherwise: if the imported variable MACHINE!=sgi, the utility ush GETGES
-#    is executed to obtain the global sigma guess file here; or if the imported
-#    variable MACHINE=sgi, the global sigma guess is copied from
-#    ${COMSP}sgesprep.$tmmark or ${tstsp}sgesprep.$tmmark
+#    otherwise: the utility ush GETGES is executed to obtain the global sigma
+#    guess file here
 #
 #    (NOTE 1: a pre-existing sgesprep file in the working directory at this
 #             point was either:
@@ -1188,20 +1148,15 @@ if [ "$PREPDATA" = 'YES' -o "$SYNDATA" = 'YES' -o "$PREVENTS" = 'YES' ]; then
 #    PREPOBS_PREPDATA) and encoded into the PREPBUFR file for use by the q.c.
 #    programs; if a non-zero length file sgesprep exists in the working
 #    directory, then this guess is used for time prior to the center PREPBUFR
-#    processing date/time  - otherwise: if the imported variable MACHINE!=sgi,
-#    the utility ush GETGES is executed to obtain the global sigma guess file
-#    here (will always be from GFS network); or if the imported variable
-#    MACHINE=sgi, the global sigma guess is copied from
-#    ${COMSP}sgesprep.$tmmark or ${tstsp}sgesprep.$tmmark;
+#    processing date/time  - otherwise: the utility ush GETGES is executed to
+#    obtain the global sigma guess file here (will always be from GFS network);
 #
 #    likewise if a non-zero length file sgesprepA exists in the working
 #    directory, then this guess is used for time after the center PREPBUFR
-#    processing date/time - otherwise: if the imported variable MACHINE!=sgi,
-#    the utility ush GETGES is executed to obtain the global sigma guess file
-#    here (will always be from the GFS network and initiate at the same time as
-#    the guess file valid prior to the PREPBUFR processing date/time); or if
-#    the imported variable MACHINE=sgi, the global sigma guess is copied from
-#    ${COMSP}sgesprepA.$tmmark or ${tstsp}sgesprepA.$tmmark
+#    processing date/time - otherwise: the utility ush GETGES is executed to
+#    obtain the global sigma guess file here (will always be from the GFS
+#    network and initiate at the same time as the guess file valid prior to the
+#    PREPBUFR processing date/time)
 #
 #    (NOTE 1: a pre-existing sgesprep file in the working directory at this
 #             point was either:
@@ -1261,21 +1216,10 @@ echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
                echo
                set -x
             fi
-            if [ $MACHINE != sgi ]; then
-               $USHGETGES/getges.sh -e $envir_getges -n $network_getges \
-                 -f $fhr -v `$utilexec/ndate $dhr $CDATE10` > \
-                 sgesprep${sfx}_pathname
-               errges=$?
-            else
-               errges=1
-               if [ -f ${tstsp}sgesprep${sfx}.$tmmark ]; then
-                echo "${tstsp}sgesprep${sfx}.$tmmark" > sgesprep${sfx}_pathname
-                  errges=0
-               elif [ -f ${COMSP}sgesprep${sfx}.$tmmark ]; then
-                echo "${COMSP}sgesprep${sfx}.$tmmark" > sgesprep${sfx}_pathname
-                  errges=0
-               fi
-            fi
+            $USHGETGES/getges.sh -e $envir_getges -n $network_getges \
+              -f $fhr -v `$utilexec/ndate $dhr $CDATE10` > \
+              sgesprep${sfx}_pathname
+            errges=$?
             if test $errges -ne 0
             then
 #  problem obtaining global sigma guess - exit if center PREPBUFR processing
@@ -1716,12 +1660,11 @@ for name in $BUFRLIST_all;do
 [ ! -f $dump_dir/$name ]  &&  > $dump_dir/$name
 done
 
-if [ $MACHINE != sgi ]; then
-   export FORT11=$DATA/cdate10.dat
-   export FORT12=$PRPT
-   export FORT15=$LANDC
-#####   export FORT18=$SGES
-#####   export FORT19=$SGESA
+export FORT11=$DATA/cdate10.dat
+export FORT12=$PRPT
+export FORT15=$LANDC
+##   export FORT18=$SGES
+##   export FORT19=$SGESA
 
 # The PREPOBS_PREPDATA code will soon, or may now, open GFS spectral
 # coefficient guess files using sigio routines (via W3EMC routine GBLEVENTS)
@@ -1730,61 +1673,31 @@ if [ $MACHINE != sgi ]; then
 # statements in the code or replace the above FORTxx lines with soft links.
 # The soft link approach is taken below.
 
-   ln -sf $SGES              fort.18
-   ln -sf $SGESA             fort.19
-   export FORT20=$PRVT
-   export FORT21=$dump_dir/${BUFRLIST_all_array[0]}
-   export FORT22=$dump_dir/${BUFRLIST_all_array[1]}
-   export FORT23=$dump_dir/${BUFRLIST_all_array[2]}
-   export FORT24=$dump_dir/${BUFRLIST_all_array[3]}
-   export FORT25=$dump_dir/${BUFRLIST_all_array[4]}
-   export FORT26=$dump_dir/${BUFRLIST_all_array[5]}
-   export FORT27=$dump_dir/${BUFRLIST_all_array[6]}
-   export FORT31=$dump_dir/${BUFRLIST_all_array[7]}
-   export FORT32=$dump_dir/${BUFRLIST_all_array[8]}
-   export FORT33=$dump_dir/${BUFRLIST_all_array[9]}
-   export FORT34=$dump_dir/${BUFRLIST_all_array[10]}
-   export FORT35=$dump_dir/${BUFRLIST_all_array[11]}
-   export FORT36=$dump_dir/${BUFRLIST_all_array[12]}
-   export FORT37=$dump_dir/${BUFRLIST_all_array[13]}
-   export FORT38=$dump_dir/${BUFRLIST_all_array[14]}
-   export FORT39=$dump_dir/${BUFRLIST_all_array[15]}
-   export FORT41=$dump_dir/${BUFRLIST_all_array[16]}
-   export FORT42=$dump_dir/${BUFRLIST_all_array[17]}
-   export FORT46=$dump_dir/${BUFRLIST_all_array[18]}
-   export FORT48=$dump_dir/${BUFRLIST_all_array[19]}
-   export FORT51=prepda
-   export FORT52=prevents.filtering.prepdata
-else
-   ln -sf $DATA/cdate10.dat                   fort.11
-   ln -sf $PRPT                               fort.12
-   ln -sf $LANDC                              fort.15
-   ln -sf $SGES                               fort.18
-   ln -sf $SGESA                              fort.19
-   ln -sf $PRVT                               fort.20
-   ln -sf $dump_dir/${BUFRLIST_all_array[0]}  fort.21
-   ln -sf $dump_dir/${BUFRLIST_all_array[1]}  fort.22
-   ln -sf $dump_dir/${BUFRLIST_all_array[2]}  fort.23
-   ln -sf $dump_dir/${BUFRLIST_all_array[3]}  fort.24
-   ln -sf $dump_dir/${BUFRLIST_all_array[4]}  fort.25
-   ln -sf $dump_dir/${BUFRLIST_all_array[5]}  fort.26
-   ln -sf $dump_dir/${BUFRLIST_all_array[6]}  fort.27
-   ln -sf $dump_dir/${BUFRLIST_all_array[7]}  fort.31
-   ln -sf $dump_dir/${BUFRLIST_all_array[8]}  fort.32
-   ln -sf $dump_dir/${BUFRLIST_all_array[9]}  fort.33
-   ln -sf $dump_dir/${BUFRLIST_all_array[10]} fort.34
-   ln -sf $dump_dir/${BUFRLIST_all_array[11]} fort.35
-   ln -sf $dump_dir/${BUFRLIST_all_array[12]} fort.36
-   ln -sf $dump_dir/${BUFRLIST_all_array[13]} fort.37
-   ln -sf $dump_dir/${BUFRLIST_all_array[14]} fort.38
-   ln -sf $dump_dir/${BUFRLIST_all_array[15]} fort.39
-   ln -sf $dump_dir/${BUFRLIST_all_array[16]} fort.41
-   ln -sf $dump_dir/${BUFRLIST_all_array[17]} fort.42
-   ln -sf $dump_dir/${BUFRLIST_all_array[18]} fort.46
-   ln -sf $dump_dir/${BUFRLIST_all_array[19]} fort.48
-   ln -sf prepda                              fort.51
-   ln -sf prevents.filtering.prepdata         fort.52
-fi
+ln -sf $SGES              fort.18
+ln -sf $SGESA             fort.19
+export FORT20=$PRVT
+export FORT21=$dump_dir/${BUFRLIST_all_array[0]}
+export FORT22=$dump_dir/${BUFRLIST_all_array[1]}
+export FORT23=$dump_dir/${BUFRLIST_all_array[2]}
+export FORT24=$dump_dir/${BUFRLIST_all_array[3]}
+export FORT25=$dump_dir/${BUFRLIST_all_array[4]}
+export FORT26=$dump_dir/${BUFRLIST_all_array[5]}
+export FORT27=$dump_dir/${BUFRLIST_all_array[6]}
+export FORT31=$dump_dir/${BUFRLIST_all_array[7]}
+export FORT32=$dump_dir/${BUFRLIST_all_array[8]}
+export FORT33=$dump_dir/${BUFRLIST_all_array[9]}
+export FORT34=$dump_dir/${BUFRLIST_all_array[10]}
+export FORT35=$dump_dir/${BUFRLIST_all_array[11]}
+export FORT36=$dump_dir/${BUFRLIST_all_array[12]}
+export FORT37=$dump_dir/${BUFRLIST_all_array[13]}
+export FORT38=$dump_dir/${BUFRLIST_all_array[14]}
+export FORT39=$dump_dir/${BUFRLIST_all_array[15]}
+export FORT41=$dump_dir/${BUFRLIST_all_array[16]}
+export FORT42=$dump_dir/${BUFRLIST_all_array[17]}
+export FORT46=$dump_dir/${BUFRLIST_all_array[18]}
+export FORT48=$dump_dir/${BUFRLIST_all_array[19]}
+export FORT51=prepda
+export FORT52=prevents.filtering.prepdata
 
 #### THE BELOW LIKELY NO LONGER APPLIES ON WCOSS
 #If program ever fails, try changing 64000000 to 20000000
@@ -1832,15 +1745,9 @@ unset FORT00 `env | grep "^FORT[0-9]\{1,\}=" | awk -F= '{print $1}'`
 set -x
 #--------------------------
 
-if [ $MACHINE != sgi ]; then
-   export FORT11=prepda
-   export FORT51=prepda.reorder
-   export FORT52=prepda.hdrs
-else
-   ln -sf prepda         fort.11
-   ln -sf prepda.reorder fort.51
-   ln -sf prepda.hdrs    fort.52
-fi
+export FORT11=prepda
+export FORT51=prepda.reorder
+export FORT52=prepda.hdrs
 
 $TIMEIT $LISTHDX < listhdx.stdin >>$mp_pgmout 2>&1
 err=$?
