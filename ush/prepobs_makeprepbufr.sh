@@ -352,7 +352,7 @@
 #     FIXSYND       String indicating directory path for SYNTHETIC data fix-
 #                   field files
 #                   Default is "${HOMEALL}/fix"
-#     EXECUTIL      String indicating directory path for utility program
+#     utilexec      String indicating directory path for utility program
 #                   executables
 #                   If the imported variable MACHINE!=sgi, then the default is
 #                   "/nwprod/util/exec"; otherwise the default is
@@ -666,7 +666,7 @@
 #                  $USHVQC/prepobs_cqcvad.sh
 #                  $USHAQC/prepobs_prepacqc.sh
 #                  $USHOIQC/prepobs_oiqcbufr.sh
-#                  $EXECUTIL/ndate
+#                  $utilexec/ndate
 #                  $DATA/postmsg
 #                  $DATA/prep_step {here and by referenced script(s)}
 #                  $DATA/err_exit
@@ -897,9 +897,9 @@ PARMSYND=${PARMSYND:-${HOMEobsproc_network}/parm}
 FIXSYND=${FIXSYND:-${HOMEALL}/fix}
 
 if [ $MACHINE != sgi ]; then
-   EXECUTIL=${EXECUTIL:-/nwprod/util/exec}
+   utilexec=${utilexec:-/nwprod/util/exec}
 else
-   EXECUTIL=${EXECUTIL:-${HOMEALL}/util/exec}
+   utilexec=${utilexec:-${HOMEALL}/util/exec}
 fi
 
 GETGUESS=${GETGUESS:-YES}
@@ -1271,7 +1271,7 @@ echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
             fi
             if [ $MACHINE != sgi ]; then
                $USHGETGES/getges.sh -e $envir_getges -n $network_getges \
-                 -f $fhr -v `$EXECUTIL/ndate $dhr $CDATE10` > \
+                 -f $fhr -v `$utilexec/ndate $dhr $CDATE10` > \
                  sgesprep${sfx}_pathname
                errges=$?
             else
