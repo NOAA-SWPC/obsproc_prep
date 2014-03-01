@@ -620,6 +620,7 @@ C          522 - Ship with name
 C          523 - Ship without name (report id set to "SHIP")
 C          531 - C-MAN platform
 C          532 - Tide gauge
+C          534 - Coast Guard Tide gauge
 C          540 - Mesonet surface
 C          551 - Sea-level pressure bogus
 C          561 - Buoys arriving in WMO FM13 format (fixed)
@@ -1118,7 +1119,7 @@ C  THE FIRST TIME IN, INITIALIZE SOME DATA
 C  (NOTE: FORTRAN 77/90 STANDARD DOES NOT ALLOW COMMON BLOCK VARIABLES
 C         TO BE INITIALIZED VIA DATA STATEMENTS, AND, FOR SOME REASON,
 C         THE BLOCK DATA MAY NOT INITIALIZE DATA IN THE W3EMC/W3NCO
-C         LIBRAIRES
+C         LIBRARIES
 C         A V O I D   B L O C K   D A T A   I N   W 3 L I B )
 C  --------------------------------------------------------------------
 
@@ -2118,7 +2119,7 @@ C     ---> SORTS DATA LEVEL CATEGORIES
       COMMON/IUBFPP/LWI,LWR
 
       CHARACTER*8 STNIDX,CRES1X,CRES2X
- 
+
       REAL(8)     BMISS
 
       DIMENSION RCAT(50,LEVLIM),SCAT(50,LEVLIM),IORD(LEVLIM),
@@ -2426,6 +2427,12 @@ C  SEA-LEVEL PRESSURE BOGUS
 C  ------------------------
 
                ERTUBF = 551
+            ELSE  IF(SUBSET(6:8).EQ.'007') THEN
+
+C  COAST GUARD TIDE GAUGE
+C  ----------------------
+
+               ERTUBF = 534
             END IF
          ELSE  IF(SUBSET(1:5).EQ.'NC002')  THEN
             IF(SUBSET(6:8).EQ.'001')  THEN
@@ -4701,7 +4708,7 @@ C***********************************************************************
 C***********************************************************************
       FUNCTION R06UBF(LUNIT,OBS,OBS2,OBS3,NOBS3)
 C     ---> PROCESSES SATWIND DATA (005/*)
- 
+
       COMMON/IUBFAA/BMISS
       COMMON/IUBFBB/KNDX,KSKACF(8),KSKUPA,KSKSFC,KSKSAT,KFLSAT(8),KSKSMI
       COMMON/IUBFCC/SUBSET
