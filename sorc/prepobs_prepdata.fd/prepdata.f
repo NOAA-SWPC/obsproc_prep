@@ -15443,15 +15443,15 @@ C$$$
 
 C      31         511 512     514       522 523       531 532  --> RTYPE
 C      --         --- ---     ---       --- ---       --- ---
-     $  5, 479*13,  1,  8, 13, 11, 7*13,  2,  2, 7*13,  6,  9,
+     $  5, 479*30,  1,  8, 30, 11, 7*30,  2,  2, 7*30,  6,  9,
 
-C           540        551       561 562  --> RTYPE
-C           ---        ---       --- ---
-     $ 7*13, 10, 10*13,  3, 9*13,  4,  4 /
+C          534        540        551         561 562  --> RTYPE
+C          ---        ---        ---         --- ---
+     $ 30,  12, 5*30,  10, 10*30,  3, 9*30,    4,  4 /
 
       DATA  YMISS/99998.8/
 
-      I = 13
+      I = 30
 
       IF(ITYPDMP.GT.30.AND.ITYPDMP.LT.563)  I = JTYPE(ITYPDMP)
 
@@ -15466,8 +15466,8 @@ C                 THESE HAVE ALREADY BEEN EXAMINED)
 C ------------------------------------------------------------------
 
          IF(IDATA(15).EQ.0)  THEN
-C  ... IF NO CAT. 2 LEVELS, THEN NOT A SPLASH-LEVEL DROP, RESET I = 12
-            I = 12
+C  ... IF NO CAT. 2 LEVELS, THEN NOT A SPLASH-LEVEL DROP, RESET I = 13
+            I = 13
          ELSE  IF(NINT(RDATA(IDATA(16))).GE.32750.OR.
      $    (NINT(RDATA(IDATA(16)))*0.1).LT.PMAND(LEVST))  THEN
             IF(NINT(RDATA(IDATA(16))).GE.YMISS)  THEN
@@ -15480,8 +15480,8 @@ C  ... IF NO CAT. 2 LEVELS, THEN NOT A SPLASH-LEVEL DROP, RESET I = 12
                   END IF
                END IF
             END IF
-C  ... IF PRESS ON 1ST CAT. 2 LVL MISSING OR < PMAND(LEVST) RESET I = 12
-            I = 12
+C  ... IF PRESS ON 1ST CAT. 2 LVL MISSING OR < PMAND(LEVST) RESET I = 13
+            I = 13
          END IF
       END IF
 
