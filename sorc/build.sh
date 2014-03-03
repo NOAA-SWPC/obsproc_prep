@@ -15,13 +15,7 @@ for sdir in $dir_list; do
  [ $dir = bufr_tranwindsat.fd ] && continue  # this code isn't ready
  cd $dir
  make clobber
-#  uncomment following two lines if using modules (load_libs.rc)
-# [ $dir = bufr_trantmi.fd ] && module load HDF4/$HDF4_ver 
-# [ $dir = bufr_tranmls.fd -o $dir = bufr_tranomi.fd ] && module load HDF5/$HDF5_ver/serial
  make
-#  uncomment following two lines if using modules (load_libs.rc)
-# [ $dir = bufr_trantmi.fd ] && module unload HDF4/$HDF4_ver
-# [ $dir = bufr_tranmls.fd -o $dir = bufr_tranomi.fd ] && module unload HDF5/$HDF5_ver/serial
  cd ..
 done
 
