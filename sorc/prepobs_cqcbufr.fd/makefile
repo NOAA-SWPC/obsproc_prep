@@ -1,32 +1,31 @@
 SHELL=/bin/sh
-#
+
 # If this makefile is invoked by the command line
 #       make -f makefile
 # it will compile the fortran modules indicated by SRCS into the object
-# modules indicated by OBJS and produce an executable named a.out.
+# modules indicated by OBJS and produce an executable named CMD.
 #
-# If it is invoked by the command line
-#       make -f makefile a.out.prof
-# it will compile the fortran modules indicated by SRCS into the object
-# modules indicated by OBJS and produce an executable which profiles
-# named a.out.prof.
+# For a quick method to move that executable to it's expected target
+# location ../../exec,  use the command line
+#       make -f makefile install
 #
-# To remove all the objects but leave the executables use the command line
+# To remove all files produced by this makefile but leave the executable(s) use
+# the command line
 #       make -f makefile clean
 #
-# To remove everything but the source files use the command line
+# To remove all files produced by this makefile including the executable(s) use
+# the command line
 #       make -f makefile clobber
 #
-# To remove the source files created by /usr/bin/fmgen and this makefile
-# use the command line
+# To remove the source files and this makefile use the command line
 #       make -f makefile void
 #
 # The parameters SRCS and OBJS should not need to be changed.  If, however,
 # you need to add a new module add the name of the source module to the
 # SRCS parameter and add the name of the resulting object file to the OBJS
-# parameter.  The new modules are not limited to fortran, but may be C, YACC,
+# parameter.  The new modules are not limited to Fortran, but may be C, YACC,
 # LEX, or CAL.  An explicit rule will need to be added for PASCAL modules.
-#
+
 SRCS = 	cqcbufr.f radcor.f
 
 OBJS =  cqcbufr.o radcor.o
@@ -34,34 +33,40 @@ OBJS =  cqcbufr.o radcor.o
 
 # Tunable parameters
 #
-# FC		Name of the fortran compiling system to use
-# LDFLAGS	Flags to the loader
-# LIBS		List of libraries
-# CMD		Name of the executable
-#
+# FC            Name of the compiling system to use
+# LDFLAGS       Flags to the loader
+# LIBS          List of libraries
+# CMD           Name of the executable
+# FFLAGS        Flags to the compiler
+# DEBUG         Flags for extra debugging
+# DEBUG2        Flags for even more extra debugging
+
 FC = ifort
 #LDFLAGS = -Xlinker -t
 #LDFLAGS = -Xlinker -M
 LIBS = ${W3NCO_LIB4} ${W3EMC_LIB4} ${BUFR_LIB4} 
 CMD = prepobs_cqcbufr
 
-##DEBUG =		 -ftrapuv -check all -check nooutput_conversion -fp-stack-check -fstack-protector
-FFLAGS = -O2 -convert big_endian -list -assume noold_ldout_format -fixed -g -traceback $(DEBUG)
+DEBUG =                -g -traceback
+#DEBUG2 =        -ftrapuv -check all -check nooutput_conversion -fp-stack-check -fstack-protector
+FFLAGS = -O2 -convert big_endian -list -assume noold_ldout_format -fixed $(DEBUG) $(DEBUG2)
 
-# Lines from here on down should not need to be changed.  They are the
-# actual rules which make uses to build a.out.
-#
+
+# Lines from here on down should not need to be changed.  They are the actual
+# rules which make uses to build CMD.
+
 all:		$(CMD)
 
 $(CMD):		$(OBJS)
 	$(FC) $(LDFLAGS) -o $(@) $(OBJS) $(LIBS)
 
 
+.PHONY: clean clobber void install
 clean:
-	-rm -f $(OBJS)
+	-rm -f $(OBJS) xref.db *.lst *.mod
 
 clobber:	clean
-	-rm -f $(CMD) $(CMD).prof
+	-rm -f $(CMD)
 
 void:	clobber
 	-rm -f $(SRCS) makefile
