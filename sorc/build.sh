@@ -16,6 +16,8 @@ for sdir in $dir_list; do
  cd $dir
  make clobber
  make
+ ###touch *
+ ls -l
  cd ..
 done
 
