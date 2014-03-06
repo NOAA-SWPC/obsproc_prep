@@ -2,7 +2,7 @@ c$$$  Subprogram Documentation Block
 c   BEST VIEWED WITH 94-CHARACTER WIDTH WINDOW
 c
 c Subprogram: output_acqc_noprof 
-c   Programmer: D. Keyser       Org: NP22       Date: 2013-02-07
+c   Programmer: D. Keyser       Org: NP22       Date: 2014-03-06
 c
 c Abstract: Reads an input, pre-PREPACQC PREPBUFR file and matches the subsets within to the
 c   "merged" reports contained within the arrays output by the NRL aircraft QC subroutine
@@ -29,6 +29,12 @@ c                           sent to the production joblog file in this case when
 c                           first read in by subroutine INPUT_ACQC)
 c 2013-02-07  D. Keyser  -- Final changes to run on WCOSS: use formatted print statements
 c                           where previously unformatted print was > 80 characters
+c 2014-03-06  D. Keyser  -- Moved BUFRLIB routine OPENMB call to after time window and
+c                           geographic domain checks to prevent creation of an empty, but
+c                           open, BUFR message (type AIRCAR) in (rare) cases where absolutely
+c                           no aircraft reports pass these checks (would cause a BUFRLIB
+c                           abort due to previous message being open when attempting to copy
+c                           first non-aircraft message from input to output PREPBUFR file
 c
 c Usage: call output_acqc_noprof(inlun,outlun,nrpts4QC_pre,max_reps,
 c                                bmiss,alat,alon,ht_ft,idt,c_qc,
@@ -407,8 +413,6 @@ c ----------------------------------------------------------------------
 
           call copymg(inlun,outlun) ! for non-aircraft BUFR messages, just copy to output
         else
-          call openmb(outlun,mesgtype,mesgdate) 
-
           do while(ireadsb(inlun).eq.0)
 
 c Initialize variables
@@ -662,6 +666,8 @@ c -----------------------------------------------------
 c If the report passes the time window and geographic domain checks, copy the subset to the
 c  output PREPBUFR file in anticipation of adding events
 c -----------------------------------------------------------------------------------------
+            call openmb(outlun,mesgtype,mesgdate) 
+
             call ufbcpy(inlun,outlun)
 
             if(l_hit_limit) cycle ! if this subset exceeds the "max_rep" limit, don't attempt

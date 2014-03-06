@@ -2,7 +2,7 @@ c$$$ Main Program Documentation Block
 c   BEST VIEWED WITH 94-CHARACTER WIDTH WINDOW
 c
 c Main Program: PREPOBS_PREPACQC
-c   Programmer: D. Keyser       Org: NP22       Date: 2013-02-07
+c   Programmer: D. Keyser       Org: NP22       Date: 2014-03-06
 c
 c Abstract: Performs the NRL aircraft data quality control on all types of reports (AIREP,
 c   PIREP, AMDAR, TAMDAR, MDCRS).  Replaces the previous routine of the same name originally
@@ -60,6 +60,13 @@ c 2013-02-07  D. Keyser  -- Final changes to run on WCOSS: Set BUFRLIB missing (
 c                           10E8 rather than 10E10 to avoid integer overflow; use formatted
 c                           print statements where previously unformatted print was > 80
 c                           characters
+c 2014-03-06  D. Keyser  -- Moved BUFRLIB routine OPENMB call in subroutine
+c                           output_acqc_noprof to after time window and geographic domain
+c                           checks to prevent creation of an empty, but open, BUFR message
+c                           (type AIRCAR) in (rare) cases where absolutely no aircraft
+c                           reports pass these checks (would cause a BUFRLIB abort due to
+c                           previous message being open when attempting to copy first non-
+c                           aircraft message from input to output PREPBUFR file
 c
 c Usage:
 c   Input files:
@@ -693,11 +700,11 @@ c ******************************************************************************
 
 c Start program
 c -------------
-      call w3tagb('PREPOBS_PREPACQC',2013,038,1927,'NP20')
+      call w3tagb('PREPOBS_PREPACQC',2014,065,1927,'NP20')
 
       write(*,*)
       write(*,*) '************************************************'
-      write(*,*) 'Welcome to PREPOBS_PREPACQC, version 2013-02-07 '
+      write(*,*) 'Welcome to PREPOBS_PREPACQC, version 2014-03-06 '
       call system('date')
       write(*,*) '************************************************'
       write(*,*)
