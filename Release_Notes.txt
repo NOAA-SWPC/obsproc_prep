@@ -124,7 +124,7 @@ files:
       version numbers and to add sample build script and info in sorc
       directory.  This generalizes the library version information.
    prepobs_cqcbufr, prepobs_listheaders, prepobs_monoprepbufr,
-   prepobs_mpcopybufr, prepobs_oiqcbufr, prepobs_prepacpf, prepobs_prepvents,
+   prepobs_mpcopybufr, prepobs_oiqcbufr, prepobs_prepacpf, prepobs_prevents,
    prepobs_profcqc, syndat_syndata:
     - No change to source.
    prepobs_cqcvad:
