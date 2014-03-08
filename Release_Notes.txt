@@ -7,31 +7,31 @@ files:
  *obsproc_prep/fix/prepobs_prep.bufrtable
  *obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
  *obsproc_prep/fix/syndat_weight
- *obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
- *obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
- *obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
- *obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
- *obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
- *obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
- *obsproc_prep/sorc/prepobs_listheaders.fd/makefile
- *obsproc_prep/sorc/prepobs_monoprepbufr.fd/makefile
- *obsproc_prep/sorc/prepobs_monoprepbufr.fd/monoprepbufr.f90
- *obsproc_prep/sorc/prepobs_mpcopybufr.fd/makefile
- *obsproc_prep/sorc/prepobs_mpcopybufr.fd/mpcopybufr.f90
- *obsproc_prep/sorc/prepobs_oiqcbufr.fd/makefile
- *obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
- *obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
- *obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
- *obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/prepacqc.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_mer.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
+&*obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
+&*obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
+&*obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
+&*obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
+&*obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
+&*obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
+&*obsproc_prep/sorc/prepobs_listheaders.fd/makefile
+&*obsproc_prep/sorc/prepobs_monoprepbufr.fd/makefile
+&*obsproc_prep/sorc/prepobs_monoprepbufr.fd/monoprepbufr.f90
+&*obsproc_prep/sorc/prepobs_mpcopybufr.fd/makefile
+&*obsproc_prep/sorc/prepobs_mpcopybufr.fd/mpcopybufr.f90
+&*obsproc_prep/sorc/prepobs_oiqcbufr.fd/makefile
+&*obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
+&*obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
+&*obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
+&*obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
+&*obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
+&*obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
+&*obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
+&*obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
+&*obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
+&*obsproc_prep/sorc/prepobs_prepacqc.fd/prepacqc.f
+&*obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_mer.f
+&*obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
+&*obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
  *obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
  *obsproc_prep/sorc/prepobs_prepdata.fd/makefile
  *obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
@@ -42,39 +42,60 @@ files:
  *obsproc_prep/sorc/prepobs_prepdata.fd/w3tovseds.f
  *obsproc_prep/sorc/prepobs_prepdata.fd/w3tovsmnd.f
  *obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
- *obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
- *obsproc_prep/sorc/prepobs_prevents.fd/makefile
- *obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
- *obsproc_prep/sorc/prepobs_profcqc.fd/makefile
- *obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
- *obsproc_prep/sorc/syndat_syndata.fd/makefile
- *obsproc_prep/sorc/syndat_syndata.fd/syndata.f
- *obsproc_prep/sorc/build.sh
- *obsproc_prep/sorc/clean.sh
- *obsproc_prep/sorc/install.sh
- *obsproc_prep/sorc/load_libs.rc
- *obsproc_prep/sorc/README.build
- *obsproc_prep/sorc/setlibs.rc
- *obsproc_prep/ush/prepobs_cqcbufr.sh
- *obsproc_prep/ush/prepobs_cqcvad.sh
- *obsproc_prep/ush/prepobs_makeprepbufr.sh
- *obsproc_prep/ush/prepobs_oiqcbufr.sh
- *obsproc_prep/ush/prepobs_prepacqc.sh
- *obsproc_prep/ush/prepobs_prevents.sh
- *obsproc_prep/ush/prepobs_profcqc.sh
- *obsproc_prep/ush/prepobs_syndata.sh
+&*obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
+&*obsproc_prep/sorc/prepobs_prevents.fd/makefile
+&*obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
+&*obsproc_prep/sorc/prepobs_profcqc.fd/makefile
+&*obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
+&*obsproc_prep/sorc/syndat_syndata.fd/makefile
+&*obsproc_prep/sorc/syndat_syndata.fd/syndata.f
+&*obsproc_prep/sorc/build.sh
+&*obsproc_prep/sorc/clean.sh
+&*obsproc_prep/sorc/install.sh
+&*obsproc_prep/sorc/load_libs.rc
+&*obsproc_prep/sorc/README.build
+&*obsproc_prep/sorc/setlibs.rc
+&*obsproc_prep/ush/prepobs_cqcbufr.sh
+&*obsproc_prep/ush/prepobs_cqcvad.sh
+&*obsproc_prep/ush/prepobs_makeprepbufr.sh
+&*obsproc_prep/ush/prepobs_oiqcbufr.sh
+&*obsproc_prep/ush/prepobs_prepacqc.sh
+&*obsproc_prep/ush/prepobs_prevents.sh
+&*obsproc_prep/ush/prepobs_profcqc.sh
+&*obsproc_prep/ush/prepobs_syndata.sh
 
 ( * - changed)
 
 
  USH script changes:
    prepobs_makeprepbufr.sh:
-    - !!!
+    - Imports new environment variable $HOMEobsproc_prep which points to
+      directory path for generic prep subdirectories under version control (in
+      production this is normally /nwprod/obsproc_prep.vX.Y.Z where X.Y.Z
+      version number being used, usually the latest).  This replaces
+      /nw${envir}.
+    - Imports new environment variable $HOMEobsproc_network which points to
+      directory path for network-specific prep subdirectories under version
+      control (in production this is normally /nwprod/obsproc_NETWORK.vX.Y.Z
+      where NETWORK is, e.g., global, nam, rap, rtma, urma, and x.y.z is
+      version number being used, usually the latest).  This replaces
+      /nw${envir}.
+    - Removed all references to RUC network (obsolete).
+    - Removed all references to CDC network (obsolete).
+    - Added references to URMA network.
+    - Removed option to run on MACHINE=sgi - this is obsolete (as a result
+      variables $MACHINE and $HOMEALL are no longer used in this script).
+    - Replaced variable $EXECUTIL with $utilexec for directory path to utility
+      program ndate (both were exported from job scripts with same value,
+      $EXECUTIL has now been removed from all parent PREP job scripts).
    prepobs_syndata.sh:
     - Modified export variable FORT14 to point to renamed fix file:
       syndat_syndata.slmask.t126.gaussian 
+   prepobs_prevents.sh
+    - Removed all references to CDC network (obsolete).
+    - Added references to URMA network.
    prepobs_cqcbufr.sh, prepobs_cqcvad.sh, prepobs_oiqcbufr.sh,
-   prepobs_prepacqc.sh, prepobs_prevents.sh, prepobs_profcqc.sh: 
+   prepobs_prepacqc.sh, prepobs_profcqc.sh: 
     - No changes; initial population of vertical structure. 
       
  Source code changes:
@@ -103,17 +124,70 @@ files:
       version numbers and to add sample build script and info in sorc
       directory.  This generalizes the library version information.
    prepobs_cqcbufr, prepobs_listheaders, prepobs_monoprepbufr,
-   prepobs_mpcopybufr, prepobs_oiqcbufr, prepobs_prepacpf, prepobs_profcqc,
-   syndat_syndata:
+   prepobs_mpcopybufr, prepobs_oiqcbufr, prepobs_prepacpf, prepobs_prepvents,
+   prepobs_profcqc, syndat_syndata:
     - No change to source.
    prepobs_cqcvad:
-    - !!! 
+    - ???? Increased total number of levels amongst all VAD reports that can be
+      processed and total number of events amongst all VAD reports that can be
+      processed from 160000 to 500000 to accommodate Level2 format VAD wind
+      data.
+    - ???? The product of the number of stations reporting, the number of
+      reporting times in the dataset time span, and the number of computer
+      increments is now dynamically computed to allow statistical examination
+      of VAD wind data to be completed - this is needed with the addition of
+      Level2 format VAD wind data,
    prepobs_prepacqc:
-    - !!! 
+    - In final subroutine which copies all BUFR messages from input to output
+      PREPBUFR file (including aircraft reports undated by this program), moved
+      BUFRLIB routine OPENMB call to after time-window and geographic-domain
+      checks to prevent creation of an empty, but open, BUFR message (of type
+      AIRCAR) in (rare) cases where absolutely no aircraft reports pass these
+      checks
+      BENEFIT: Prevents a BUFRLIB abort due to previous message being open
+               when attempting to copy first non-aircraft message from input to
+               output PREPBUFR file in such cases where no aircraft reports are
+               written back out.  This occurred in the 07z 20140214 RAP_PREP
+               production run when the number of aircraft reports was severely
+               reduced due to a fiber cut and no reports survived the time-
+               window check.
    prepobs_prepdata:
     - !!! 
-   prepobs_prepvents:
-    - !!! 
+xxx
+-- under construction --
+   iw3unpbf:
+    DK only:
+    - Added ability to read in and process percent confidence based on EUMETSAT
+      Quality Indicator with and without forecast for NESDIS GOES winds pulled
+      from NESDIS server (which originally stored them in dump file explicitly
+      as "QIFY" and "QIFN" but later stored them both as before and as
+      replicated "PCCF" values as with v10 BUFR, and even later stored them
+      only as replicated "PCCF" values as with v10 BUFR) if they are present.
+      (Note: As noted, will also work if these are stored in replicated "PCCF"
+             values as with v10 BUFR, e.g., MODIS winds, AVHRR winds, JMA
+             winds, EUMETSAT winds.)
+    - Added ability to read in and process percent confidence based on NESDIS
+      Recursive Filter Function for types which might store it in dump file in
+      replicated "PCCF" values as with v10 BUFR (in this case NESDIS GOES
+      winds, MODIS winds, AVHRR winds, JMA winds - already in place for
+      EUMETSAT winds) if it is present.
+      (Note: Will still work if this is stored explicitly as "RFFL" as
+             originally with GOES winds pulled from NESDIS server.)
+    - Added ability to read in and process percent confidence based on NESDIS
+      Expected Error for types which might store it in dump file in replicated
+      "PCCF" values as with v10 BUFR (in this case MODIS or AVHRR winds) if it
+      is present.
+      (Note: Will still work if this is stored explicitly as "EEQF" as
+             originally with GOES winds pulled from NESDIS server.
+    - Now stores cloud-top/deep-layer indicator in byte 3 of header reserve
+      character word 1 for foreign-produced satellite winds (as already done
+      for NESDIS-produced satellite winds) - JMA and EUMETSAT imager water
+      vapor winds can now be of both types, before they were only cloud-top.        - Output array OBS2 creased from length 42 to 43 words, where word 43
+      contains satellite zenith angle (degrees, satwnd types only)
+    SM & YL:
+    - Added new dump report type 534 for surface marine Coast Guard tide gauge
+      reports.
+XXX
 
  Fixed file changes:
    prepobs_cqc_statbge, prepobs_landc, syndat_weight:
