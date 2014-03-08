@@ -130,13 +130,13 @@ files:
    prepobs_cqcvad:
     - ???? Increased total number of levels amongst all VAD reports that can be
       processed and total number of events amongst all VAD reports that can be
-      processed from 160000 to 500000 to accommodate Level2 format VAD wind
-      data.
+      processed from 160000 to 500000 to accommodate combined legacy and Level
+      2 format VAD wind data.
     - ???? The product of the number of stations reporting, the number of
       reporting times in the dataset time span, and the number of computer
       increments is now dynamically computed to allow statistical examination
       of VAD wind data to be completed - this is needed with the addition of
-      Level2 format VAD wind data,
+      Level 2 format VAD wind data,
    prepobs_prepacqc:
     - In final subroutine which copies all BUFR messages from input to output
       PREPBUFR file (including aircraft reports undated by this program), moved
