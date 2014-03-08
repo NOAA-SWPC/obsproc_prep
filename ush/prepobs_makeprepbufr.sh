@@ -175,7 +175,7 @@
 #      structure/environmental equivalence paradigm.  As a result: imports new
 #      environment variable $HOMEobsproc_prep which points to directory path for
 #      generic prep subdirectories under version control (in production this is
-#      normally /nwprod/obsproc_prepv.vX.Y.Z where X.Y.Z is version number being
+#      normally /nwprod/obsproc_prep.vX.Y.Z where X.Y.Z is version number being
 #      used, usually the latest); and imports new environment variable
 #      $HOMEobsproc_network which points to directory path for network-specific
 #      prep subdirectories under version control (in production this is normally
@@ -670,8 +670,8 @@
 #          PREPOBS_MONOPREPBUFR - executable: $MONOBFRX
 #          SYNDAT_SYNDATA       - executable: $SYNDX
 #                                 T126 gaussian land/sea mask:
-#                                   $FIXPREP/syndat_syndata.slmask.t126.gaussian
-#                                 weights: $FIXPREP/syndat_weight
+#                                   $FIXSYND/syndat_syndata.slmask.t126.gaussian
+#                                 weights: $FIXSYND/syndat_weight
 #                                 obs. error table: $PRVT
 #                                 data cards: $SYNDC
 #          PREPOBS_PREVENTS     - executable: $PREX

@@ -22,7 +22,7 @@ qid=$$
 # Imported variables that must be passed in:
 #   DATA  - path to working directory
 #   NET   - string indicating system network (either "gfs", "gdas", "cdas",
-#            "cdc", "nam", "rap" or "rtma")
+#            "nam", "rap", "rtma" or "urma")
 #            NOTE1: NET is changed to gdas in the parent Job script for the
 #                   RUN=gdas1 (was gfs - NET remains gfs for RUN=gfs).
 #            NOTE2: This is read from the program PREPOBS_PREVENTS via a call
