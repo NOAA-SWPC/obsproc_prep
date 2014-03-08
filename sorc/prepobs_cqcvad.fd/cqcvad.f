@@ -1,7 +1,7 @@
 C$$$  MAIN PROGRAM DOCUMENTATION BLOCK
 C
 C MAIN PROGRAM: PREPOBS_CQCVAD
-C   PRGMMR: KEYSER           ORG: NP22        DATE: 2013-02-05
+C   PRGMMR: MELCHIOR         ORG: NP22        DATE: 2014-01-15
 C
 C ABSTRACT: PERFORM COMPLEX QUALITY CONTROL OF VAD WINDS FROM
 C   WSR-88D RADARS.
@@ -61,6 +61,11 @@ C 2012-11-20  J. WOOLLEN  INITIAL PORT TO WCOSS
 C 2013-02-05  D. Keyser   Final changes to run on WCOSS:  Set BUFRLIB
 C       missing (BMISS) to 10E8 rather than 10E10 to avoid integer
 C       overflow; rename all REAL(8) variables as *_8.
+C 2014-01-15  S. Melchior  Increased NRPT (total number of levels
+C       amongst all VAD reports that can be processed) and NEVNT (total
+C       number of events amongst all VAD reports that can be processed)
+C       both from 160000 to 500000 to accommodate Level2 format VAD
+C       wind data.
 C
 C USAGE:
 C   INPUT FILES:
@@ -134,9 +139,9 @@ C$$$
 
       NAMELIST /NAMLST/ HONOR_FLAGS, PRINT_52, PRINT_53, PRINT_60, TEST
 
-      CALL W3TAGB('PREPOBS_CQCVAD',2013,0036,0031,'NP22')
+      CALL W3TAGB('PREPOBS_CQCVAD',2014,0015,0031,'NP22')
 
-      PRINT *, ' ==> WELCOME TO CQCVAD, VERSION 2013-02-05 <=='
+      PRINT *, ' ==> WELCOME TO CQCVAD, VERSION 2014-01-15 <=='
       PRINT *, ' '
 
 C  Set up default values for namelist switches
@@ -273,8 +278,8 @@ C  --------------------------------------
       END
 
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
-C                .      .    .                                       .
-C SUBPROGRAM:    BLOCK DATA
+C
+C SUBPROGRAM: BLOCK DATA
 C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1999-08-18
 C
 C ABSTRACT: BLOCK DATA
@@ -318,9 +323,9 @@ C$$$
       END
 
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
-C                .      .    .                                       .
-C SUBPROGRAM:    COMSTAT
-C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1999-08-18
+C
+C SUBPROGRAM: COMSTAT
+C   PRGMMR: S. Melchior      ORG: NP22       DATE: 2014-01-15
 C
 C ABSTRACT: COMPUTE STATISTICS FOR HEIGHT-TIME INCREMENT INTERPOLATION.
 C
@@ -332,6 +337,9 @@ C       TIDY UP THE CODE. RENAMED NE TO NME TO EASE NAVIGATION AND
 C       FOR CLARIFICATION AS NE IS ALSO USED FOR INEQUALITY
 C       TESTING (.NE.). INCREASED NRPT FROM 80000 TO 160000 TO
 C       ACCOMMODATE LEVEL2 FORMAT VADWND DATA.
+C 2014-01-15  S. Melchior  Increased NRPT (total number of levels
+C       amongst all VAD reports that can be processed) from 160000 to
+C       500000 to accommodate Level2 format VAD wind data.
 C
 C USAGE:    CALL COMSTAT
 C
@@ -528,8 +536,8 @@ C  -------------
       END
 
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
-C                .      .    .                                       .
-C SUBPROGRAM:    CSTATS
+C
+C SUBPROGRAM: CSTATS
 C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1999-08-18
 C
 C ABSTRACT: CALCULATE MEANS, STANDARD DEVIATIONS, COVARIANCE, AND
@@ -606,8 +614,8 @@ C  ----------------------------------------------------------------
       END
 
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
-C                .      .    .                                       .
-C SUBPROGRAM:    CUMPROB
+C
+C SUBPROGRAM: CUMPROB
 C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1999-08-18
 C
 C ABSTRACT: FOR A GIVEN X, RETURN THE CUMULATIVE PROBABILITY FOR
@@ -656,8 +664,8 @@ C  USE LINEAR INTERPOLATION IN A TABLE.
       END
 
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
-C                .      .    .                                       .
-C SUBPROGRAM:    ANLWT
+C
+C SUBPROGRAM: ANLWT
 C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 2000-01-07
 C
 C ABSTRACT: FOR A GIVEN X>0., RETURN THE ANALYSIS WEIGHT FOR AN
@@ -735,8 +743,8 @@ cwgc  ENDIF
       END
 
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
-C                .      .    .                                       .
-C SUBPROGRAM:    DISTR       CALCULATE MOMENTS OF DISTRIBUTION
+C
+C SUBPROGRAM: DISTR
 C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1991-07-23
 C
 C ABSTRACT: FOR GIVEN DATA, CALCULATE THE 0TH THROUGH 4TH MOMENTS.
@@ -998,9 +1006,9 @@ C  ----------------------------------------------------
       END
 
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
-C                .      .    .                                       .
-C SUBPROGRAM:    EVNOUT
-C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2001-10-08
+C
+C SUBPROGRAM: EVNOUT
+C   PRGMMR: S. Melchior      ORG: NP22       DATE: 2014-01-15
 C
 C ABSTRACT: THE PRESENT REPORT IS IN /SINGLE/ AND STNID WITH INDICES
 C   FROM NUM1 TO NUM2.  FOLLOWING CODE WILL LOOK AT THE EVENTS
@@ -1026,9 +1034,15 @@ C       NAVIGATION AND FOR CLARIFICATION SINCE NE IS USED FOR
 C       INEQUALITY TESTING (.NE.). INCREASED NRPT FROM 80000 TO
 C       160000 TO ACCOMMODATE LEVEL2 FORMAT VADWND DATA.
 C 2012-03-05  D. KEYSER   UPDATED PROCESSING OF RADAR STATION IDS TO
-C       ACCOMMODATE LEVEL 2 VAD WIND DATA.  THE LEVEL 2 VAD WIND DATA COMES
-C       IN WITH THE STATION ID FORMATTED WITH ONLY 4 CHARACTERS WHEREAS
-C       LEGACY RADAR CODED VAD WIND DATA STATION IDS HAVE 7 CHARACTERS.
+C       ACCOMMODATE LEVEL 2 VAD WIND DATA.  THE LEVEL 2 VAD WIND DATA
+C       COMES IN WITH THE STATION ID FORMATTED WITH ONLY 4 CHARACTERS
+C       WHEREAS LEGACY RADAR CODED VAD WIND DATA STATION IDS HAVE 7
+C       CHARACTERS.
+C 2014-01-15  S. Melchior  Increased NRPT (total number of levels
+C       amongst all VAD reports that can be processed) and NEVNT (total
+C       number of events amongst all VAD reports that can be processed)
+C       both from 160000 to 500000 to accommodate Level2 format VAD
+C       wind data.
 C
 C USAGE:    CALL EVNOUT(NUM1,NUM2,NLV)
 C   INPUT ARGUMENT LIST:
@@ -1096,7 +1110,7 @@ C  ----------------
       ETYP = 0
       NEVN = 0
       loop1: do n=num1,num2
-       DO IEV=1,NME !  nme max is nev and nevnt (both 80k)
+       DO IEV=1,NME !  nme max is nev and nevnt
          IF(SIDEV(IEV).EQ.STNID(N) .AND.
      &      ABS(HTEV(IEV)-ZOB(N)).LT.10. .AND.
      &      TIMEV(IEV).EQ.TIM(N)) THEN
@@ -1181,8 +1195,8 @@ C  ------------------------------------------------------------------
       END
 
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
-C                .      .    .                                       .
-C SUBPROGRAM:    EVENTW      WRITE A WIND EVENT.
+C
+C SUBPROGRAM: EVENTW
 C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1997-05-23
 C
 C ABSTRACT: COMPUTE EXPANSION FACTOR FOR CORECT.
@@ -1263,9 +1277,9 @@ C  ----------------
       END
 
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
-C                .      .    .                                       .
-C SUBPROGRAM:    GETDAT
-C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 2001-10-08
+C
+C SUBPROGRAM: GETDAT
+C   PRGMMR: S. Melchior      ORG: NP22       DATE: 2014-01-15
 C
 C ABSTRACT: READ PREPBUFR DATA
 C
@@ -1285,6 +1299,9 @@ C       CORRECTED LOGIC TO HANDLE SITUATIONS WHEN THE SUBSET IS
 C       VADWND BUT THE NUMBER OF LEVELS (NUM) EXCEEDS NRPT.  
 C       INCREASED NRPT FROM 80000 TO 160000 TO ACCOMMODATE LEVEL2
 C       FORMAT VADWND DATA.
+C 2014-01-15  S. Melchior  Increased NRPT (total number of levels
+C       amongst all VAD reports that can be processed) from 160000 to
+C       500000 to accommodate Level2 format VAD wind data.
 C
 C USAGE:    CALL GETDAT(ITIME)
 C   INPUT ARGUMENT LIST:
@@ -1590,8 +1607,8 @@ C  -------------------------------------
       END
 
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
-C                .      .    .                                       .
-C SUBPROGRAM:    GETOBV      READ DATA FOR 1 OBSERVATION
+C
+C SUBPROGRAM: GETOBV
 C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1997-03-18
 C
 C ABSTRACT: Read data for a single observation. Place the data in
@@ -1653,8 +1670,8 @@ C  -----------
       END
 
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
-C                .      .    .                                       .
-C SUBPROGRAM:    HT
+C
+C SUBPROGRAM: HT
 C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1999-08-18
 C
 C ABSTRACT: COMPUTE VERTICAL INDEX FOR HEIGHT
@@ -1704,9 +1721,9 @@ C$$$
       END
 
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
-C                .      .    .                                       .
-C SUBPROGRAM:    INCDIST
-C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1999-08-18
+C
+C SUBPROGRAM: INCDIST
+C   PRGMMR: S. Melchior      ORG: NP22       DATE: 2014-01-15
 C
 C ABSTRACT: COMPUTE STATISTICS AND DISTRIBUTIONS FOR INCREMENTS
 C
@@ -1724,6 +1741,9 @@ C 2012-07-23  S. MELCHIOR Added integer "icntmx" to define the max
 C       value of icnt in the 4-nested do loop that hinges on the
 C       number of levels (NLEV), the number of stations (NST), the
 C       number of times (NTIMES), and the number of increments (NINC).
+C 2014-01-15  S. Melchior  Increased NRPT (total number of levels
+C       amongst all VAD reports that can be processed) from 160000 to
+C       500000 to accommodate Level2 format VAD wind data.
 C
 C USAGE:    CALL INCDIST
 C
@@ -1892,9 +1912,9 @@ c       WRITE(6,503) (IZLEV(L), (NMS(I,L,2,IS),I=1,23), L=1,NLEV)
       END
 
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
-C                .      .    .                                       .
-C SUBPROGRAM:    INCR
-C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1999-08-18
+C
+C SUBPROGRAM: INCR
+C   PRGMMR: S. Melchior      ORG: NP22       DATE: 2014-01-15
 C
 C ABSTRACT: Compute increments (observation - guess)
 C
@@ -1905,6 +1925,9 @@ C       TIDY UP THE CODE. RENAMED NE TO NME TO EASE NAVIGATION AND
 C       FOR CLARIFICATION AS NE IS USED FOR INEQUALITY TESTING
 C       (.NE.). INCREASED NRPT FROM 80000 TO 160000 TO ACCOMMODATE
 C       LEVEL2 FORMAT VADWND DATA.
+C 2014-01-15  S. Melchior  Increased NRPT (total number of levels
+C       amongst all VAD reports that can be processed) from 160000 to
+C       500000 to accommodate Level2 format VAD wind data.
 C
 C USAGE:    CALL INCR
 C
@@ -2003,8 +2026,8 @@ C  Since guess is missing, mark all data as bad
       END
 
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
-C                .      .    .                                       .
-C SUBPROGRAM:    INDEXX
+C
+C SUBPROGRAM: INDEXX
 C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1999-08-18
 C
 C ABSTRACT: Indexes an array arr(1:n), i.e., outputs the array
@@ -2116,8 +2139,8 @@ C     input quantities n and arr are not changed.
       END
 
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
-C                .      .    .                                       .
-C SUBPROGRAM:    INIT
+C
+C SUBPROGRAM: INIT
 C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1999-08-18
 C
 C ABSTRACT: Initialize some quantities.
@@ -2167,8 +2190,8 @@ C$$$
       END
 
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
-C                .      .    .                                       .
-C SUBPROGRAM:    MATR
+C
+C SUBPROGRAM: MATR
 C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1999-08-18
 C
 C ABSTRACT: SET UP THE MATRICES FOR THE HEIGHT-TIME OI ANALYSIS
@@ -2288,9 +2311,9 @@ C  -------------------------
       END
 
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
-C                .      .    .                                       .
-C SUBPROGRAM:    DMA
-C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2001-10-08
+C
+C SUBPROGRAM: DMA
+C   PRGMMR: S. Melchior      ORG: NP22       DATE: 2014-01-15
 C
 C ABSTRACT: THIS IS THE DECISION MAKING ALGORITHM.  IT DETERMINES
 C   THE DATA QUALITY.
@@ -2309,6 +2332,11 @@ C       NE TO NME FOR EASE OF NAVIGATION AND ALSO FOR CLARIFICATION
 C       AS NE IS USED FOR INEQUALITY TESTING (.NE.). INCREASED NRPT
 C       FROM 80000 TO 160000 TO ACCOMMODATE LEVEL2 FORMAT VADWND
 C       DATA.
+C 2014-01-15  S. Melchior  Increased NRPT (total number of levels
+C       amongst all VAD reports that can be processed) and NEVNT (total
+C       number of events amongst all VAD reports that can be processed)
+C       both from 160000 to 500000 to accommodate Level2 format VAD
+C       wind data.
 C
 C USAGE:    CALL DMA(HONOR_FLAGS)
 C   INPUT ARGUMENT LIST:
@@ -2596,8 +2624,8 @@ C  ------------------------------------------------------
       END
 
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
-C                .      .    .                                       .
-C SUBPROGRAM:    RESDIST
+C
+C SUBPROGRAM: RESDIST
 C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1999-08-18
 C
 C ABSTRACT: COMPUTE STATISTICS AND DISTRIBUTIONS OF RESIDUALS OF
@@ -2723,8 +2751,8 @@ C  -------------------
       END
 
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
-C                .      .    .                                       .
-C SUBPROGRAM:    SELECT
+C
+C SUBPROGRAM: SELECT
 C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1999-08-18
 C
 C ABSTRACT: SELECT DATA TO BE USED IN Z-T OI ANALYSIS
@@ -2825,8 +2853,8 @@ C  ------------------------------------------
       END
 
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
-C                .      .    .                                       .
-C SUBPROGRAM:    SOLVE
+C
+C SUBPROGRAM: SOLVE
 C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1999-08-18
 C
 C ABSTRACT:  SOLVE THE MATRIX PROBLEMS
@@ -2876,8 +2904,8 @@ C    THE ANALYSIS WEIGHTS ON OUTPUT FROM DRCTSL.
       END
 
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
-C                .      .    .                                       .
-C SUBPROGRAM:    SORTD
+C
+C SUBPROGRAM: SORTD
 C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1999-08-18
 C
 C ABSTRACT: SORT D, L, J, N, ALL ACCORDING TO ORDER OF D.
@@ -3039,8 +3067,8 @@ C  ---------------------
       END
 
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
-C                .      .    .                                       .
-C SUBPROGRAM:    ZTOI
+C
+C SUBPROGRAM: ZTOI
 C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1999-08-18
 C
 C ABSTRACT: PERFORM OI ANALYSIS IN Z-T PLANE, ONE STATION AT A TIME.
@@ -3099,8 +3127,8 @@ C  -------------
       END
 
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
-C                .      .    .                                       .
-C SUBPROGRAM:    ZTRES
+C
+C SUBPROGRAM: ZTRES
 C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1999-08-18
 C
 C ABSTRACT: SOLVE FOR THE HEIGHT-TIME OI ANALYSIS RESIDUALS
