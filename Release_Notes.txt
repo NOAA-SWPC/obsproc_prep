@@ -77,7 +77,7 @@ files:
     - Imports new environment variable $HOMEobsproc_network which points to
       directory path for network-specific prep subdirectories under version
       control (in production this is normally /nwprod/obsproc_NETWORK.vX.Y.Z
-      where NETWORK is, e.g., global, nam, rap, rtma, urma, and x.y.z is
+      where NETWORK is, e.g., global, nam, rap, rtma, urma, and X.Y.Z is
       version number being used, usually the latest).  This replaces
       /nw${envir}.
     - Removed all references to RUC network (obsolete).
@@ -132,11 +132,15 @@ files:
       processed and total number of events amongst all VAD reports that can be
       processed from 160000 to 500000 to accommodate combined legacy and Level
       2 format VAD wind data.
-    - ???? The product of the number of stations reporting, the number of
-      reporting times in the dataset time span, and the number of computer
-      increments is now dynamically computed to allow statistical examination
-      of VAD wind data to be completed - this is needed with the addition of
-      Level 2 format VAD wind data,
+    - Generated a new dynamic variable "icntmx" (product of number of stations
+      reporting (max=200), number of reporting times in the dataset time span 
+      (max=6), and the number of data type increments (max=3, but more
+      realistically 2, u and v)) to allocate the upper limit of a 4-nested DO
+      loop in subroutines INCDIST and RESIDST.  The static limit of 1000 was
+      occasionally being exceeded.
+      BENEFIT: This change does not affect the output prepbufr file but it
+               does improve the statistical evaluation of legacy and Level 2
+               VAD wind data.
    prepobs_prepacqc:
     - In final subroutine which copies all BUFR messages from input to output
       PREPBUFR file (including aircraft reports undated by this program), moved
@@ -152,10 +156,11 @@ files:
                reduced due to a fiber cut and no reports survived the time-
                window check.
    prepobs_prepdata:
+    prepdata:
     - !!! 
 xxx
 -- under construction --
-   iw3unpbf:
+    iw3unpbf:
     DK only:
     - Added ability to read in and process percent confidence based on EUMETSAT
       Quality Indicator with and without forecast for NESDIS GOES winds pulled
@@ -193,10 +198,23 @@ XXX
    prepobs_cqc_statbge, prepobs_landc, syndat_weight:
     - No changes to contents.
    prepobs_prep.bufrtable:
-    - !!!
+    - Added two new mnemonics to Table B: Satellite Zenith Angle (SAZA), Mean
+      Sea-Level Indicator (PMIN) 
+    - Added SAZA to the SATWND mnemonic sequence
+    - Added <WSPD_SEQ> to SFCSHP mnemonic sequence
+    - Added <WSPD_SEQ> and <PMSL_SEQ> to MSONET mnemonic sequence
+    - Added PMIN to PMSL_SEQ mnemonic sequence
+    - Changed TSB (Report Subtype) bits from 10 to 14
+    - Added SAZA and PMIN particulars (scale, reference, bit, units)
+    BENEFIT: The above noted changes will allow for wind speed (SOB) and wind
+             direction (DDO) to be encoded into prepbufr reports, allow for  
+             the derivation of mean sea-level pressure for RTMA and URMA,
+             and encode satellite zenith angle into a prepbufr file for all
+             SATWND types for use by GSI.
    syndat_syndata.slmask.t126.gaussian:
     - Renamed from syndat_slmask.t126.gaussian to distinguish from file in
       /nwprod/tropcy_qc_reloc.v*/fix 
+    - No changes to contents.
 
 
  Output changes:
@@ -228,8 +246,8 @@ XXX
    obsproc_global.v2.0.0, obsproc_nam.v2.0.0, obsproc_rap.v2.0.0
    obsproc_rtma.v2.0.0, obsproc_urma.v2.0.0, and ??? (any others?)
 
-!!!This must be implemented simultaneously with NCEPLIBS (glbevents.f) or 
-   immediately afterward NCEPLIBS (gblevents.f).
+   This must be implemented simultaneously with or immediately afterward the 
+   w3emc_v2.2.0 implementation.
 
    Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
    needed.
