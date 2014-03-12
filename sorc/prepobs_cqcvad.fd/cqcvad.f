@@ -1738,7 +1738,7 @@ C       RENAMED NE TO NME TO EASE NAVIGATION AND FOR CLARIFICATION AS
 C       NE IS USED FOR INEQUALITY TESTING (.NE.). INCREASED NRPT FROM
 C       80000 TO 160000 TO ACCOMMODATE LEVEL2 FORMAT VADWND DATA.
 C 2014-01-15  S. Melchior Added integer "icntmx" to define the max
-C       value of icnt in the 4-nested do loop that hinges on the
+C       value of icnt in the multi-nested do loop that hinges on the
 C       number of levels (NLEV), the number of stations (NST), the
 C       number of times (NTIMES), and the number of increments (NINC).
 C       Increased NRPT (total number of levels amongst all VAD reports
