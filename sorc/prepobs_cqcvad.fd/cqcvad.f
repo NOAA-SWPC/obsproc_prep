@@ -1737,13 +1737,13 @@ C       ADDED DIAGNOSTIC OUTPUT STATEMENTS WHEN LIMITS ARE EXCEEDED.
 C       RENAMED NE TO NME TO EASE NAVIGATION AND FOR CLARIFICATION AS
 C       NE IS USED FOR INEQUALITY TESTING (.NE.). INCREASED NRPT FROM
 C       80000 TO 160000 TO ACCOMMODATE LEVEL2 FORMAT VADWND DATA.
-C 2012-07-23  S. MELCHIOR Added integer "icntmx" to define the max
+C 2014-01-15  S. Melchior Added integer "icntmx" to define the max
 C       value of icnt in the 4-nested do loop that hinges on the
 C       number of levels (NLEV), the number of stations (NST), the
 C       number of times (NTIMES), and the number of increments (NINC).
-C 2014-01-15  S. Melchior  Increased NRPT (total number of levels
-C       amongst all VAD reports that can be processed) from 160000 to
-C       500000 to accommodate Level2 format VAD wind data.
+C       Increased NRPT (total number of levels amongst all VAD reports
+C       that can be processed) from 160000 to 500000 to accommodate
+C       Level2 format VAD wind data.
 C
 C USAGE:    CALL INCDIST
 C
@@ -2640,8 +2640,8 @@ C       PARAMETERS NDIV=23, NTIMES=6, NINC=3 TO TIDY UP THE CODE.
 C       ADDIED DIAGNOSTIC OUTPUT STATEMENTS FOR INSTANCES WHEN LIMITS
 C       ARE EXCEEDED. RENAMED NE TO NME FOR EASE OF NAVIGATION AND 
 C       FOR CLARIFICATION AS NE IS USED FOR INEQUALITY TESTING (.NE.).
-C 2012-07-23  S. MELCHIOR Added integer "icntmx" to define the max
-C       value of icnt in the 4-nested do loop that hinges on the
+C 2014-01-15  S. Melchior Added integer "icntmx" to define the max
+C       value of icnt in the multi-nested do loop that hinges on the
 C       number of levels (NLEV), the number of stations (NST), the
 C       number of times (NTIMES), and the number of increments (NINC).
 C
