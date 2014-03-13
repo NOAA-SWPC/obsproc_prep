@@ -205,11 +205,25 @@ files:
       that format.
       BENEFIT: Level 2 format VADWND data can now be processed and encoded
                into the prepbufr file.
-!!! - [SM: explanation of code changes forthcoming ...]
+    - Added logic to retain wind information for any data type in SFCDTA 
+      subroutine.  If speed is missing or direction is missing, set 
+      IMSG_DIR=1.  If both speed and direction are missing, skip onto 
+      surface dewpoint depression evaluation.  Added statements to store 
+      wind speed and direction quality marks and obs in words 5 and 6 of 
+      MOBS array for all surface data types.  Added statement to store wind
+      direction ob in word 5 of mobs array for all surface data types 
+      (previously was only stored for metars).  Updated OBSSTR1(9,10) to
+      hold DDO rather than NUL (adpsfc), OBSSTR1(10,11) to hold SOB rather
+      than FFO (sfcshp), OBSSTR1(15,10 & 11) to hold DDO and SOB rather than
+      NUL and NUL (msonet), QMSSTR(10,6) to hold SQM rather than NUL (sfcshp),
+      and QMSSTR(15,6) to hold SQM rather than NUL (msonet).  Added statements
+      to save wind direction and speed quality marks to qms5 and qms6 arrays.
+      Added multiplication factor (for proper units) for obs(11,nlv) for 
+      surface wind obs. 
       BENEFIT: Surface data reports that have incomplete wind direction or 
                speed information will now be retained so that any other
-               observation data may be processed and encoded into the prepbufr
-               file. 
+               observational data may be processed and encoded into the 
+               prepbufr file. 
     iw3unpbf:
 !!! DK only:
     - Added ability to read in and process percent confidence based on EUMETSAT
