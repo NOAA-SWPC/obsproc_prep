@@ -32,6 +32,7 @@ files:
 &*obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_mer.f
 &*obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
 &*obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
+ *obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
  *obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
  *obsproc_prep/sorc/prepobs_prepdata.fd/makefile
  *obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
@@ -131,17 +132,17 @@ files:
     - Increased total number of levels amongst all VAD reports that can be
       processed and total number of events amongst all VAD reports that can be
       processed from 160000 to 500000.
-      BENEFIT: This increase will accommodate both legacy and Level 2 format
-               VAD wind data.
+      BENEFIT: This increase will accommodate both (Radar Coded Message) and
+               Level 2 decoder VAD wind reports.
     - Generated a new dynamic variable "icntmx" (product of number of stations
-      reporting (max=200), number of reporting times in the dataset time span 
+      reporting (max=200), number of reporting times in the dataset time span
       (max=6), and the number of data type increments (max=3, but more
       realistically 2, u and v)) to allocate the upper limit of a multi-nested
       DO loop in subroutines INCDIST and RESIDST.  The static limit of 1000
       was occasionally being exceeded.
-      BENEFIT: This change does not affect the output prepbufr file but it
-               does improve the statistical evaluation of legacy and Level 2
-               VAD wind data.
+      BENEFIT: This change does not affect the output PREPBUFR file but it does
+               improve the statistical evaluation of both legacy (Radar Coded
+               Message) and Level 2 decoder VAD wind reports.
    prepobs_prepacqc:
     - In final subroutine which copies all BUFR messages from input to output
       PREPBUFR file (including aircraft reports undated by this program), moved
@@ -157,115 +158,133 @@ files:
                reduced due to a fiber cut and no reports survived the time-
                window check.
    prepobs_prepdata:
-    prepdata:
-    - Adjusted FWINDO, JSURFM,  JSURFW, and npkrpt  from 11 elements to 12.
-      Added twelfth element to sfc ob type array. Set ITYP=12 for Coast Guard
-      tide gauge, adjusted RECCO to ITYP=13, and adjusted OTHER to be ITYP=30.
-      Updated JTYPE to include the new dump report type 534 for Coast Guard 
-      tide gauge data and to adjust OTHER from 13 to 30.  In subroutine ISSEL
-      adjusted I=13 to I=30 and adjusted all I=12  statements to I=13.
-      BENEFIT: Now Coast Guard tide gauge reports are available to be encoded
-               into the prepbufr file for all networks that process the SFCSHP
-               dump file.
-    - Added 'npkrpt' and 'ipstnflg.'  Increased number of possible mass and
-      wind report types from 72 to 74.  Added report types 292-295 to JITSW
-      and added their descriptive names to NAMEW and NAMEM.  Moved PFRALT_save
-      above mesonet conditional in sfcdta subroutine. Added initialization of
-      ipstnflg=0 prior to unpacking each report with UNPREPBF.  Added logic to
-      set ipstnflg=1 for the three following cases: 1) npkrpt=.true. for atlas
-      buoys, 2) npkrpt=.true. for mesonets (and set pressure and moisture 
-      quality marks to 3), and 3) npkrpt=.true. for all other surface data
-      types (and retain temperature, estimate station pressure, and set 
-      pressure and moisture quality marks to 3). Added logic to force moisture
-      quality mark to a minimum of 3 for prepbufr report type 183 (pstn is
-      estimated).  Added logic to reset moisture quality mark when ipstnflg=0 
-      for all surface data types.  Added logic to assign new prepbufr report
-      types 192-195 and 292-295 based on dump type and if ipstnflg=1 for
-      surface data.  Updated KTYP in subroutine W3FIZZ to define the data type 
-      assigned to new prepbufr report types 192-195 and 292-295.  Added logic
-      to handle storage of station pressure based on whether or not ipstnflg=0.
-      BENEFIT: ADPSFC, SFCSHP, and MSONET reports that do not contain station
-               pressure information are now retained (previously, they were
-               discarded).
-    - Updated OBSSTR2(9,3) to hold PMIN rather than NUL.  Updated 
-      OBSSTR2(10,3) to hold PMIN rather than NUL.  Added statement to save
-      PMIN=0 in ob2 array.
-      BENEFIT: More complete and thorough pressure information for surface
-               data is available by deriving mean sea level pressure when 
-               adequate environmental information is available for networks
-               RTMA and URMA.  A majority of changes for this new feature are
-               in w3emc libs code, gblevents.f
-    - Modified subroutine GETC06 to skip over prepbufr encoding if U- or
-      V-comp of wind exceeds 32767 (a bufr bit limitation).
-      BENEFIT: erroneously large upper-air wind reports will no longer be 
-               encoded into the prepbufr file.
-    - Subtype is set to 2 for Level 2 format VADWND data.  Logic is set up to
-      not apply a factor to the U- and V- component of the wind and to not
-      convert the data to U- and V- components since the data is natively in
-      that format.
-      BENEFIT: Level 2 format VADWND data can now be processed and encoded
-               into the prepbufr file.
-    - Added logic to retain wind information for any data type in SFCDTA 
-      subroutine.  If speed is missing or direction is missing, set 
-      IMSG_DIR=1.  If both speed and direction are missing, skip onto 
-      surface dewpoint depression evaluation.  Added statements to store 
-      wind speed and direction quality marks and obs in words 5 and 6 of 
-      MOBS array for all surface data types.  Added statement to store wind
-      direction ob in word 5 of mobs array for all surface data types 
-      (previously was only stored for metars).  Updated OBSSTR1(9,10) to
-      hold DDO rather than NUL (adpsfc), OBSSTR1(10,11) to hold SOB rather
-      than FFO (sfcshp), OBSSTR1(15,10 & 11) to hold DDO and SOB rather than
-      NUL and NUL (msonet), QMSSTR(10,6) to hold SQM rather than NUL (sfcshp),
-      and QMSSTR(15,6) to hold SQM rather than NUL (msonet).  Added statements
-      to save wind direction and speed quality marks to qms5 and qms6 arrays.
-      Added multiplication factor (for proper units) for obs(11,nlv) for 
-      surface wind obs. 
-      BENEFIT: Surface data reports that have incomplete wind direction or 
-               speed information will now be retained so that any other
-               observational data may be processed and encoded into the 
-               prepbufr file. 
-    iw3unpbf:
-!!! DK only:
-    - Added ability to read in and process percent confidence based on EUMETSAT
-      Quality Indicator with and without forecast for NESDIS GOES winds pulled
-      from NESDIS server (which originally stored them in dump file explicitly
-      as "QIFY" and "QIFN" but later stored them both as before and as
-      replicated "PCCF" values as with v10 BUFR, and even later stored them
-      only as replicated "PCCF" values as with v10 BUFR) if they are present.
-      (Note: As noted, will also work if these are stored in replicated "PCCF"
-             values as with v10 BUFR, e.g., MODIS winds, AVHRR winds, JMA
-             winds, EUMETSAT winds.)
-    - Added ability to read in and process percent confidence based on NESDIS
-      Recursive Filter Function for types which might store it in dump file in
-      replicated "PCCF" values as with v10 BUFR (in this case NESDIS GOES
-      winds, MODIS winds, AVHRR winds, JMA winds - already in place for
-      EUMETSAT winds) if it is present.
-      (Note: Will still work if this is stored explicitly as "RFFL" as
-             originally with GOES winds pulled from NESDIS server.)
-    - Added ability to read in and process percent confidence based on NESDIS
-      Expected Error for types which might store it in dump file in replicated
-      "PCCF" values as with v10 BUFR (in this case MODIS or AVHRR winds) if it
-      is present.
-      (Note: Will still work if this is stored explicitly as "EEQF" as
-             originally with GOES winds pulled from NESDIS server.
-    - Now stores cloud-top/deep-layer indicator in byte 3 of header reserve
-      character word 1 for foreign-produced satellite winds (as already done
-      for NESDIS-produced satellite winds) - JMA and EUMETSAT imager water
-      vapor winds can now be of both types, before they were only cloud-top.
-    - Output array OBS2 increased from length 42 to 43 words, where word 43
-      contains satellite zenith angle (degrees, satwnd types only)
-    - Added new dump report type 534 for surface marine Coast Guard tide gauge
-      reports.
-      BENEFIT: Now Coast Guard tide gauge reports are available to be encoded
-               into the prepbufr file for all networks that process the SFCSHP
-               dump file.
+      prepdata:
+       - Adjusted FWINDO, JSURFM,  JSURFW, and npkrpt  from 11 elements to 12.
+         Added twelfth element to sfc ob type array. Set ITYP=12 for Coast
+         Guard tide gauge, adjusted RECCO to ITYP=13, and adjusted OTHER to be
+         ITYP=30. Updated JTYPE to include the new dump report type 534 for
+         Coast Guard tide gauge data and to adjust OTHER from 13 to 30.  In
+         subroutine ISSEL adjusted I=13 to I=30 and adjusted all I=12
+         statements to I=13.
+         BENEFIT: Now Coast Guard tide gauge reports are available to be
+                  encoded into the PREPBUFR file for all networks that process
+                  the SFCSHP dump file.
+       - Added 'npkrpt' and 'ipstnflg.'  Increased number of possible mass and
+         wind report types from 72 to 74.  Added report types 292-295 to JITSW
+         and added their descriptive names to NAMEW and NAMEM.  Moved
+         PFRALT_save above mesonet conditional in sfcdta subroutine.  Added
+         initialization of ipstnflg=0 prior to unpacking each report with
+         UNPREPBF.  Added logic to set ipstnflg=1 for the three following
+         cases: 1) npkrpt=.true. for atlas buoys, 2) npkrpt=.true. for mesonets
+         (and set pressure and moisture quality marks to 3), and 3) npkrpt=
+         .true. for all other surface data types (and retain temperature,
+         estimate station pressure, and set pressure and moisture quality marks
+         to 3). Added logic to force moisture quality mark to a minimum of 3
+         for PREPBUFR report type 183 (pstn is estimated).  Added logic to
+         reset moisture quality mark when ipstnflg=0 for all surface data
+         types.  Added logic to assign new PREPBUFR report types 192-195 and
+         292-295 based on dump type and if ipstnflg=1 for surface data.
+         Updated KTYP in subroutine W3FIZZ to define the data type assigned to
+         new PREPBUFR report types 192-195 and 292-295.  Added logic to handle
+         storage of station pressure based on whether or not ipstnflg=0.
+         BENEFIT: ADPSFC, SFCSHP, and MSONET reports that do not contain
+                  station pressure information are now retained (previously,
+                  they were discarded).
+       - Updated OBSSTR2(9,3) to hold PMIN rather than NUL.  Updated
+         OBSSTR2(10,3) to hold PMIN rather than NUL.  Added statement to save
+         PMIN=0 in ob2 array.
+         BENEFIT: More complete and thorough pressure information for surface
+                  data is available by deriving mean sea level pressure when
+                  adequate environmental information is available for networks
+                  RTMA and URMA.  A majority of changes for this new feature
+                  are in w3emc libs code, gblevents.f
+       - Modified subroutine GETC06 to skip over PREPBUFR encoding if U- or
+         V-comp of wind exceeds 32767 (a bufr bit limitation).
+         BENEFIT: erroneously large upper-air wind reports will no longer be
+                  encoded into the PREPBUFR file.
+       - Subtype is set to 2 for VAD wind reports from Level 2 decoder.  Logic
+         is set up to not apply a factor to the U- and V- component of the wind
+         and to not convert the data to U- and V- components since the data is
+         natively in that format.
+         BENEFIT: VAD wind reports from Level 2 decoder can now be processed
+                  and encoded into the PREPBUFR file.
+       - Added logic to retain wind information for any data type in SFCDTA
+         subroutine.  If speed is missing or direction is missing, set
+         IMSG_DIR=1.  If both speed and direction are missing, skip onto
+         surface dewpoint depression evaluation.  Added statements to store
+         wind speed and direction quality marks and obs in words 5 and 6 of
+         MOBS array for all surface data types.  Added statement to store wind
+         direction ob in word 5 of mobs array for all surface data types
+         (previously was only stored for metars).  Updated OBSSTR1(9,10) to
+         hold DDO rather than NUL (adpsfc), OBSSTR1(10,11) to hold SOB rather
+         than FFO (sfcshp), OBSSTR1(15,10 & 11) to hold DDO and SOB rather than
+         NUL and NUL (msonet), QMSSTR(10,6) to hold SQM rather than NUL
+         (sfcshp), and QMSSTR(15,6) to hold SQM rather than NUL (msonet).
+         Added statements to save wind direction and speed quality marks to
+         qms5 and qms6 arrays.  Added multiplication factor (for proper units)
+         for obs(11,nlv) for surface wind obs.
+         BENEFIT: Surface data reports that have incomplete wind direction or
+                  speed information will now be retained so that any other
+                  observational data may be processed and encoded into the
+                  PREPBUFR file.
+      iw3unpbf:
+   !!! - Added ability to read in and process percent confidence based on
+         EUMETSAT Quality Indicator with and without forecast for NESDIS GOES
+         winds pulled from NESDIS server (which originally stored them in dump
+         file explicitly as "QIFY" and "QIFN" but later stored them both as
+         before and as replicated "PCCF" values as with v10 BUFR, and even
+         later stored them only as replicated "PCCF" values as with v10 BUFR)
+         if they are present.
+         (Note: As noted, will also work if these are stored in replicated
+                "PCCF" values as with v10 BUFR, e.g., MODIS winds, AVHRR winds,
+                JMA winds, EUMETSAT winds.)
+   !!! - Added ability to read in and process percent confidence based on
+         NESDIS Recursive Filter Function for types which might store it in
+         dump file in replicated "PCCF" values as with v10 BUFR (in this case
+         NESDIS GOES winds, MODIS winds, AVHRR winds, JMA winds - already in
+         place for EUMETSAT winds) if it is present.
+         (Note: Will still work if this is stored explicitly as "RFFL" as
+                originally with GOES winds pulled from NESDIS server.)
+   !!! - Added ability to read in and process percent confidence based on
+         NESDIS Expected Error for types which might store it in dump file in
+         replicated "PCCF" values as with v10 BUFR (in this case MODIS or AVHRR
+         winds) if it is present.
+         (Note: Will still work if this is stored explicitly as "EEQF" as
+                originally with GOES winds pulled from NESDIS server.
+   !!! - Now stores cloud-top/deep-layer indicator in byte 3 of header reserve
+         character word 1 for foreign-produced satellite winds (as already done
+         for NESDIS-produced satellite winds) - JMA and EUMETSAT imager water
+         vapor winds can now be of both types, before they were only cloud-top.
+   !!! - Output array OBS2 creased from length 42 to 43 words, where word 43
+         contains satellite zenith angle (degrees, satwnd types only)
+       - Added new dump report type 534 for surface marine Coast Guard tide
+         gauge reports.
+         BENEFIT: Now Coast Guard tide gauge reports are available to be
+                  encoded into the prepbufr file for all networks that process
+                  the SFCSHP dump file.
+      w3unpkb7:
+   !!! - Modified to handle VAD wind reports from Level 2 decoder (subset
+         "NC002017") in addition to those from Radar Coded Message (subset
+         "NC002008")}.
+   !!! - Parameterized maximum number of levels allowed for each category and
+         calculated parameter "IDMAX" (size of output "RDATA" array) based on
+         these.  All of these are now placed in new include file
+         'inc_w3unpkb7.inc'.
+      inc_w3unpkb7.inc:
+   !!! - Maximum number of cat. 04 winds-by-height levels (excluding first,
+         surface, level) increased from 64 to 254 to account for more levels in
+         new VAD wind reports from Level 2 decoder.
+   !!! - Maximum number of cat. 11 wind profiler levels (excluding first,
+         surface, level) increased from 102 to 200 to account for some map
+         profilers with more levels than before.
+   !!! - The resulting "IDMAX" is now 2270, up from 1200 before.
 
  Fixed file changes:
    prepobs_cqc_statbge, prepobs_landc, syndat_weight:
     - No changes to contents.
    prepobs_prep.bufrtable:
     - Added two new mnemonics to Table B: Satellite Zenith Angle (SAZA), Mean
-      Sea-Level Indicator (PMIN) 
+      Sea-Level Indicator (PMIN)
     - Added SAZA to the SATWND mnemonic sequence
     - Added <WSPD_SEQ> to SFCSHP mnemonic sequence
     - Added <WSPD_SEQ> and <PMSL_SEQ> to MSONET mnemonic sequence
@@ -273,13 +292,13 @@ files:
     - Changed TSB (Report Subtype) bits from 10 to 14
     - Added SAZA and PMIN particulars (scale, reference, bit, units)
     BENEFIT: The above noted changes will allow for wind speed (SOB) and wind
-             direction (DDO) to be encoded into prepbufr reports, allow for  
+             direction (DDO) to be encoded into prepbufr reports, allow for
              the derivation of mean sea-level pressure for RTMA and URMA,
              and encode satellite zenith angle into a prepbufr file for all
              SATWND types for use by GSI.
    syndat_syndata.slmask.t126.gaussian:
     - Renamed from syndat_slmask.t126.gaussian to distinguish from file in
-      /nwprod/tropcy_qc_reloc.v*/fix 
+      /nwprod/tropcy_qc_reloc.v*/fix
     - No changes to contents.
 
 
@@ -312,7 +331,7 @@ files:
    obsproc_global.v2.0.0, obsproc_nam.v2.0.0, obsproc_rap.v2.0.0
    obsproc_rtma.v2.0.0, obsproc_urma.v2.0.0, and ??? (any others?)
 
-   This must be implemented simultaneously with or immediately afterward the 
+   This must be implemented simultaneously with or immediately after the
    w3emc_v2.2.0 implementation.
 
    Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
