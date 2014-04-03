@@ -159,74 +159,112 @@ files:
                window check.
    prepobs_prepdata:
       prepdata:
-       - Adjusted FWINDO, JSURFM,  JSURFW, and npkrpt  from 11 elements to 12.
-         Added twelfth element to sfc ob type array. Set ITYP=12 for Coast
-         Guard tide gauge, adjusted RECCO to ITYP=13, and adjusted OTHER to be
-         ITYP=30. Updated JTYPE to include the new dump report type 534 for
-         Coast Guard tide gauge data and to adjust OTHER from 13 to 30.  In
-         subroutine ISSEL adjusted I=13 to I=30 and adjusted all I=12
-         statements to I=13.
+       - Adjusted namelist switches FWINDO, JSURFM,  JSURFW, and NPKRPT (new)
+         from 11 elements to 12. Added twelfth element to sfc ob type array.
+         Set ITYP=12 for Coast Guard tide gauge.  Other minor changes.
          BENEFIT: Now Coast Guard tide gauge reports are available to be
                   encoded into the PREPBUFR file for all networks that process
                   the SFCSHP dump file.
-       - Added 'npkrpt' and 'ipstnflg.'  Increased number of possible mass and
-         wind report types from 72 to 74.  Added report types 292-295 to JITSW
-         and added their descriptive names to NAMEW and NAMEM.  Moved
-         PFRALT_save above mesonet conditional in sfcdta subroutine.  Added
-         initialization of ipstnflg=0 prior to unpacking each report with
-         UNPREPBF.  Added logic to set ipstnflg=1 for the three following
-         cases: 1) npkrpt=.true. for atlas buoys, 2) npkrpt=.true. for mesonets
-         (and set pressure and moisture quality marks to 3), and 3) npkrpt=
-         .true. for all other surface data types (and retain temperature,
-         estimate station pressure, and set pressure and moisture quality marks
-         to 3). Added logic to force moisture quality mark to a minimum of 3
-         for PREPBUFR report type 183 (pstn is estimated).  Added logic to
-         reset moisture quality mark when ipstnflg=0 for all surface data
-         types.  Added logic to assign new PREPBUFR report types 192-195 and
-         292-295 based on dump type and if ipstnflg=1 for surface data.
-         Updated KTYP in subroutine W3FIZZ to define the data type assigned to
-         new PREPBUFR report types 192-195 and 292-295.  Added logic to handle
-         storage of station pressure based on whether or not ipstnflg=0.
+       - Added namelist switch NPKRPT (12 elements, see above) which if TRUE,
+         does all of the following:
+            - Will process surface reports that would otherwise be tossed due
+              to their having a missing pstn.
+            - In order to still allow for a q calculation, these reports
+              temporarily estimate pstn from the U.S. Std. Atmosphere value and
+              assign it a minimum q.m. of 3 while also permanently assigning
+              the moisture q.m. a minimum value of 3.  In the end, pstn obs
+              ("POB") and q.m. "PQM") are encoded as missing for these reports.
+            - These reports are then assigned new PREPBUFR report types 192/292
+              (land SYNOP), 193/293 (land METAR), 194/294 (marine), 195/295
+              (mesonet).
+        !!! - ATLAS buoys (no pressure data) will be processed as before -
+              POB encoded with 1013.0 (mb), TYP=282, no mass report.
+        !!! - MESONETS with no reported pressure or altimeter will no longer
+              have "x" in character 8 of id and U.S. Std. Atmos. as POB, but
+              instead will be encoded with POB missing and TYP=195/295.
+            - New switch ipstnflg will be set to 1 (defaults to zero) to
+              indicate this report is being encoded with missing pressure.
+         Other minor changes as well.
          BENEFIT: ADPSFC, SFCSHP, and MSONET reports that do not contain
                   station pressure information are now retained (previously,
-                  they were discarded).
-       - Updated OBSSTR2(9,3) to hold PMIN rather than NUL.  Updated
-         OBSSTR2(10,3) to hold PMIN rather than NUL.  Added statement to save
-         PMIN=0 in ob2 array.
-         BENEFIT: More complete and thorough pressure information for surface
-                  data is available by deriving mean sea level pressure when
-                  adequate environmental information is available for networks
-                  RTMA and URMA.  A majority of changes for this new feature
-                  are in w3emc libs code, gblevents.f
-       - Modified subroutine GETC06 to skip over PREPBUFR encoding if U- or
-         V-comp of wind exceeds 32767 (a bufr bit limitation).
-         BENEFIT: erroneously large upper-air wind reports will no longer be
+                  they were discarded) when NPKRPT(x)=TRUE for surface ITYP=x.
+        !!!       Currently this is the case in the ..., ..., ... networks.
+       - Added new mnemonic "PMIN" (mean sea-level pressure indicator) which
+         is encoded with a value of zero for all reports with an observed mean
+         sea-level pressure encoded in "PMO" (currently could only by land
+         SYNOP or METAR). "PMIN" will be encoded with a value of 1 in w3emc
+         routine GBLEVENTS for cases where a mean sea-level pressure is
+         derived because it was encoded as missing in PREPBUFR file by
+         prepobs_prepdata in PREP (see below and docblock in GBLEVENTS for
+  !!!    more information); e.g., for all marine and mesonet reports right
+  !!!    now.  (See changes #1, 4 & 5 to fix file prepobs_prep.bufrtable
+         below.)  Other minor changes as well.
+         BENEFIT: Downstream codes will be able to differentiate between
+                  observed and derived PMO via the PMIN value.
+       - Modified subroutine GETC06 to skip over PREPBUFR encoding if u- or
+         v-comp of wind (m/sec * 100) exceeds 32767 (a BUFR bit limitation).
+         BENEFIT: Erroneously large upper-air wind reports will no longer be
                   encoded into the PREPBUFR file.
-       - Subtype is set to 2 for VAD wind reports from Level 2 decoder.  Logic
-         is set up to not apply a factor to the U- and V- component of the wind
-         and to not convert the data to U- and V- components since the data is
-         natively in that format.
+       - Modified to always encode wind speed obs in m/sec ("SOB") and wind
+         direction obs ("DDO") for all types of surface reports (even if one or
+         the other are missing but also if both are present). Removed logic
+         which encoded "SOB" only for METAR reports when direction was missing
+         and speed was .LE. 3 m/sec (direction was never encoded in any
+         situation for surface reports). Also removed encoding of "SQM" (wind
+         speed quality mark) for these types of METAR reports.  All surface
+         reports now encode wind qm as "WQM" regardless of whether or not it
+         also encodes direction, speed, u-comp or v-comp {note this change does
+         not affect non-surface reports which can still encode speed in knots
+         ("FFO") and direction ("DDO") when "UOB" and "VOB" are also encoded.
+         (See changes #3 & 7 to fix file prepobs_prep.bufrtable below.)  Other
+         minor changes as well.
+         BENEFIT: Surface data wind reports that have incomplete wind direction
+                  or speed information will now be retained so that at least
+                  wind speed (or direction) will be available to the GSI. The
+                  GSI (or other downstream processing) will now be able to
+                  pull SOB and DDO out of PREPBUFR for all surface reports.
+       - For all satellite-derived wind reports, now encodes PREPBUFR report
+         sub-type (mnemonic "TSB", previously missing) as BUFR satellite id
+         times 10 plus "satellite derived wind computation method ("SWCM" -
+         BUFR code table 0-02-023).  (See change #6 to fix file
+         prepobs_prep.bufrtable below.)
+         BENEFIT: Allows GSI to identify cloud-top vs. deep-layer WV winds and
+                  IR vs. visible winds for METEOSAT and JMA since, unlike
+                  NESDIS, both have same rpt types (250-JMA & 254-EUMETSAT for
+                  WV, 242/252-JMA & 243/253-EUMETSAT for IR/VIS)
+       - 1-dim array OBS2 returned from IW3UNPBF increased from 42 to 43 words
+         to hold satellite zenith angle (degrees, for all satwnd types),
+         encoded into PREPBUFR file (mnemonic "SAZA"). (See changes #1 & 2 to
+         fix file prepobs_prep.bufrtable below.)
+         BENEFIT: For use by GSI (to possibly screen satwnds with high SAZA
+                  values).
+       - Changed IRNMRK value for Unrestricted Mesoscale Analysis (URMA)
+         network from 9 to 10.
+         BENEFIT: Allows URMA to have its own RUN mark value, instead of
+                  combining it with the RTMA value of 9.
+       - Process new VAD wind reports from level 2 decoder. Do not convert
+         winds from dir/speed to u/v these are already u/v and are stored in
+         m/sec.
          BENEFIT: VAD wind reports from Level 2 decoder can now be processed
-                  and encoded into the PREPBUFR file.
-       - Added logic to retain wind information for any data type in SFCDTA
-         subroutine.  If speed is missing or direction is missing, set
-         IMSG_DIR=1.  If both speed and direction are missing, skip onto
-         surface dewpoint depression evaluation.  Added statements to store
-         wind speed and direction quality marks and obs in words 5 and 6 of
-         MOBS array for all surface data types.  Added statement to store wind
-         direction ob in word 5 of mobs array for all surface data types
-         (previously was only stored for metars).  Updated OBSSTR1(9,10) to
-         hold DDO rather than NUL (adpsfc), OBSSTR1(10,11) to hold SOB rather
-         than FFO (sfcshp), OBSSTR1(15,10 & 11) to hold DDO and SOB rather than
-         NUL and NUL (msonet), QMSSTR(10,6) to hold SQM rather than NUL
-         (sfcshp), and QMSSTR(15,6) to hold SQM rather than NUL (msonet).
-         Added statements to save wind direction and speed quality marks to
-         qms5 and qms6 arrays.  Added multiplication factor (for proper units)
-         for obs(11,nlv) for surface wind obs.
-         BENEFIT: Surface data reports that have incomplete wind direction or
-                  speed information will now be retained so that any other
-                  observational data may be processed and encoded into the
-                  PREPBUFR file.
+                  and encoded into the PREPBUFR file for use by GSI systems.
+       - Differentiate between Radar Coded Message and new Level 2 decoder VAD
+         wind reports via use of report subtype (TSB=1 for former and =2 for
+         latter).
+         BENEFIT: Needed by GSI since both types will be in PREPBUFR file.
+       - Increase the maximum number of levels that can be processed (MXLVL)
+         from 300 to 600.
+         BENEFIT: Allows runs that might include interpolated levels (e.g.,
+                  special AFOS graphics, IRNMRK=2) to still work properly as
+                  more and more radiosonde levels become available in the new
+                  RRS.
+       - No longer aborts with RC=99 if number of levels in a report exceeds
+         the limit of MXLVL (just updated from 300 to 600, see above)".
+         Instead, now skips the offending report(s) and, at the very end, posts
+         a message to the joblog file noting how many reports were skipped due
+         to this issue.
+         BENEFIT: PREP job will not longer stop dead in its tracks in this
+                  case. EMC's monitoring utilities will quickly detect this
+                  issue since it will be reported in the joblog file.
       iw3unpbf:
    !!! - Added ability to read in and process percent confidence based on
          EUMETSAT Quality Indicator with and without forecast for NESDIS GOES
@@ -275,27 +313,53 @@ files:
          surface, level) increased from 64 to 254 to account for more levels in
          new VAD wind reports from Level 2 decoder.
    !!! - Maximum number of cat. 11 wind profiler levels (excluding first,
-         surface, level) increased from 102 to 200 to account for some map
+         surface, level) increased from 102 to 200 to account for some MAP
          profilers with more levels than before.
    !!! - The resulting "IDMAX" is now 2270, up from 1200 before.
+      gblevents (in w3emc library - version ?????):
+       - Added new namelist switch "DOPMSL" which, when TRUE, derives pmsl
+         (mnemonic "PMO") from reported station pressure ("POB"), station
+         height/elevation ("ZOB") and the just-computed virtual temperature for
+         surface reports in cases when pmsl initially encoded in PREPBUFR file
+   !!!   by prepobs_prepdata is missing; e.g., for all marine and mesonet
+   !!!   reports right now (derivation done in subroutine GBLEVN08).  DOVTMP
+         must be TRUE and DOANLS must be FALSE ("PREVENTS" mode). The derived
+         pmsl either gets a quality mark ("PMQ") of 3 or inherits the station
+         pressure quality mark ("PQM"), whichever is greater. The value of the
+         pmsl indicator (new mnemonic "PMIN") is set to 1 to denote pmsl was
+         derived rather than observed.  The default for "DOPMSL" is FALSE
+         (normally only TRUE in RTMA and URMA runs).  It is forced to be FALSE
+         in "POSTEVENTS" mode (DOANLS=TRUE).
+         BENEFIT: More complete and thorough pressure information for surface
+                  data is available in the RTMA and URMA GSI via this derived
+                  pmsl since every report will have a pmsl now (whether
+                  observed or derived).  The RTMA/URMA GSI analyzes pmsl.
+       - In subroutine GBLEVN02, SFCSHP reports with calm winds and non-missing
+         background u- or v-component wind .ge. 5 m/sec are flagged with Q.M. 8
+         (event pgm "PREVENT", reason code 8).
+         BENEFIT: These data are suspect and will now not be assimilated by any
+                  GSI system.
 
  Fixed file changes:
    prepobs_cqc_statbge, prepobs_landc, syndat_weight:
     - No changes to contents.
    prepobs_prep.bufrtable:
-    - Added two new mnemonics to Table B: Satellite Zenith Angle (SAZA), Mean
-      Sea-Level Indicator (PMIN)
-    - Added SAZA to the SATWND mnemonic sequence
-    - Added <WSPD_SEQ> to SFCSHP mnemonic sequence
-    - Added <WSPD_SEQ> and <PMSL_SEQ> to MSONET mnemonic sequence
-    - Added PMIN to PMSL_SEQ mnemonic sequence
-    - Changed TSB (Report Subtype) bits from 10 to 14
-    - Added SAZA and PMIN particulars (scale, reference, bit, units)
-    BENEFIT: The above noted changes will allow for wind speed (SOB) and wind
-             direction (DDO) to be encoded into prepbufr reports, allow for
-             the derivation of mean sea-level pressure for RTMA and URMA,
-             and encode satellite zenith angle into a prepbufr file for all
-             SATWND types for use by GSI.
+    - 1) Added two new mnemonics to Table B: Satellite Zenith Angle (SAZA),
+         Mean Sea-Level Indicator (PMIN).
+    - 2) Added SAZA to the Table A SATWND mnemonic sequence.
+    - 3) Added existing Table D 1-bit repl. sequence <WSPD_SEQ> to Table A
+         SFCSHP and MSONET mnemonic sequences.
+    - 4) Added PMIN to PMSL_SEQ mnemonic sequence.
+    - 5) Added existing Table D 1-bit repl. sequence <PMSL_SEQ> to Table A
+         MSONET mnemonic sequence.
+    - 6) Increased Table B mnemonic TSB (Report Subtype) bit width from 10 to
+         14.
+    - 7) Removed Table B mnemonic SQM (wind speed quality marker).  It had been
+         a part of Table D sequence WSPD_SEQ.  It was used only by METAR
+         reports with missing direction and speed .LE. 3 m/sec when wind speed
+         obs was encoded in SOB.  Since all surface reports now encode SOB, the
+         wind quality marker (whether UOB and VOB are reported or not) will
+         just be encoded in existing menmonic WQM.
    syndat_syndata.slmask.t126.gaussian:
     - Renamed from syndat_slmask.t126.gaussian to distinguish from file in
       /nwprod/tropcy_qc_reloc.v*/fix

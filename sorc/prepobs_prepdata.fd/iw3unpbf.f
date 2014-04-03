@@ -1,7 +1,7 @@
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    IW3UNPBF
-C   PRGMMR: KEYSER           ORG: NP22       DATE: 2013-02-14
+C   PRGMMR: MELCHIOR         ORG: NP22       DATE: 2014-02-01
 C
 C ABSTRACT: READS AND UNPACKS ONE REPORT FROM INPUT NCEP BUFR DUMP
 C   FILE INTO SPECIFIED FORMAT.  FUNCTION RETURNS THE UNPACKED REPORT
@@ -350,6 +350,37 @@ C     BUFRLIB FUNCTION IBFMS TO DETERMINE IF A VARIABLE READ FROM BUFR
 C     FILE IS MISSING (I.E. RETURNED AS BMISS);  USE FORMATTED PRINT
 C     STATEMENTS WHERE PREVIOUSLY UNFORMATTED PRINT WAS USED (WCOSS
 C     SPLITS UNFORMATTED PRINT AT 80 CHARACTERS)
+C 2013-06-30  D. A. KEYSER -- ADDED ABILITY TO READ IN AND PROCESS
+C     PERCENT CONFIDENCE BASED ON EUMETSAT QUALITY INDICATOR WITH AND
+C     WITHOUT FORECAST FOR NESDIS GOES WINDS PULLED FROM NESDIS SERVER
+C     (WHICH ORIGINALLY STORED THEM IN DUMP FILE EXPLICITLY AS "QIFY"
+C     AND "QIFN" BUT LATER STORED THEM BOTH AS BEFORE AND AS REPLICATED
+C     "PCCF" VALUES AS WITH V10 BUFR, AND EVEN LATER STORED THEM ONLY
+C     AS REPLICATED "PCCF" VALUES AS WITH V10 BUFR) IF THEY ARE PRESENT
+C     (NOTE: AS NOTED, WILL ALSO WORK IF THESE ARE STORED IN REPLICATED
+C     "PCCF" VALUES AS WITH V10 BUFR, E.G., MODIS WINDS, AVHRR WINDS,
+C     JMA WINDS, EUMETSAT WINDS); ADDED ABILITY TO READ IN AND PROCESS
+C     PERCENT CONFIDENCE BASED ON NESDIS RECURSVE FILTER FUNCTION FOR
+C     TYPES WHICH MIGHT STORE IT IN DUMP FILE IN REPLICATED "PCCF"
+C     VALUES AS WITH V10 BUFR (IN THIS CASE NESDIS GOES WINDS, MODIS
+C     WINDS, AVHRR WINDS, JMA WINDS - ALREADY IN PLACE FOR EUMETSAT
+C     WINDS) IF IT IS PRESENT (NOTE: WILL STILL WORK IF THIS IS STORED
+C     EXPLICITLY AS "RFFL" AS ORIGINALLY WITH GOES WINDS PULLED FROM
+C     NESDIS SERVER); ADDED ABILITY TO READ IN AND PROCESS PERCENT
+C     CONFIDENCE BASED ON NESDIS EXPECTED ERROR FOR TYPES WHICH MIGHT
+C     STORE IT IN DUMP FILE IN REPLICATED "PCCF" VALUES AS WITH
+C     V10 BUFR (IN THIS CASE MODIS OR AVHRR WINDS) IF IT IS PRESENT
+C     (NOTE: WILL STILL WORK IF THIS IS STORED EXPLICITLY AS "EEQF" AS
+C     ORIGINALLY WITH GOES WINDS PULLED FROM NESDIS SERVER); NOW STORES
+C     CLOUD-TOP/DEEP-LAYER INDICATOR IN BYTE 3 OF HEADER RESERVE
+C     CHARACTER WORD 1 FOR FOREIGN-PRODUCED SATELLITE WINDS (AS ALREADY
+C     DONE FOR NESDIS-PRODUCED SATELLITE WINDS) - JMA AND EUMETSAT
+C     IMAGER WATER VAPOR WINDS CAN NOW BE OF BOTH TYPES, BEFORE THEY
+C     WERE ONLY CLOUD-TOP; OUTPUT ARRAY OBS2 INCR. FROM 42 TO 43 WORDS,
+C     WORD 43 CONTAINS SATELLITE ZENITH ANGLE (DEGREES, SATWND TYPES
+C     ONLY)
+C 2014-02-01  S. MELCHIOR  -- ADDED NEW REPORT TYPE (RTP) OF 534 FOR
+C     SURFACE MARINE COAST GUARD TIDE GAUGE REPORTS
 C
 C
 C USAGE:    II = IW3UNPBF(NUNIT, OBS, STNID, CRES1, CRES2, OBS2, OBS3,
@@ -403,7 +434,7 @@ C                TYPE OF DATA)
 C     CRES2    - CHARACTER*8 SINGLE REPORT CHARACTER RESERVE WORD 2
 C                (SEE DOCUMENTATION/COMMENTS IN THIS PROGRAM (VARIES BY
 C                TYPE OF DATA)
-C     OBS2     - 42-WORD ARRAY CONTAINING ADDITIONAL REPORT DATA NOT
+C     OBS2     - 43-WORD ARRAY CONTAINING ADDITIONAL REPORT DATA NOT
 C                PRESENT IN OBS ARRAY (DATA RESTRICTION INFO,
 C                ALTIMETER SETTING, SST, SINGLE-LEVEL SENSIBLE WEATHER
 C                ELEMENTS - STORED DIRECTLY FROM BUFR) (SEE REMARKS FOR
@@ -983,6 +1014,7 @@ C                                             (HARDWIRED TO 2 IF SST
 C                                             NON-MISSING, ELSE TO
 C                                             MISSING IF SST MISSING)
 C    42    MOISTURE QUALITY                   BUFR CODE TBL "0 33 026"
+C    43    SATELLITE ZENITH ANGLE             DEGREES
 C
 C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
@@ -1078,7 +1110,8 @@ C$$$
       PARAMETER (NUMCAT=8, LEVLIM=300)
 
       COMMON/IUBFAA/BMISS
-      COMMON/IUBFBB/KNDX,KSKACF(8),KSKUPA,KSKSFC,KSKSAT,KFLSAT(8),KSKSMI
+      COMMON/IUBFBB/KNDX,KSKACF(8),KSKUPA,KSKSFC,KSKSAT,KFLSAT(10),
+     $ KSKSMI
       COMMON/IUBFCC/SUBSET
       COMMON/IUBFDD/HDR(12),RCATS(50,LEVLIM,NUMCAT),IKAT(NUMCAT),
      $ MCAT(NUMCAT),NCAT(NUMCAT),LVDX(NUMCAT)
@@ -1098,7 +1131,7 @@ C$$$
       COMMON/IUBFQQ/NPRINT(0:255,0:200)
       COMMON/IUBFRR/IDATEB
  
-      DIMENSION    OBS(*),OBS2(42),OBS3(5,255,7),NOBS3(7),JWFILE(100)
+      DIMENSION    OBS(*),OBS2(43),OBS3(5,255,7),NOBS3(7),JWFILE(100)
 
       CHARACTER*8  STNID,STNIDX,CRES1,CRES1X,CRES2,CRES2X,DSNAME,DSNAMX,
      $ SUBSET_r,SUBSET
@@ -1193,7 +1226,7 @@ C  THE JWFILE INDICATOR: =0 IF UNOPENED; =2 IF OPENED AND NCEP BUFR
 C  ----------------------------------------------------------------
  
       IF(JWFILE(LUNIT).EQ.0) THEN
-         PRINT'(" ===> IW3UNPBF - WCOSS VERSION: 02-14-2013")'
+         PRINT'(" ===> IW3UNPBF - WCOSS VERSION: 02-01-2014")'
 
 C  DETERMINE MACHINE WORD LENGTH (BYTES) FOR BOTH INTEGERS AND REALS
 C  -----------------------------------------------------------------
@@ -1327,12 +1360,19 @@ C   this type/subtype with reports present for the diagnostic print
             IF(KFLSAT(6).GT.0)  PRINT'(" IW3UNPBF - TOTAL NO. OF GOES ",
      $       "SATWND REPORTS FLAGGED WITH WQM=13 DUE TO QI MANUAL/",
      $       "AUTOMATIC Q.C. INDICATOR >/= LIMqc = ",I0)', KFLSAT(6)
-            IF(KFLSAT(7).GT.0)  PRINT'(" IW3UNPBF - TOTAL NO. OF POES ",
-     $       "SATWND REPORTS FLAGGED WITH WQM=13 DUE TO QI CONFIDENCE ",
-     $       "FACTOR </= LIMqi % = ",I0)', KFLSAT(7)
-            IF(KFLSAT(8).GT.0)  PRINT'(" IW3UNPBF - TOTAL NO. OF POES ",
-     $       "SATWND REPORTS FLAGGED WITH WQM=13 DUE TO QI MANUAL/",
-     $       "AUTOMATIC Q.C. INDICATOR >/= LIMqc = ",I0)', KFLSAT(8)
+            IF(KFLSAT(7).GT.0)  PRINT'(" IW3UNPBF - TOTAL NO. OF MODIS",
+     $       " POES SATWND REPORTS FLAGGED WITH WQM=13 DUE TO QI ",
+     $       "CONFIDENCE FACTOR </= LIMqi % = ",I0)', KFLSAT(7)
+            IF(KFLSAT(8).GT.0)  PRINT'(" IW3UNPBF - TOTAL NO. OF MODIS",
+     $       " POES SATWND REPORTS FLAGGED WITH WQM=13 DUE TO QI ",
+     $       "MANUAL/AUTOMATIC Q.C. INDICATOR >/= LIMqc = ",I0)',
+     $       KFLSAT(8)
+            IF(KFLSAT(9).GT.0)  PRINT *, 'IW3UNPBF - TOTAL NO. OF ',
+     $       'AVHRR POES SATWND REPORTS FLAGGED WITH WQM=13 DUE TO QI ',
+     $       'CONFIDENCE FACTOR </= LIMqi % = ',KFLSAT(9)
+            IF(KFLSAT(10).GT.0)  PRINT *, 'IW3UNPBF - TOTAL NO. OF ',
+     $       'AVHRR POES SATWND REPORTS FLAGGED WITH WQM=13 DUE TO QI ',
+     $       'MANUAL/AUTOMATIC Q.C. INDICATOR >/= LIMqc = ',KFLSAT(10)
             IF(KSKSMI.GT.0)  PRINT'(" IW3UNPBF - TOTAL NO. OF SPSSMI ",
      $       "REPORTS TOSSED = ",I0)', KSKSMI
             IF(IFLSAT.EQ.1)  THEN
@@ -1417,7 +1457,7 @@ C***********************************************************************
  
       CHARACTER*8  SUBSET,DSNAMX,CBUFR
       CHARACTER*6  C01UBF
-      DIMENSION    OBS(MAXOBS),OBS2(42),OBS3(5,255,7),NOBS3(7),JDATE(5),
+      DIMENSION    OBS(MAXOBS),OBS2(43),OBS3(5,255,7),NOBS3(7),JDATE(5),
      $ JDUMP(5)
       INTEGER(8) IDSDAX_8,IDSDMX_8,JDUMP_8(5)
       LOGICAL  SUBSKP(0:255,0:200)
@@ -1517,6 +1557,8 @@ C            Y2K COMPLIANT (BUFRLIB DOES THE WINDOWING HERE)
          ENDIF
 
          CALL OPENBF(LUNIT,'IN',LUNIT)
+ccccccc  CALL OPENBF(0,'QUIET',1) ! will generate diagnostic print if
+ccccccc                           ! an embedded BUFR table is read
 
 C This next call, I believe, is needed only because SUBSET is not
 C  returned in DUMPBF ...
@@ -1645,7 +1687,7 @@ C***********************************************************************
  
       CHARACTER*(*) SUBSET
       CHARACTER*6   C01UBF,ADPSUB
-      DIMENSION     OBS(*),OBS2(42),OBS3(5,255,7),NOBS3(7)
+      DIMENSION     OBS(*),OBS2(43),OBS3(5,255,7),NOBS3(7)
 
       SAVE
  
@@ -2119,7 +2161,7 @@ C     ---> SORTS DATA LEVEL CATEGORIES
       COMMON/IUBFPP/LWI,LWR
 
       CHARACTER*8 STNIDX,CRES1X,CRES2X
-
+ 
       REAL(8)     BMISS
 
       DIMENSION RCAT(50,LEVLIM),SCAT(50,LEVLIM),IORD(LEVLIM),
@@ -2582,7 +2624,8 @@ C     ---> PROCESSES ADPUPA DATA (002/*, 004/005)
       PARAMETER (NUMCAT=8, LEVLIM=300)
 
       COMMON/IUBFAA/BMISS
-      COMMON/IUBFBB/KNDX,KSKACF(8),KSKUPA,KSKSFC,KSKSAT,KFLSAT(8),KSKSMI
+      COMMON/IUBFBB/KNDX,KSKACF(8),KSKUPA,KSKSFC,KSKSAT,KFLSAT(10),
+     $ KSKSMI
       COMMON/IUBFCC/SUBSET
       COMMON/IUBFDD/HDR(12),RCATS(50,LEVLIM,NUMCAT),IKAT(NUMCAT),
      $ MCAT(NUMCAT),NCAT(NUMCAT),LVDX(NUMCAT)
@@ -2595,10 +2638,10 @@ C     ---> PROCESSES ADPUPA DATA (002/*, 004/005)
  
       CHARACTER*80 HDSTR,LVSTR,QMSTR,RCSTR
       CHARACTER*8  SUBSET,SID,RSV1,RSV2
-      REAL(8)  RID_8,HDR_8(12),VSG_8(255),OBS2_8(42),OBS3_8(5,255,7),
+      REAL(8)  RID_8,HDR_8(12),VSG_8(255),OBS2_8(43),OBS3_8(5,255,7),
      $ RCT_8(5,255),ARR_8(10,255),RAT_8(255),RMORE_8(4),RGP10_8(255),
      $ PRGP10_8(255),RPMSL_8,RPSAL_8,BMISS,AMINIMUM_8
-      DIMENSION  OBS(*),OBS2(42),OBS3(5,255,7),NOBS3(7),RCT(5,255),
+      DIMENSION  OBS(*),OBS2(43),OBS3(5,255,7),NOBS3(7),RCT(5,255),
      $ ARR(10,255), RAT(255),RMORE(4),RGP10(255),PRGP10(255),P2(255),
      $ P8(255),P16(255)
 
@@ -3336,7 +3379,8 @@ C***********************************************************************
 C     ---> PROCESSES SURFACE AND MESONET DATA (000/*, 001/*, 255/*)
  
       COMMON/IUBFAA/BMISS
-      COMMON/IUBFBB/KNDX,KSKACF(8),KSKUPA,KSKSFC,KSKSAT,KFLSAT(8),KSKSMI
+      COMMON/IUBFBB/KNDX,KSKACF(8),KSKUPA,KSKSFC,KSKSAT,KFLSAT(10),
+     $ KSKSMI
       COMMON/IUBFCC/SUBSET
       COMMON/IUBFEE/POB(255),QOB(255),TOB(255),ZOB(255),DOB(255),
      $              SOB(255),VSG(255),OB8(255),CF8(255)
@@ -3347,10 +3391,10 @@ C     ---> PROCESSES SURFACE AND MESONET DATA (000/*, 001/*, 255/*)
       CHARACTER*80 HDSTR,RCSTR
       CHARACTER*8  SUBSET,SID,RSV1,RSV2,PRVSTG,SPRVSTG,QCD
       INTEGER ITIWM(0:15)
-      REAL(8) RID_8,UFBINT_8,OBS2_8(42),OBS3_8(5,255,7),RRVSTG_8(255),
+      REAL(8) RID_8,UFBINT_8,OBS2_8(43),OBS3_8(5,255,7),RRVSTG_8(255),
      $ RPRVSTG_8(255),HDR_8(20),RCT_8(5,255),SOLR_8(3,255),
      $ TOPC_8(5,255),RMSO_8(2),RQCD_8,BMISS,AMINIMUM_8
-      DIMENSION  OBS(*),OBS2(42),OBS3(5,255,7),NOBS3(7),HDR(20),
+      DIMENSION  OBS(*),OBS2(43),OBS3(5,255,7),NOBS3(7),HDR(20),
      $ RCT(5,255),RRSV(5),SOLR(3,255),TOPC(5,255)
       EQUIVALENCE  (RID_8,SID),(RRVSTG_8,PRVSTG),(RPRVSTG_8,SPRVSTG),
      $ (RQCD_8,QCD)
@@ -3671,6 +3715,7 @@ C  Quality markers for all types except mesonets ....
          CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'QMDD');QMD=UFBINT_8
          QPR = 2 ! precip. rate (no q. marker available, set to neutral)
          QPT = 2 ! tot. precip. (no q. marker available, set to neutral)
+
          IF(SUBSET(6:8).EQ.'007')  THEN
 
 C  METARs transfer the quality marker from pstn to altimeter setting if
@@ -3891,7 +3936,8 @@ C***********************************************************************
 C     ---> PROCESSES AIRCRAFT DATA (004/001-004, 004/006-009)
 
       COMMON/IUBFAA/BMISS
-      COMMON/IUBFBB/KNDX,KSKACF(8),KSKUPA,KSKSFC,KSKSAT,KFLSAT(8),KSKSMI
+      COMMON/IUBFBB/KNDX,KSKACF(8),KSKUPA,KSKSFC,KSKSAT,KFLSAT(10),
+     $ KSKSMI
       COMMON/IUBFCC/SUBSET
       COMMON/IUBFEE/POB(255),QOB(255),TOB(255),ZOB(255),DOB(255),
      $              SOB(255),VSG(255),OB8(255),CF8(255)
@@ -3900,12 +3946,13 @@ C     ---> PROCESSES AIRCRAFT DATA (004/001-004, 004/006-009)
       COMMON/IUBFRR/IDATEB
  
       CHARACTER*80 HDSTR,LVSTR,QMSTR,RCSTR,CRAWR
+      CHARACTER*500 CRAWRX
       CHARACTER*8  SUBSET,SID,RSV1,RSV2,CCL,CRAW(255),ACID,QCD
-      REAL(8) RID_8,RCL_8,UFBINT_8,RNS_8,OBS2_8(42),OBS3_8(5,255,7),
+      REAL(8) RID_8,RCL_8,UFBINT_8,RNS_8,OBS2_8(43),OBS3_8(5,255,7),
      $ RACID_8,RTAM_8(2),RTAM_WDIR_8,RQCD_8
       REAL(8) HDR_8(20),RCT_8(5,255),ARR_8(10,255),RAW_8(255),TRBX_8(5),
      $ ROLF_8,BMISS,AMINIMUM_8,AMAXIMUM_8
-      DIMENSION    OBS(*),OBS2(42),OBS3(5,255,7),NOBS3(7),HDR(20),
+      DIMENSION    OBS(*),OBS2(43),OBS3(5,255,7),NOBS3(7),HDR(20),
      $ RCT(5,255),ARR(10,255),TRBX(5)
       EQUIVALENCE  (RID_8,SID),(RCL_8,CCL),(RAW_8,CRAW),(RACID_8,ACID),
      $ (RQCD_8,QCD)
@@ -4363,14 +4410,34 @@ C      (NOTE: Apparently AFWA here applies to more bulletin location
 C             identifiers than just "KAWN", so report header is not
 C             even checked.)
 
+         crawrx = ' '
+         crawr = ' '
          call ufbint(lunit,raw_8,1,255,nlev,'RRSTG')
+cppppp
+cc       print *, 'this report''s RRSTG has nlev = ',nlev
+cc       ni = -7
+cc       do mm = 1,nlev
+cc          ni = ni + 8
+cc          crawrx(ni:ni+7) = craw(mm)
+cc          if(ni+8.gt.500.and.mm.lt.nlev)  print *, 'ni+8.gt.500'
+cc          if(ni+8.gt.500)  exit
+cc       enddo
+cc       print *, 'BULLETIN:      "',crawrx(1:ni+7),'"'
+cppppp
          if(nlev.gt.5)  then
             ni = -7
             do mm = 6,nlev
                ni = ni + 8
                crawr(ni:ni+7) = craw(mm)
+cppppp
+cc             if(ni+8.gt.80.and.mm.lt.nlev)  print *, 'ni+8.gt.80'
+cppppp
                if(ni+8.gt.80)  exit
             enddo
+cppppp
+cc          print *, 'BULLETIN(41-): "                              ',
+cc   $       '          ',crawr(1:ni+7),'"'
+cppppp
             do mm = 1,ni+7
                if(crawr(mm:mm+1).eq.' S')  then
                   if((crawr(mm+2:mm+2).ge.'0'.and.crawr(mm+2:mm+2).le.
@@ -4708,9 +4775,10 @@ C***********************************************************************
 C***********************************************************************
       FUNCTION R06UBF(LUNIT,OBS,OBS2,OBS3,NOBS3)
 C     ---> PROCESSES SATWIND DATA (005/*)
-
+ 
       COMMON/IUBFAA/BMISS
-      COMMON/IUBFBB/KNDX,KSKACF(8),KSKUPA,KSKSFC,KSKSAT,KFLSAT(8),KSKSMI
+      COMMON/IUBFBB/KNDX,KSKACF(8),KSKUPA,KSKSFC,KSKSAT,KFLSAT(10),
+     $ KSKSMI
       COMMON/IUBFCC/SUBSET
       COMMON/IUBFEE/POB(255),QOB(255),TOB(255),ZOB(255),DOB(255),
      $              SOB(255),VSG(255),OB8(255),CF8(255)
@@ -4724,9 +4792,9 @@ C     ---> PROCESSES SATWIND DATA (005/*)
       CHARACTER*1  CSAT(499),CPROD(0:4),CPRDF(0:2),CPRDFN(51),C8(9)
       INTEGER      IPRDF(0:2),ISWCM(5,9:10,2),ITP_C8(9),ISWDL(7)
       REAL(8) RID_8,UFBINT_8,PCCF_8(2,12),GNAP_8(12),HDR_8(20),RCT_8(5),
-     $ ARR_8(10),OBS2_8(42),OBS3_8(5,255,7),WIND_8(2,5),PRLC_8(11),
+     $ ARR_8(10),OBS2_8(43),OBS3_8(5,255,7),WIND_8(2,5),PRLC_8(11),
      $ QFGU_8(8),BMISS
-      DIMENSION    OBS(*),OBS2(42),OBS3(5,255,7),NOBS3(7),HDR(20),
+      DIMENSION    OBS(*),OBS2(43),OBS3(5,255,7),NOBS3(7),HDR(20),
      $ RCT(5),ARR(10),PCCF(2,12),GNAP(12),WIND(2,5),PRLC(11),QFGU(8)
       EQUIVALENCE  (RID_8,SID)
 
@@ -4838,7 +4906,9 @@ C  STORE SINGLE LEVEL REPORT DATA DIRECTLY INTO OBS2 ARRAY
 C  -------------------------------------------------------
 
       OBS2_8 = BMISS
-      CALL UFBINT(LUNIT,OBS2_8,2,1,IRET,'RSRD EXPRSRD');OBS2=OBS2_8
+      CALL UFBINT(LUNIT,OBS2_8,2,1,IRET,'RSRD EXPRSRD')
+      CALL UFBINT(LUNIT,OBS2_8(43),1,1,IRET,'SAZA')
+      OBS2 = OBS2_8
 
       IFLSAT = 1
  
@@ -4882,7 +4952,6 @@ C  ------------------------------------------------------------------
 C   = 1 - DEEP LAYER
 C   = 2 - CLOUD TOP (NORMAL CLOUD DRIFT)
 C   = 9 - INDICATOR MISSING (REVERTS TO DEFAULT CLOUD TOP)
-C     (NOTE: =9 FOR ALL WINDS PRODUCED FROM FOREIGN PRODUCERS)
 
 C  THE INSTRUMENT TYPE INDICATES THE PRODUCT TYPE
 C  ----------------------------------------------
@@ -5062,7 +5131,9 @@ C  --------------------------------------------------------------------
                END IF
 C  .. Cloud top/deep-layer indicator for winds generated by NESDIS
                CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'SWDL');SWDL=UFBINT_8
-               IF(SWDL.GE.BMISS) THEN !NESDIS GTS & MODIS wnds come here
+            IF(SWDL.GE.BMISS) THEN ! NESDIS GTS (& eventually V10 server
+                                   !  too) & MODIS/AVHRR winds come here
+
                   IF(NINT(SWCM).GT.0.AND.NINT(SWCM).LT.8) THEN
                      IF(ISWDL(NINT(SWCM)).LT.3) SWDL = ISWDL(NINT(SWCM))
                   END IF
@@ -5083,6 +5154,15 @@ C          15 July 2005 when MTSAT-1R replaced GOES-9)
 C  .. Product type for  winds generated from foreign producers
                SID(8:8) = CPRDF(MOD(INUM1,3))
                ITP = IPRDF(MOD(INUM1,3))
+C  .. Cloud top/deep-layer indicator for winds generated from foreign
+C      producers
+               CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'SWCM')
+               SWCM=UFBINT_8
+               IF(NINT(SWCM).GT.0.AND.NINT(SWCM).LT.8) THEN
+                  IF(ISWDL(NINT(SWCM)).LT.3) SWDL = ISWDL(NINT(SWCM))
+               END IF
+               IF(NINT(SWDL).GT.-1.AND.NINT(SWDL).LT.10)
+     $          WRITE(RSV1(3:3),'(I1)') NINT(SWDL)
             END IF
          END IF
          IF(IDS.LT.500.AND.ITP.LT.19.AND.IPRODUCER.LT.3)  THEN
@@ -5154,6 +5234,15 @@ C  .. Product type for  winds generated from foreign producers
                   EXIT
                END IF
             ENDDO
+C  .. Cloud top/deep-layer indicator for winds generated from foreign
+C      producers
+            CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'SWCM')
+            SWCM=UFBINT_8
+            IF(NINT(SWCM).GT.0.AND.NINT(SWCM).LT.8) THEN
+               IF(ISWDL(NINT(SWCM)).LT.3) SWDL = ISWDL(NINT(SWCM))
+            END IF
+            IF(NINT(SWDL).GT.-1.AND.NINT(SWDL).LT.10)
+     $       WRITE(RSV1(3:3),'(I1)') NINT(SWDL)
 
 C  From approximately 11 August through 30 September 2010, BUFR_DUPSAT
 C   incorrectly placed a "?" in character 1 of the generated report id
@@ -5296,11 +5385,16 @@ CVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
       QC_QI_without = BMISS
       RFF           = BMISS
       QC_RFF        = BMISS
+      EE            = BMISS
+      QC_EE         = BMISS
 
-      IF((SUBSET(7:8).GE.'15'.AND.SUBSET(7:8).LE.'18') .OR.
+      IF((SUBSET(7:8).GE.'10'.AND.SUBSET(7:8).LE.'12') .OR.
+     $   SUBSET(7:8).EQ.'14'                           .OR.
+     $   (SUBSET(7:8).GE.'15'.AND.SUBSET(7:8).LE.'18') .OR.
      $   (SUBSET(7:8).GE.'44'.AND.SUBSET(7:8).LE.'46') .OR.
      $   (SUBSET(7:8).GE.'64'.AND.SUBSET(7:8).LE.'66') .OR.
-     $   (SUBSET(7:8).GE.'70'.AND.SUBSET(7:8).LE.'71'))  THEN
+     $   (SUBSET(7:8).GE.'70'.AND.SUBSET(7:8).LE.'71') .OR.
+     $   (SUBSET(7:8).GE.'80'))  THEN
 
          IF(SUBSET(7:8).GE.'64'.AND.SUBSET(7:8).LE.'66') THEN !EUMETSAT
             INDX  =   1
@@ -5308,7 +5402,7 @@ CVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
             IVARS =   4 ! number of variables w/ quality info
             IQI   =   1 ! value of GNAP for QI w/  forecast
             IQIwo =   2 ! value of GNAP for QI w/o forecast
-            IRFF  =   3 ! value of RFF (present after ?-?-2006)
+            IRFF  =   3 ! value of GNAP for RFF (present after ?-?-2006)
 ccccccccc   LIMqi =  80 ! if QI less than or equal to this - flag
             LIMqi =   0 ! if QI less than or equal to this - flag
 ccccccccc   LIMqc =   3 ! if Manual/automatic q.c. indicator greater
@@ -5321,29 +5415,50 @@ ccccccccc               !  than or equal to this - flag
             IVARS =   4 ! number of variables w/ quality info
             IQI   = 101 ! value of GNAP for QI w/  forecast
             IQIwo = 102 ! value of GNAP for QI w/o forecast
-            IRFF  = 103 ! value of RFF
+            IRFF  = 103 ! value of GNAP for RFF
             LIMqi =  80 ! if QI less than or equal to this - flag
             LIMqc =   3 ! if Manual/automatic q.c. indicator greater
                         !  than or equal to this - flag
-         ELSE IF(SUBSET(7:8).GE.'15'.AND.SUBSET(7:8).LE.'18') THEN !GOES
+         ELSE IF(SUBSET(7:8).GE.'15'.AND.SUBSET(7:8).LE.'18') THEN
+                                                             !GOES-GTS
             INDX  =   5
             IVARS =   2 ! number of variables w/ quality info
             IOFF  =   1
             IQI   =   3 ! value of GNAP for QI w/ forecast
             IQIwo =   1 ! value of GNAP for QI w/o forecast
-            IRFF  =   2 ! value of RFF
+            IRFF  =   2 ! value of GNAP for RFF
             LIMqi =  49 ! if QI less than or equal to this - flag
             LIMqc =   3 ! if Manual/automatic q.c. indicator greater
                         !  than or equal to this - flag
-         ELSE IF(SUBSET(7:8).GE.'70'.AND.SUBSET(7:8).LE.'71') THEN !POES
+         ELSE IF((SUBSET(7:8).GE.'70'.AND.SUBSET(7:8).LE.'71')  .OR.
+     $           (SUBSET(7:8).GE.'10'.AND.SUBSET(7:8).LE.'12')  .OR.
+     $           SUBSET(7:8).EQ.'14'                          ) THEN
+                                                             !MODIS POES
+                                                             !GOES-V10
+                                                             !  (server)
             INDX  =   7
             IVARS =   2 ! number of variables w/ quality info
             IOFF  =   1
             IQI   =   3 ! value of GNAP for QI w/ forecast
             IQIwo =   1 ! value of GNAP for QI w/o forecast
-            IRFF  =   2 ! value of RFF
+            IRFF  =   2 ! value of GNAP for RFF
+            IEE   =   4 ! value of GNAP for NESDIS Expected Error
             LIMqi =  49 ! if QI less than or equal to this - flag
             LIMqc =   3 ! if Manual/automatic q.c. indicator greater
+                        !  than or equal to this - flag
+         ELSE IF(SUBSET(7:8).EQ.'80') THEN !AVHRR POES
+            INDX  =   9
+            IVARS =   2 ! number of variables w/ quality info
+            IOFF  =   1
+            IQI   =   3 ! value of GNAP for QI w/ forecast
+            IQIwo =   1 ! value of GNAP for QI w/o forecast
+            IRFF  =   2 ! value of GNAP for RFF
+            IEE   =   4 ! value of GNAP for NESDIS Expected Error
+ccccccccc   LIMqi =  49 ! if QI less than or equal to this - flag
+            LIMqi =   0 ! if QI less than or equal to this - flag
+ccccccccc   LIMqc =   3 ! if Manual/automatic q.c. indicator greater
+ccccccccc               !  than or equal to this - flag
+            LIMqc = 999 ! if Manual/automatic q.c. indicator greater
                         !  than or equal to this - flag
          END IF
 
@@ -5403,6 +5518,10 @@ C              If IVARS = 2:
 C                If IEND = 3:     GNAP(1),(4) are the same
 C                                 GNAP(2),(5) are the same
 C                             and GNAP(3),(6) are the same
+C                If IEND = 4:     GNAP(1),(4) are the same
+C                                 GNAP(2),(5) are the same
+C                                 GNAP(3),(6) are the same
+C                             and GNAP(4),(8) are the same
 
             DO J = 1,IEND
                IF(NINT(GNAP(J)).EQ.IQI .OR. IEND.EQ.1) THEN
@@ -5426,11 +5545,19 @@ C                             and GNAP(3),(6) are the same
      $                         PCCF(1,(2*IEND+J)-(IOFF*IEND)))
                   QC_RFF = MAX(PCCF(2,(IEND+J)-(IOFF*IEND)),
      $                         PCCF(2,(2*IEND+J)-(IOFF*IEND)))
+               ELSE IF(NINT(GNAP(J)).EQ.IEE) THEN
+                  IF(MAX(PCCF(1,(IEND+J)-(IOFF*IEND)),
+     $                   PCCF(1,(2*IEND+J)-(IOFF*IEND))).LT.BMISS)
+     $             EE    = MIN(PCCF(1,(IEND+J)-(IOFF*IEND)),
+     $                         PCCF(1,(2*IEND+J)-(IOFF*IEND)))
+                  QC_EE  = MAX(PCCF(2,(IEND+J)-(IOFF*IEND)),
+     $                         PCCF(2,(2*IEND+J)-(IOFF*IEND)))
                END IF
             ENDDO
 
 C  EUMETSAT QI with forecast must be > LIMqi % for EUMETSAT/JMA/GOES/
-C   POES, else flag (note: This should be moved to prepdata)
+C   POES (MODIS or AVHRR), else flag (note: This should be moved to
+C   prepdata)
 C  ------------------------------------------------------------------
 
             IF(WQM(1).EQ.2.AND.QI_with.LT.BMISS)  THEN
@@ -5486,8 +5613,8 @@ C   FILTER FUNCTION
 C  --------------------------------------------------------------
 
       CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'RFFL');RFFL=UFBINT_8
-      IF(RFFL.GE.BMISS) RFFL = RFF  ! RFFL missing for GTS GOES, POES
-                                    !  and JMA (from BUFR) winds
+      IF(RFFL.GE.BMISS) RFFL = RFF  ! RFFL missing for all types except
+                                    !  NESDIS GOES winds from server
       IF(RFFL.LT.BMISS) THEN
          OB8(1) = NINT(RFFL)
          CF8(1) = 355
@@ -5500,8 +5627,13 @@ C  CODE FIGURE 356 - PERCENT CONFIDENCE BASED ON EUMETSAT QUALITY
 C   INDEX WITH FCST CONSISTENCY TEST
 C  --------------------------------------------------------------
 
-      IF(QI_with.LT.BMISS) THEN
-         OB8(1) = NINT(QI_with)
+      CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'QIFY');QIFY=UFBINT_8
+      IF(QIFY.GE.BMISS) QIFY = QI_with ! QIFY missing for all types
+                                       ! except NESDIS GOES winds from
+                                       ! server and possibly MODIS
+                                       ! winds from server
+      IF(QIFY.LT.BMISS) THEN
+         OB8(1) = NINT(QIFY)
          CF8(1) = 356
          Q81(1) = IMISS
          Q82(1) = IMISS
@@ -5512,8 +5644,13 @@ C  CODE FIGURE 357 - PERCENT CONFIDENCE BASED ON EUMETSAT QUALITY
 C   INDEX W/O FCST CONSISTENCY TEST
 C  --------------------------------------------------------------
 
-      IF(QI_without.LT.BMISS) THEN
-         OB8(1) = NINT(QI_without)
+      CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'QIFN');QIFN=UFBINT_8
+      IF(QIFN.GE.BMISS) QIFN = QI_without ! QIFN missing for all types
+                                          ! except NESDIS GOES winds
+                                          ! from server and possibly
+                                          ! MODIS winds from server
+      IF(QIFN.LT.BMISS) THEN
+         OB8(1) = NINT(QIFN)
          CF8(1) = 357
          Q81(1) = IMISS
          Q82(1) = IMISS
@@ -5524,6 +5661,9 @@ C  CODE FIGURE 358 - PERCENT CONFIDENCE BASED ON NESDIS EXPECTED ERROR
 C  -------------------------------------------------------------------
 
       CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'EEQF');EEQF=UFBINT_8
+      IF(EEQF.GE.BMISS) EEQF = EE ! EEQF missing for all types except
+                                  ! NESDIS GOES winds from server and
+                                  ! possibly MODIS winds from server
       IF(EEQF.LT.BMISS) THEN
          OB8(1) = NINT(EEQF)
          CF8(1) = 358
@@ -5584,7 +5724,8 @@ C***********************************************************************
 C     ---> PROCESSES REPROCESSED SSM/I (SPSSMI) DATA (012/*)
 
       COMMON/IUBFAA/BMISS
-      COMMON/IUBFBB/KNDX,KSKACF(8),KSKUPA,KSKSFC,KSKSAT,KFLSAT(8),KSKSMI
+      COMMON/IUBFBB/KNDX,KSKACF(8),KSKUPA,KSKSFC,KSKSAT,KFLSAT(10),
+     $ KSKSMI
       COMMON/IUBFCC/SUBSET
       COMMON/IUBFEE/POB(255),QOB(255),TOB(255),ZOB(255),DOB(255),
      $              SOB(255),VSG(255),OB8(255),CF8(255)
@@ -5592,9 +5733,9 @@ C     ---> PROCESSES REPROCESSED SSM/I (SPSSMI) DATA (012/*)
 
       CHARACTER*80 HDSTR
       CHARACTER*8  SUBSET,SID,RSV1,RSV2
-      REAL(8) RID_8,UFBINT_8,OBS2_8(42),OBS3_8(5,255,7),HDR_8(20),
+      REAL(8) RID_8,UFBINT_8,OBS2_8(43),OBS3_8(5,255,7),HDR_8(20),
      $ PROD_8(2,2),ADDP_8(5),TMBRS_8(2,14),TMBR_8(7),BMISS,AMINIMUM_8
-      DIMENSION    OBS(*),OBS2(42),OBS3(5,255,7),NOBS3(7),HDR(20),
+      DIMENSION    OBS(*),OBS2(43),OBS3(5,255,7),NOBS3(7),HDR(20),
      $ PROD(2,2),ADDP(5),TMBRS(2,14),TMBR(7)
       EQUIVALENCE  (RID_8,SID)
 

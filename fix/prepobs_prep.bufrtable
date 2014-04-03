@@ -317,7 +317,7 @@
 | PRSS     | 010195 | SURFACE PRESSURE OBSERVATION                             |
 | PMO      | 010243 | MEAN SEA-LEVEL PRESSURE OBSERVATION                      |
 | PMQ      | 010244 | MEAN SEA-LEVEL PRESSURE (QUALITY) MARKER                 |
-| PMIN     | 010245 | MEAN SEA-LEVEL INDICATOR                                 |
+| PMIN     | 010245 | MEAN SEA-LEVEL PRESSURE INDICATOR                        |
 | ZQM      | 010246 | HEIGHT (QUALITY) MARKER                                  |
 | ZPC      | 010247 | HEIGHT EVENT PROGRAM CODE                                |
 | ZRC      | 010248 | HEIGHT EVENT REASON CODE                                 |
@@ -330,8 +330,8 @@
 | DDO      | 011001 | WIND DIRECTION OBSERVATION (NOT ASSIMILATED)             |
 *          |        |  (AFTER "PREPACQC" STEP ONLY - SUBSEQUENT CODES DO NOT   |
 *          |        |   PROCESS)                                               |
-| SOB      | 011002 | WIND SPEED OBSERVATION                                   |
-*          |        |  (STORED WHEN DIRECTION IS MISSING; E.G. METARS)         |
+| SOB      | 011002 | WIND SPEED OBSERVATION (NOT ASSIMILATED)                 |
+*          |        |  (STORED ONLY FOR SURFACE REPORTS )                      |
 | UOB      | 011003 | U-COMPONENT WIND OBSERVATION                             |
 | VOB      | 011004 | V-COMPONENT WIND OBSERVATION                             |
 | DGOT     | 011031 | DEGREE OF TURBULENCE                                     |
@@ -345,8 +345,6 @@
 | WSPD1    | 011201 | SURFACE WIND SPEED                                       |
 | PKWDDR   | 011202 | PEAK WIND DIRECTION                                      |
 | PKWDSP   | 011203 | PEAK WIND SPEED                                          |
-| SQM      | 011217 | WIND SPEED (SOB) (QUALITY) MARKER                        |
-*          |        |  (STORED WHEN DIRECTION IS MISSING; E.G. METARS)         |
 | DFQ      | 011218 | WIND DIRECTION/SPEED (DDO/FFO) (QUALITY) MARKER          |
 | DFP      | 011219 | WIND DIRECTION/SPEED (DDO/FFO) EVENT PROGRAM CODE        |
 | DFR      | 011220 | WIND DIRECTION/SPEED (DDO/FFO) EVENT REASON CODE         |
@@ -371,6 +369,7 @@
 | UCS      | 011250 | STANDARD DEVIATION OF CLIMATOLOGICAL U-COMP WIND VALUE   |
 | VCS      | 011251 | STANDARD DEVIATION OF CLIMATOLOGICAL V-COMP WIND VALUE   |
 | FFO      | 011252 | WIND SPEED OBSERVATION (NOT ASSIMILATED)                 |
+*          |        |  (STORED ONLY FOR NON-SURFACE REPORTS )                  |
 *          |        |  (AFTER "PREPACQC" STEP ONLY - SUBSEQUENT CODES DO NOT   |
 *          |        |   PROCESS)                                               |
 | WOETU    | 011253 | ANALYSIS-TUNED WIND OBSERVATION ERROR                    |
@@ -661,7 +660,7 @@
 | RSRD_SEQ | RSRD       EXPRSRD                                                |
 | PMSL_SEQ | PMO        PMQ     PMIN                                           |
 | ALTIMSEQ | ALSE                                                              |
-| WSPD_SEQ | SOB        SQM                                                    |
+| WSPD_SEQ | SOB                                                               |
 | TOPC_SEQ | .DTHTOPC   TOPC                                                   |
 | PREWXSEQ | PRWE                                                              |
 | CLOUDSEQ | VSSO       CLAM    CLTP     HOCB    <HOCT_SEQ>                    |
@@ -879,7 +878,6 @@
 | WSPD1    |    1 |           0 |  12 | M/S                      |-------------|
 | PKWDDR   |    0 |           0 |   9 | DEGREES TRUE             |-------------|
 | PKWDSP   |    1 |           0 |  12 | M/S                      |-------------|
-| SQM      |    0 |           0 |   5 | CODE TABLE               |-------------|
 | DFQ      |    0 |           0 |   5 | CODE TABLE               |-------------|
 | DFP      |    0 |           0 |   5 | CODE TABLE               |-------------|
 | DFR      |    0 |           0 |  10 | CODE TABLE               |-------------|

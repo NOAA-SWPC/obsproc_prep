@@ -1,12 +1,12 @@
 C$$$  MAIN PROGRAM DOCUMENTATION BLOCK
 C
 C MAIN PROGRAM: PREPOBS_PREPDATA
-C   PRGMMR: KEYSER           ORG: NP22        DATE: 2013-02-14
+C   PRGMMR: ??????????       ORG: NP22        DATE: ????-??-??
 C
 C ABSTRACT: PREPARES DATA FOR USE IN ANALYSES FOR THE NDAS, NAM, GDAS,
 C   GFS, RAP (RAPID REFRESH), RTMA, AND URMA NETWORKS.  ALL ANALYSES
-C   ARE GSI.  ALSO RUNS IN HOURLY NETWORK TO PROCESS GOES CLOUD DATA (ONLY).
-C   WRITES DATA TO PREPBUFR FILE WHICH CONTAINS 10000-BYTE BUFR
+C   ARE GSI.  ALSO RUNS IN HOURLY NETWORK TO PROCESS GOES CLOUD DATA
+C  (ONLY).  WRITES DATA TO PREPBUFR FILE WHICH CONTAINS 10000-BYTE BUFR
 C   MESSAGES. HERE A "REPORT" IS SEPARATED INTO MASS AND WIND PIECES.
 C
 C PROGRAM HISTORY LOG:
@@ -992,6 +992,72 @@ C     REGARDLESS OF THEIR LOCATION), THIS ALSO CAUSED AN ARRAY OVERFLOW
 C     SINCE KYJ COULD BE CALCULATED AS 38, 1 GREATER THAN THE LIMIT; IN
 C     SUBR. LNDCHK  FIXED S.H. BUGS WHICH CAUSED AN OVERFLOW IN KXI FOR
 C     ELON > 359.98 AND AN OVERFLOW IN KYJ FOR LAT > -0.01
+C ????-??-??  D. A. KEYSER -- FOR ALL SATELLITE-DERIVED WIND REPORTS,
+C     NOW ENCODES PREPBUFR REPORT SUB-TYPE (MNEMONIC "TSB", PREVIOUSLY
+C     MISSING) AS BUFR SATELLITE ID TIMES 10 PLUS "SATELLITE DERIVED
+C     WIND COMPUTATION METHOD ("SWCM" - BUFR CODE TABLE 0-02-023),
+C     ALLOWS GSI TO IDENTIFY CLOUD-TOP VS. DEEP-LAYER WV WINDS AND IR
+C     VS. VISIBLE WINDS FOR METEOSAT AND JMA SINCE, UNLIKE NESDIS,
+C     BOTH HAVE SAME RPT TYPES (250-JMA & 254-EUMETSAT FOR WV, 242/252-
+C     JMA & 243/253-EUMETSAT FOR IR/VIS); 1-DIM ARRAY OBS2 RETURNED
+C     FROM IW3UNPBF INCREASED FROM 42 TO 43 WORDS TO HOLD SATELLITE
+C     ZENITH ANGLE (DEGREES, FOR ALL SATWND TYPES), ENCODED INTO
+C     PREPBUFR FILE (MNEMONIC SAZA) FOR USE BY GSI (TO POSSIBLY SCREEN
+C     SATWNDS WITH HIGH SAZA VALUES); ADDED IRNMRK=10 FOR UNRESTRICTED
+C     MESOSCALE ANALYSIS (URMA) NETWORK
+C ????-??-??  ???????????  -- DIFFERENTIATE BETWEEN RADAR CODED MESSAGE
+C  AND NEW LEVEL 2 DECODER VAD WIND REPORTS VIA USE OF REPORT SUBTYPE
+C  (TSB=1 FOR FORMER AND =2 FOR LATTER)
+C ????-??-??  ???????????? -- DO NOT CONVERT WINDS FROM DIR/SPEED TO
+C     U/V FOR NEW VAD WIND REPORTS FROM LEVEL 2 DECODER SINCE THESE ARE
+C     ALREADY U/V AND ARE STORED IN M/SEC
+C ???-??-??  ???????????  -- Add 12'th word to following namelist
+C     switches to account for Coast Guard tide gauge (surface marine)
+C     reports: FWINDO, JSURFM, JSURFW
+C ???-??-??  ???????????  -- Added new namelist switch NPKRPT ..., if
+C     true all of the below is true: will process reports that would
+C     otherwise be tossed due to their having a missing pstn -- in
+C     order to still allow for a q calculation, these reports
+C     temporarily estimate pstn from the U.S. std. atmosphere value and
+C     assign it a minimum q.m. of 3 while also permanently assigning
+C     the moisture q.m. a minimum value of 3 - in the end, pstn obs and
+C     qm is encoded as missing for these reports - these reports are
+C     then assigned new PREPBUFR report types ...., ATLAS buoys are
+C     handled by ..., MESONETS will no longer have "x" in character 8
+C     of id
+C ????-??-??  S. Melchior -- SUBROUTINE GETC06 WAS MODIFIED TO TRAP
+C     RPTS WHOSE WIND INFORMATION EXCEEDS THE 32767 LIMIT.  IF THE
+C     LIMIT IS EXCEEDED THE ENTIRE REPORT WILL SKIP BEING ENCODED INTO
+C     THE OUTPUT PREPBUFR FILE.
+C ????-??-??  ??????????  -- Modified to always encode wind speed obs
+C     in m/sec ("SOB") and wind direction obs ("DDO") for all types of
+C     surface reports (even if one or the other are missing but also if
+C     both are present); removed old logic which encoded "SOB" only for
+C     METAR reports when direction was missing and speed was .LE. 3
+C     m/sec (direction was never encoded in any situation for surface
+C     reports), also removed encoding of "SQM" (wind speed quality
+C     mark) for these types of METAR reports - all surface reports now
+C     encode wind qm as "WQM" regardless of whether or not it also
+C     encodes direction, speed, u-comp or v-comp {note this change does
+C     not affect non-surface reports which can still encode speed
+C     in knots ("FFO") and direction ("DDO") when "UOB" and "VOB" are
+C     also encoded.
+C ????-??-??  ??????????  -- Added new mnemonic "PMIN" (mean sea-level
+C     pressure indicator) which is encoded with a value of zero for all
+C     reports with an observed mean sea-level pressure encoded in
+C     "PMO".  "PMIN" will be encoded with a value of 1 in w3emc routine
+C     gblevents for cases where a mean sea-level pressure is derived
+C     (see docblock in gblevents for more information).
+C ????-??-??  ??????????  --  Increase the maximum number of levels
+C     that can be processed from 300 to 600.  This allows runs that
+C     might include interpolated levels (e.g., special AFOS graphics,
+C     IRNMRK=2) to still work properly as more and more radiosonde
+C     levels become available in the new RRS.
+C ????-??-??  ???????????? -- NO LONGER ABORTS WITH RC=99 IF NUMBER OF
+C     LEVELS IN A REPORT EXCEEDS THE LIMIT OF "MXLVL".  INSTEAD, NOW
+C     SKIPS THE OFFENDING REPORT(S) AND, AT THE VERY END, POSTS A
+C     MESSAGE TO THE JOBLOG FILE NOTING HOW MANY REPORTS WERE SKIPPED
+C     DUE TO THIS ISSUE.
 C 2014-01-15  S. Melchior -- [Commentary forthcoming]
 C
 C USAGE:
@@ -1145,9 +1211,6 @@ C     COND =  49 - ERROR OR END-OF-FILE READING FIXED LAND-SEA-U.S.
 C                  MASK FILE IN UNIT IUNIT(3)
 C     COND =  60-79 - RESERVED FOR W3EMC ROUTINE GBLEVENTS (SEE
 C                      GBLEVENTS DOCBLOCK)
-C     COND =  99 - TOTAL NUMBER OF LEVELS IN A SINGLE REPORT EXCEEDS
-C                  THE MAXIMUM LIMIT SET BY THIS PROGRAM, MUST
-C                  INCREASE SIZE OF PARAMETER NAME "MXLVL"
 C
 C REMARKS: SEE COMMENT CARDS FOLLOWING DOCBLOCK.
 C
@@ -1218,15 +1281,15 @@ C                      UNIT BB                                 (DEFAULT)
 C    IRNMRK - NCEP MODEL RUN MARKER
 C              IRNMRK =  2 ---> SPECIAL AFOS GRAPHICS RUN
 C              IRNMRK =  3 ---> GFS RUNS
-C              IRNMRK =  4 ---> RAP (RAPID REFRESH) RUNS {PRIOR TO NOV
-C                               2011 THIS WAS RUC2A (RAPID UPDATE
+C              IRNMRK =  4 ---> RAP (RAPID REFRESH) RUNS {PRIOR TO
+C                               1 MAY 2012 THIS WAS RUC2A (RAPID UPDATE
 C                               CYCLE)}
 C              IRNMRK =  5 ---> GDAS RUNS
 C              IRNMRK =  6 ---> NDAS OR NAM RUNS
 C              IRNMRK =  7 ---> CDAS-REANALYSIS RUNS
 C              IRNMRK =  8 ---> HOURLY (GOES CLOUD DATA) RUNS
-C              IRNMRK =  9 ---> REAL TIME MESOSCALE ANAL (RTMA) OR 
-C                               UNRESTRICTED MESOSCALE ANAL (URMA) RUNS
+C              IRNMRK =  9 ---> REAL TIME MESOSCALE ANAL (RTMA) RUNS
+C              IRNMRK = 10 ---> UNRESTRICTED MESOSCALE ANAL (URMA) RUNS
 C                                                          (DEFAULT=-99)
 C    SUBSKP - LOGICAL (0:255,0:200) THAT IDENTIFIES THOSE BUFR TYPES/
 C              SUBTYPES FOR WHICH THE BUFR MESSAGES SHOULD BE SKIPPED
@@ -1414,7 +1477,8 @@ C                           (NOTE: 1-6 ARE GEOSTATIONARY SATELLITES,
 C                                  7-8 ARE POLAR-ORBITING SATELLITES)
 C                ** THE THIRD ELEMENT IDENTIFIED AS FOLLOWS:
 C                     1 - CONVENTIONAL IR CLOUD-DRIFT WINDS/TEMPERATURE
-C                     2 - CONVENTIONAL WATER-VAPOR WINDS(NO TEMPERATURE)
+C                     2 - CONVENTIONAL IMAGER WATER-VAPOR WINDS (DEEP-
+C                         LAYER AND CLOUD TOP) (NO TEMPERATURE)
 C                     3 - CONVENTIONAL VISIBLE CLOUD-DRIFT WINDS/TEMP
 C                     4 - HIGH-DENSITY IMAGER IR CLOUD-DRIFT WINDS/TEMP
 C                     5 - HIGH-DENSITY VIS CLOUD-DRIFT WINDS/TEMPERATURE
@@ -1742,7 +1806,7 @@ C             ARE FLAGGED;  'EXCLUDE' HERE MEANS THIS TYPE IS PROCESSED
 C             BUT IS FLAGGED WITH PREPBUFR TABLE VALUE=15)
 C                          (DEFAULT - IRTRV(5,4,4)/4(2*0,544,2*0),60*0/)
 CC
-C  N O T E -- THE FOLLOWING 11-WORD ARRAYS REFER TO THE 11 SURFACE
+C  N O T E -- THE FOLLOWING 12-WORD ARRAYS REFER TO THE 12 SURFACE
 C              OBSERVATION TYPES POSSIBLE
 C        1 - SYNOPTIC LAND (FIXED) (INCLUDING WMO RESOLUTION 40)
 C        2 - MARINE SHIP (FIXED AND MOVING)
@@ -1769,46 +1833,92 @@ C       =    0  PROCESS WIND INFO FOR THIS TYPE
 C       = 9999  EXCLUDE WIND INFO FOR THIS TYPE
 C                         (DEF - JSURFW(12)/2*0,9999,0,9999,0,9999,5*0/)
 C    npkrpt - logical flag denoting whether or not to process surface
-C              observations lacking a station pressure report
-C              (npkrpt = no pressure keep report)
-C       =   .TRUE.  process the surface observation despite the missing
-C                   station pressure
-C       =   .FALSE.  toss the surface observation and do not process it
-C                         (def - npkrpt(12)/12*.false./)
+C              reports in the following situations:
+C                1) non-mesonet land reports with a missing station
+C                   pressure observation, a missing sea-level pressure
+C                   observation, and pfralt=F;
+C                2) non-mesonet land reports with a missing station
+C                   pressure observation, a missing sea-level pressure
+C                   observation, and a missing altimeter setting when
+C                   pfralt=T;
+C                3) marine reports with a missing station pressure
+C                   observation and a missing sea-level pressure
+C                   observation
+C       =   .TRUE.   process the surface report in one of the above
+C                    situations, but store pstn as missing and give it
+C                    a new report type (more on that later)
+C       =   .FALSE.  toss the surface report in one of the above
+C                    situations
+C                         -- or --
+C             logical flag denoting how to process surface mesonet
+C              reports with a missing station pressure observation and
+C              a missing altimeter setting (note: all mesonets have a
+C              a missing sea-level pressure observation, and all have
+C              hardwired pfralt=T)
+C       =   .TRUE.   process the surface mesonet report, but store pstn
+C                    as missing and give it a new report type (more on
+C                    that later)
+C       =   .FALSE.  process the surface mesonet report, but store pstn
+C                    as the U.S. Std. Atmos. value, and set character 8
+C                    of the stnid to "x" (instead of the usual blank)
+C                    (these remain report type 188/288)
+C                                         (def - npkrpt(12)/12*.false./)
 C {NOTE: PMSL BOGUS (BOTH) & SPL-LVL REPORTS NEVER PROCESS A WIND PART)
 CC
-C    PFRALT - FOR SURFACE LAND (ONLY) REPORTS WITH MISSING STATION
-C              PRESSURE AND NON-MISSING ALTIMETER SETTING, CALCULATE
-C              STATION PRESSURE FROM ALTIMETER AND GIVE THE REPORTS A
-C              PREPBUFR REPORT TYPE OF 187/287 TO UNIQUELY IDENTIFY THEM
+C    PFRALT - FOR NON-MESONET SURFACE LAND (ONLY) REPORTS WITH MISSING
+C              STATION PRESSURE AND NON-MISSING ALTIMETER SETTING,
+C              CALCULATE STATION PRESSURE FROM ALTIMETER AND GIVE THE
+C              REPORTS A PREPBUFR REPORT TYPE OF 187/287 TO UNIQUELY
+C              IDENTIFY THEM (SEE BELOW FOR INFO ON MESONET REPORTS)
 C              PFRALT =.TRUE.  ---> YES
 C              PFRALT =.FALSE. ---> NO                         (DEFAULT)
-C             {NOTE1: DOES NOT APPLY TO MESONET REPORTS: IN THE CASE OF
-C                     PFRALT=F OR MISSING ALTIMETER SETTING, IF SURFACE
-C                     LAND REPORTS HAVE MISSING STATION PRESSURE, THEN
-C                     IT WILL BE ESTIMATED FROM PMSL IF ITS NON-MISSING
-C                     AND THE REPORTS WILL GET A PREPBUFR REPORT TYPE
-C                     183/284 (UNLESS ELEV IS < 7.5 M IN WHICH CASE
-C                     PSTN IS SET TO PMSL AND PREPBUFR R.T. 181/281 IS
-C                     ASSIGNED); IF PMSL IS ALSO MISSING, THE REPORT
-C                     WILL BE SKIPPED
+C             {NOTE1: THE FOLLOWING DOES NOT APPLY TO MESONET REPORTS:
+C                     IN THE CASE OF PFRALT=F OR MISSING ALTIMETER
+C                     SETTING, IF SURFACE LAND REPORTS HAVE MISSING
+C                     STATION PRESSURE, THEN IT WILL BE ESTIMATED FROM
+C                     PMSL IF ITS NON-MISSING AND THE REPORTS WILL GET
+C                     A PREPBUFR REPORT TYPE 183/284 (UNLESS ELEV IS <
+C                     7.5 M IN WHICH CASE PSTN IS SET TO PMSL AND
+C                     PREPBUFR R.T. 181/281 IS ASSIGNED); IF PMSL IS
+C                     ALSO MISSING, THEN ONE OF THE FOLLOWING WILL
+C                     OCCUR:
+C                      1) IF NPKRPT=T FOR THE SFC TYPE, PSTN IS ENCODED
+C                         AS MISSING IN PREPBUFR FILE (ALTHOUGH Q IS
+C                         STILL CALCULATED FROM ITS U.S. STANDARD
+C                         ATMOS. VALUE), THESE GET PREPBUFR REPORT TYPE
+C                         192/292 IF SYNOPTIC AND PREPBUFR REPORT TYPE
+C                         193/193 IF METAR;
+C                      2) IF NPKRPT=F FOR THE SFC TYPE, THE REPORT WILL
+C                         BE SKIPPED}
 C             (NOTE2: PFRALT=T WILL ALSO ENCODE ALTIMETER SETTING INTO
 C                     PREPBUFR FILE FOR ALL SURFACE LAND REPORTS,
 C                     REGARDLESS OF WHETHER OR NOT STATION PRESSURE IS
 C                     MISSING - THE RUC2A HAD READ THE ALTIMETER
 C                     SETTING, NOT STATION PRESSURE, FOR SURFACE LAND
-C                     REPORTS - NOT SURE IF THIS IS THE CASE FOR THE
-C                     RAP)
-C             (NOTE3: FOR MESONET REPORTS, PFRALT IS HARDWIRED TO TRUE
-C                     AND ALL GET PREPBUFR REPORT TYPE 188/288 - IF
-C                     PSTN IS NON-MISSING, CHARACTER 8 OF STNID REMAINS
-C                     BLANK; IF PSTN IS MISSING AND NON-MISSING
-C                     ALTIMETER SETTING IS USED TO ESTIMATE PSTN,
-C                     CHARACTER 8 OF STNID IS SET TO 'a'; IF BOTH PSTN
-C                     AND ALTIMETER SETTING ARE MISSING AND STANDARD
-C                     ATMOSPHERE IS USED TO ESTIMATE PSTN, CHARACTER 8
-C                     OF STNID IS SET TO 'x'; NOTE THAT PMSL IS ALWAYS
-C                     MISSING FOR MESONET REPORTS
+C                     REPORTS - THIS IS NOT THE CASE FOR THE RAP)
+C             (NOTE3: FOR MESONET REPORTS, PFRALT IS HARDWIRED TO TRUE:
+C                     - IF PSTN IS NON-MISSING, IT IS ENCODED IN
+C                       PREPBUFR FILE, AND CHARACTER 8 OF STNID REMAINS
+C                       BLANK, THESE GET PREPBUFR REPORT TYPE 188/288;
+C                     - IF PSTN IS MISSING BUT ALTIMETER SETTING IS
+C                       NON-MISSING, IT IS USED TO ESTIMATE PSTN, PSTN
+C                       IS ENCODED IN PREPBUFR FILE, AND CHARACTER 8 OF
+C                       STNID IS SET TO 'a', THESE GET PREPBUFR REPORT
+C                       TYPE 188/288;
+C                     - IF BOTH PSTN AND ALTIMETER SETTING ARE MISSING,
+C                       THEN ONE OF THE FOLLOWING WILL OCCUR:
+C                        1) IF NPKRPT(10)=T, PSTN IS ENCODED AS MISSING
+C                           IN PREPBUFR FILE (ALTHOUGH Q IS STILL
+C                           CALCULATED FROM ITS U.S. STANDARD ATMOS.
+C                           VALUE), THESE GET PREPBUFR REPORT TYPE
+C                           195/295;
+C                        2) IF NPKRPT(10)=F, THE U.S. STANDARD
+C                           ATMOSPHERE IS USED TO ESTIMATE PSTN, PSTN
+C                           IS ENCODED INTO PREPBUFR WITH THIS VALUE,
+C                           AND CHARACTER 8 OF STNID IS SET TO 'x',
+C                           THESE GET PREPBUFR REPORT TYPE 188/288;
+C                     NOTE THAT PMSL IS ALWAYS MISSING FOR MESONET
+C                     REPORTS.)
 CC
 C  N O T E --  THE FOLLOWING DEFINES AN LFM GRID (POLAR STEREOGRAPHIC)
 C               WHICH IS USED TO 'THIN' VOLUME OF SURFACE DATA PREPARED
@@ -2205,7 +2315,7 @@ C    PROFILER, VAD, RASS, SATELLITE SOUNDINGS, SATWINDS, AND AIRCRAFT.)
 C                              ICAT(MXLVL)
 
 C          WHERE MXLVL  = MAX NUMBER OF LEVELS
-C                   CURRENTLY = 300 (BOTTOM TO TOP)
+C                   CURRENTLY = 600 (BOTTOM TO TOP)
 
 C                      POSSIBLE VALUES FOR ICAT:
 
@@ -2242,7 +2352,7 @@ C                         ON AN MOBS REPORT LEVEL
 C          CURRENTLY = 6 (AS INDICATED BELOW)
 
 C          WHERE MXLVL  = MAX NUMBER OF LEVELS FOR AN MOBS REPORT
-C          CURRENTLY = 300 (BOTTOM TO TOP)
+C          CURRENTLY = 600 (BOTTOM TO TOP)
 
 C      {IN ALL CASES, MISSING/NOT USED IS INITIALIZED AS IMISS (99999)}
 
@@ -2411,7 +2521,7 @@ C PARAMETER NAME "MXLVL"  THROUGHOUT PGM SETS MAXIMUM NO. OF LEVELS THAT
 C  CAN BE PROCESSED INTO THE FOLLOWING ARRAYS: MOBS, ICAT, DAT, TMP, IQ,
 C  JQ, IR, JR, VDAT, VTMP, PP, ZP, TP, DP, QP, UP, VP, VV, CLAM, CLAL,
 C  AND KS
-      PARAMETER (MXLVL = 5000)
+      PARAMETER (MXLVL = 600)
 
 C PARAMETER NAME "MXPWT" THROUGHOUT PGM SETS MAXIMUM NO. OF PRECIP.
 C  WATER OBS/Q.M./R.C. ETC. GROUPS (CURRENTLY 5 - TOTAL COLUMN, 1.0-0.9
@@ -2435,10 +2545,12 @@ C PARAMETER NAME "MAXOBS" THROUGHOUT PGM SETS MAX SIZE OF OBS ARRAY
 C  IN INTERFACE WITH SUBROUTINE IW3UNPBF
       PARAMETER (MAXOBS = 3500)
 
+      CHARACTER*4   c2many_lvls
       CHARACTER*5   CTYPE(2)
+      CHARACTER*6   CMXLVL
       CHARACTER*8   STNPRT,STNID,SUBSET_d
       CHARACTER*10  CDAT(8)
-      CHARACTER*14  NET(9)
+      CHARACTER*14  NET(10)
       CHARACTER*40  NAMEW(NUMTYP),NAMEM(NUMTYP)
       LOGICAL  POLA,NORTH,RECCON,DROPSN,AIRLND,TOVEDS,GOESND,SATMST,
      $ SWNLND,MARLND,PG4243,SPCIAL,FILLZ,FILLT,FILLW,FILLM,KTEMP,TR80KM,
@@ -2476,7 +2588,7 @@ C  IN INTERFACE WITH SUBROUTINE IW3UNPBF
      $ JSURFM(12),JSURFW(12),FWINDO(12),PFRALT,npkrpt(12)
       COMMON/UPALIM/LEVPM,LEVST,LEVQQ,TDLIM,SPCIAL,ISQNUM_UPA
       COMMON/COUNT/KKTYPE(100:299)
-      COMMON/PARM2/PG4243,KTEMP
+      COMMON/PARM2/PG4243,KTEMP,i2many_lvls
       COMMON/PARM3/RECCON,RWINDO,UWINDO,RECSLM,FLRECO,VWINDO,VADWIN,
      $ IVADFL,IVADSP,FLDMGS,FLDMAF,FLDMFR,DROPSN,DWINDO
       COMMON/PARM4/ICODE
@@ -2508,7 +2620,8 @@ C  IN INTERFACE WITH SUBROUTINE IW3UNPBF
       DATA  IMISS/99999/
       DATA  NET/'??????????????',' AFOS GRAPHIC ','***** GFS ****',
      $          '**** RAP *****','**** GDAS ****','** NAM/NDAS **',
-     $          '  CDAS-REANL  ','HRLY- GOES CLD','**** RTMA ****'/
+     $          '  CDAS-REANL  ','HRLY- GOES CLD','**** RTMA ****',
+     $          '**** URMA ****'/
       DATA  CTYPE/'RTOVS','ATOVS'/
       DATA  JITSW/
      $ 202,210,220,221,222,223,224,225,226,227,228,229,230,231,232,233,
@@ -2546,13 +2659,13 @@ C  IN INTERFACE WITH SUBROUTINE IW3UNPBF
      $  'SATWND: NESDIS GOES    H-D IM WV/DEEP LY',  ! 247
      $  'SATWND: NESDIS GOES    H-D SN WV/CL. TOP',  ! 248
      $  'SATWND: NESDIS GOES    H-D SN WV/DEEP LY',  ! 249
-     $  'SATWND: JAPAN  GMS/MTSAT WATER-VAPOR    ',  ! 250
+     $  'SATWND: JAPAN  GMS/MTSAT IM WV(C-T, D-L)',  ! 250
      $  'SATWND: NESDIS GOES    H-D VZ CLD-DRIFT ',  ! 251
      $  'SATWND: JAPAN  GMS/MTSAT IR/VZ C-DRFT HI',  ! 252
      $  'SATWND: EUMSAT MTEOSAT IR/VZ CLD-DRFT HI',  ! 253
-     $  'SATWND: EUMSAT MTEOSAT WATER-VAPOR      ',  ! 254
+     $  'SATWND: EUMSAT MTEOSAT IM WV (C-T, D-L) ',  ! 254
      $  'SATWND: NESDIS GOES    PICTURE TRIPLET  ',  ! 255
-     $  'SATWND: INDIA  INSAT/KALPANA WATER-VAPOR',  ! 256
+     $  'SATWND: INDIA INSAT/KALPANA IM WV(CT,DL)',  ! 256
      $  'SATWND: NASA/MODIS POES IR CLOUD-DRIFT  ',  ! 257
      $  'SATWND: NASA/MODIS POES IMGR WV/CLD. TOP',  ! 258
      $  'SATWND: NASA/MODIS POES IMGR WV/DEEP LYR',  ! 259
@@ -2655,7 +2768,8 @@ C  IN INTERFACE WITH SUBROUTINE IW3UNPBF
      $ FLACMS,IACFTH,SUBSKP,JPGPSD,GWINDO,RASS,TWINDO,JPWDSD,IWWNDO,
      $ FLDMFR,WRMISS,SKGP45,JPASCD,IAWNDO,npkrpt
       NAMELIST/PARM/IUNIT
-      CALL W3TAGB('PREPOBS_PREPDATA',2013,0045,0061,'NP22')
+ ! DAK: update this date ...
+      CALL W3TAGB('PREPOBS_PREPDATA',2014,0092,0061,'NP22')
 C DETERMINE MACHINE WORD LENGTH (BYTES) FOR BOTH INTEGERS AND REALS
       CALL WORDLENGTH(LWI,LWR)
       PRINT 2213, LWI,LWR
@@ -2692,13 +2806,13 @@ C    CARDS FILE, JUST AFTER NAMELIST TASK, BY THE MAKE_PREPBUFR SCRIPT)
          TOVBFR(1) = .FALSE.
          TOVBFR(2) = .FALSE.
       END IF
-      IF(IRNMRK.GT.0.AND.IRNMRK.LT.10)  THEN
+      IF(IRNMRK.GT.0.AND.IRNMRK.LT.11)  THEN
          PRINT 321, NET(IRNMRK)
       ELSE
          PRINT 321, NET(1)
       END IF
   321 FORMAT(/37X,'WELCOME TO THE UNIVERSAL ',A14,' DATA PREPROCESSOR'/
-     $ 48X,'WCOSS VERSION CREATED 14 FEB 2013'/)
+     $ 48X,'WCOSS VERSION CREATED ?? ??? ????'/)
       PRINT 322, (IUNIT(I),I=1,8),IUNIT(16),IUNIT(17)
   322 FORMAT(//53X,'TABLE OF UNIT NUMBERS'/31X,
      $ 'INPUTS IN UNIT NUMBERS 11-50 - OUTPUTS IN UNIT NUMBERS 51-90'//
@@ -2827,7 +2941,7 @@ C  THAT LAST INCOMPLETE BUFR MESSAGE SHOULD BE WRITTEN OUT
      $ '       PRODUCER/SATELLITE/PRODUCT COMBINATION    = ',I8,/,35X,
      $ '   -- NO. SATWND (ALL PRODUCERS/SATELLITES)...        ',/,35X,
      $ '          CONVENTIONAL IR CLOUD DRIFT            = ',I8,/,35X,
-     $ '          CONVENTIONAL WATER VAPOR               = ',I8,/,35X,
+     $ '          CONVENTIONAL IMGR WTR VPR(CL-TOP,D-LYR)= ',I8,/,35X,
      $ '          CONVENTIONAL VISIBLE CLOUD DRIFT       = ',I8,/,35X,
      $ '          HI-DENSITY IR CLOUD DRIFT              = ',I8,/,35X,
      $ '          HI-DENSITY VISIBLE CLOUD DRIFT         = ',I8,/,35X,
@@ -3114,6 +3228,14 @@ C  THAT LAST INCOMPLETE BUFR MESSAGE SHOULD BE WRITTEN OUT
       PRINT 91
    91 FORMAT(//39X,'***** PREPDATA PROGRAM SUCCESSFULLY COMPLETED',
      $ ' *****'//)
+      if(i2many_lvls.gt.0) then
+         WRITE(c2many_lvls,'(I4)') i2many_lvls
+         WRITE(CMXLVL,'(I6)') MXLVL
+         CALL SYSTEM('[ -n "$jlogfile" ] && $DATA/postmsg'//
+     $    ' "$jlogfile" "***WARNING: '//c2many_lvls//' REPORT(S) '//
+     $    'SKIPPED DUE TO HAVING TOO MANY LEVELS (> '//
+     $    CMXLVL//' )"')
+      end if
       GO TO 99
 C-----------------------------------------------------------------------
   326 CONTINUE
@@ -3140,7 +3262,7 @@ C-----------------------------------------------------------------------
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    PREP
-C   PRGMMR: D. A. KEYSER     ORG: NP22       DATE: 2008-09-25
+C   PRGMMR: ????????????     ORG: NP22       DATE: ????-??-??
 C
 C ABSTRACT: PERFORMS SEVERAL FUNCTIONS - UNPACKS REPORTS ONE AT A TIME
 C   INTO UNPACKED IW3UNPBF FMT, PERFORMING SEVERAL CHECKS SUCH AS
@@ -3290,6 +3412,9 @@ C     WIND DATA READING FROM REPROCESSED DUMP FILE IN UNIT 39, ENCODING
 C     INTO NEW PREPBUFR REPORT TYPE 290 UNDER NEW PREPBUFR MESSAGE TYPE
 C     "ASCATW" VIA NEW NAMELIST SWITCHES "JPASCD" (DEF=6*9999) AND
 C     IAWNDO (DEF=-3,+3)
+C ????-??-??  ???????????  -- DIFFERENTIATE BETWEEN RADAR CODED MESSAGE
+C  AND NEW LEVEL 2 DECODER VAD WIND REPORTS VIA USE OF REPORT SUBTYPE
+C  (TSB=1 FOR FORMER AND =2 FOR LATTER)
 C 2014-01-15  S. Melchior -- [Commentary forthcoming]
 C
 C USAGE:    CALL PREP
@@ -3318,7 +3443,7 @@ C$$$
       PARAMETER (MXWRDH = 15)
       PARAMETER (MXTYPV =  3)
       PARAMETER (MXWRDL =  6)
-      PARAMETER (MXLVL = 5000)
+      PARAMETER (MXLVL = 600)
       PARAMETER (MAXOBS = 3500)
 C PARAMETER NAME "NUMOBS2"  THROUGHOUT PGM SETS NO. OF ELEMENTS IN OBS2
 C  ARRAY
@@ -4124,8 +4249,9 @@ C-----------------------------------------------------------------------
 C STORE WORD 8 OF REPORT HEADER (REPORT "SUBTYPE") AS 2 FOR DROPS
 C  (STORED AS 1 FOR RECCOS IN SUBR. GETC06)
       IF(IDATA(9).EQ.31)  HDR(8) = 2.
-C STORE WORD 8 OF REPORT HEADER (REPORT "SUBTYPE") AS 2 FOR LEVEL 2
-C  VAD WINDS
+C STORE WORD 8 OF REPORT HEADER (REPORT "SUBTYPE") AS 2 FOR VAD WIND
+C  REPORTS FROM LEVEL 2 DECODER AND AS 1 FOR VAD WIND REPORTS FROM
+C  RADAR CODED MESSAGE
       IF(IDATA(9).EQ.72) THEN
          IF(SUBSET_d.EQ.'NC002017')  THEN
             HDR(8) = 2.
@@ -4728,7 +4854,7 @@ C 2008-04-10  D. A. KEYSER -- CAN HANDLE RADIOSONDE TYPES > 99 WHICH
 C     WILL SOON BE INTRODUCED INTO THE BUFR DATABASE (BASED ON NOVEMBER
 C     2007 WMO BUFR UPDATE)
 C 2012-11-27  D. A. KEYSER -- INCREASED MAXIMUM POSSIBLE VALUE FOR SQN
-C     (SEQUENCE NUMBER) ENCODED INTO PREPBUFR FILE FROM 99998 TO 524286 
+C     (SEQUENCE NUMBER) ENCODED INTO PREPBUFR FILE FROM 99998 TO 524286
 C     (NEEDED BECAUSE THERE CAN NOW BE > 99998 MDCRS REPORTS IN A
 C     MONOLITHIC "AIRCAR" DUMP FILE - THIS CAUSES PREPACQC TO FAIL IN
 C     SERIAL PREPBUFR PROCESSING RUNS, E.G. IN SDMEDIT)
@@ -5138,7 +5264,7 @@ C$$$
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    GETUPA
-C   PRGMMR: D. A. KEYSER     ORG: NP22       DATE: 2004-09-09
+C   PRGMMR: ?????????????    ORG: NP22       DATE: ????-??-??
 C
 C ABSTRACT: RETRIEVES UPPER-AIR RAOB, PIBAL, DROPWINSONDE, CLASS,
 C   WIND PROFILER ORIGINATING FROM PILOT (PIBAL) FORMAT BULLETINS, VAD
@@ -5246,6 +5372,14 @@ C 2004-09-09  D. A. KEYSER -- ADDED PROCESSING OF NPN AND CAP RASS DATA
 C     READ FROM "RASSDA" DUMP FILE IN NEW DATA LVL CAT. 15, DUMP R.
 C     TYPE 77, GET PREPBUFR R. TYPE 126, PROCESSED INTO PREPBUFR FILE
 C     UNDER NEW TBL A ENTRY "RASSDA"
+C ????-??-??  ???????????? -- DO NOT CONVERT WINDS FROM DIR/SPEED TO
+C     U/V FOR NEW VAD WIND REPORTS FROM LEVEL 2 DECODER SINCE THESE ARE
+C     ALREADY U/V AND ARE STORED IN M/SEC
+C ????-??-??  ???????????? -- NO LONGER ABORTS WITH RC=99 IF NUMBER OF
+C     LEVELS IN A REPORT EXCEEDS THE LIMIT OF "MXLVL".  INSTEAD, NOW
+C     SKIPS THE OFFENDING REPORT(S) AND, AT THE VERY END, POSTS A
+C     MESSAGE TO THE JOBLOG FILE NOTING HOW MANY REPORTS WERE SKIPPED
+C     DUE TO THIS ISSUE.
 C
 C USAGE:    CALL GETUPA(*,*)
 C   OUTPUT FILES:
@@ -5260,7 +5394,7 @@ C
 C$$$
       SUBROUTINE GETUPA(*,*)
       PARAMETER (MXWRDH = 15)
-      PARAMETER (MXLVL = 5000)
+      PARAMETER (MXLVL = 600)
       PARAMETER (NUMVAR = 6, NUMQMS = 5)
       PARAMETER (NUMDAT = NUMVAR + (2 * NUMQMS))
       PARAMETER (MAXOBS = 3500)
@@ -5275,7 +5409,7 @@ C$$$
       COMMON/DATA/KOUNT,IDATE(4),IDAT10,MP_PROCESS,WRMISS
       COMMON/RPTHDR/SUBSET_d,STNID,HDR(2:MXWRDH)
       COMMON/UPALIM/LEVPM,LEVST,LEVQQ,TDLIM,SPCIAL,ISQNUM_UPA
-      COMMON/PARM2/PG4243,KTEMP
+      COMMON/PARM2/PG4243,KTEMP,i2many_lvls
       COMMON/PARM3/RECCON,RWINDO,UWINDO,RECSLM,FLRECO,VWINDO,VADWIN,
      $ IVADFL,IVADSP,FLDMGS,FLDMAF,FLDMFR,DROPSN,DWINDO
       COMMON/PARM5/FILLZ,FILLT,FILLW,FILLM,LSWIND,LSMASS,CWINDO,NPZ
@@ -5481,7 +5615,17 @@ CAAAAA%%%%%
 C IF THIS IS NOT SFC LVL DON'T PROCESS LVL IF TEMP MISSING
          IF((N.GT.1.OR.NP1VLD.EQ.0).AND.RDATA(II+1).GE.YMISS)  CYCLE
          NL = NL + 1
-         IF(NL.GT.MXLVL)  GO TO 99
+         IF(NL.GT.MXLVL)  THEN
+C----------------------------------------------------------------------
+C IF NO. OF LEVELS IN A REPORT EXCEEDS THE LIMIT OF "MXLVL", SKIP
+C  REPORT AND PRINT DIAGNOSTIC
+            PRINT 9953, STNID,RDATA(1),RDATA(2),IDATA(9),MXLVL
+ 9953 FORMAT(' # # TOTAL REPORT TOSSED  -ID=',A8,', LAT=',F7.2,'N, ',
+     $ 'LON=',F8.2,'E, RTYP',I4,' - EXCEEDS LIMIT OF',I6,' LVLS')
+            i2many_lvls = i2many_lvls + 1
+            RETURN 2
+C----------------------------------------------------------------------
+         END IF
          NSIG = NSIG + 1
          IQ(NL,3) = 2
          IQ(NL,5) = IPM
@@ -5526,7 +5670,15 @@ C PROCESS NON-MSG PRESSURE REGARDLESS OF PREPBUFR TBL VAL
          IF(MIN(RDATA(II+1),RDATA(II+2)).GE.YMISS.AND.
      $      MAX(RDATA(II+3),RDATA(II+4)).GE.YMISS)  CYCLE
          NL = NL + 1
-         IF(NL.GT.MXLVL)  GO TO 99
+         IF(NL.GT.MXLVL)  THEN
+C----------------------------------------------------------------------
+C IF NO. OF LEVELS IN A REPORT EXCEEDS THE LIMIT OF "MXLVL", SKIP
+C  REPORT AND PRINT DIAGNOSTIC
+            PRINT 9953, STNID,RDATA(1),RDATA(2),IDATA(9),MXLVL
+            i2many_lvls = i2many_lvls + 1
+            RETURN 2
+C----------------------------------------------------------------------
+         END IF
          N5 = N5 + 1
          IQ(NL,3) = 5
          IQ(NL,5) = IPM
@@ -5628,7 +5780,15 @@ C  WIND IS BAD OR MISSING
          IF((N.GT.1.OR.IABS(NP1VLD).NE.2).AND.(MAX(RDATA(II+1),
      $    RDATA(II+2)).GE.YMISS.OR.IVM.GE.IQMLIM))  CYCLE
          NL = NL + 1
-         IF(NL.GT.MXLVL)  GO TO 99
+         IF(NL.GT.MXLVL)  THEN
+C----------------------------------------------------------------------
+C IF NO. OF LEVELS IN A REPORT EXCEEDS THE LIMIT OF "MXLVL", SKIP
+C  REPORT AND PRINT DIAGNOSTIC
+            PRINT 9953, STNID,RDATA(1),RDATA(2),IDATA(9),MXLVL
+            i2many_lvls = i2many_lvls + 1
+            RETURN 2
+C----------------------------------------------------------------------
+         END IF
          NP = NP + 1
          IQ(NL,3) = 3
          IQ(NL,5) = IPM
@@ -5709,7 +5869,15 @@ C MISSING HEIGHTS OR THOSE ABOVE THE LIMIT RESULT IN SKIPPED CAT. 15 LVL
 C DON'T PROCESS CAT. 15 LEVEL IF TEMPERATURE IS MISSING
          IF(RDATA(II+1).GE.YMISS)  CYCLE
          NL = NL + 1
-         IF(NL.GT.MXLVL)  GO TO 99
+         IF(NL.GT.MXLVL)  THEN
+C----------------------------------------------------------------------
+C IF NO. OF LEVELS IN A REPORT EXCEEDS THE LIMIT OF "MXLVL", SKIP
+C  REPORT AND PRINT DIAGNOSTIC
+            PRINT 9953, STNID,RDATA(1),RDATA(2),IDATA(9),MXLVL
+            i2many_lvls = i2many_lvls + 1
+            RETURN 2
+C----------------------------------------------------------------------
+         END IF
          N15 = N15 + 1
          IQ(NL,3) = 15
          DAT(NL,2) = NINT(RDATA(II))
@@ -5757,7 +5925,15 @@ C CHECK FOR DUPLICATE PRESSURES
                IF(IP.EQ.JP)  CYCLE
             ENDDO
             NL = NL + 1
-            IF(NL.GT.MXLVL)  GO TO 99
+            IF(NL.GT.MXLVL)  THEN
+C----------------------------------------------------------------------
+C IF NO. OF LEVELS IN A REPORT EXCEEDS THE LIMIT OF "MXLVL", SKIP
+C  REPORT AND PRINT DIAGNOSTIC
+               PRINT 9953, STNID,RDATA(1),RDATA(2),IDATA(9),MXLVL
+               i2many_lvls = i2many_lvls + 1
+               RETURN 2
+C----------------------------------------------------------------------
+            END IF
             NP = NP + 1
 C THE SPECIAL LEVELS ARE NOW ASSIGNED DATA LEVEL CATEGORY 7 (UNIQUELY
 C  IDENTIFIES THEM)
@@ -5829,7 +6005,15 @@ C DON'T PROCESS CAT. 4 LEVEL IF EITHER WIND COMPONENT IS MISSING
 C PROCESS NON-MSG WIND/HGT REGARDLESS OF PREPBUFR TBL VAL
          IF(MAX(IVM,IPM).LT.IQMLIM)  THEN
             NL = NL + 1
-            IF(NL.GT.MXLVL)  GO TO 99
+            IF(NL.GT.MXLVL)  THEN
+C----------------------------------------------------------------------
+C IF NO. OF LEVELS IN A REPORT EXCEEDS THE LIMIT OF "MXLVL", SKIP
+C  REPORT AND PRINT DIAGNOSTIC
+               PRINT 9953, STNID,RDATA(1),RDATA(2),IDATA(9),MXLVL
+               i2many_lvls = i2many_lvls + 1
+               RETURN 2
+C----------------------------------------------------------------------
+            END IF
             NH = NH + 1
             IQ(NL,3) = 4
             DAT(NL,2) = NINT(RDATA(II))
@@ -5850,6 +6034,8 @@ C  SPANNING HEIGHT)
                   DAT(NL,5) = NINT(RDATA(II+1))
                   DAT(NL,6) = NINT(RDATA(II+2)) * 0.1
                ELSE
+C VAD WIND REPORTS FROM LEVEL 2 DECODER STORE U-COMP/V-COMP WIND WHICH
+C  IS ALREADY STORED IN M/SEC
                   DAT(NL,5) = RDATA(II+1)
                   DAT(NL,6) = RDATA(II+2)
                END IF
@@ -5860,17 +6046,16 @@ C  SPANNING HEIGHT)
 C RESET IDATA(19) TO NUMBER OF 'GOOD' CAT. 4 LVLS ACTUALLY PROCESSED
       IDATA(19) = NH
    41 CONTINUE
-      IF(SUBSET_d .NE. 'NC002017')  THEN ! do not convert dir/spd
-                                      !  for new VAD winds since
-                                      !  already u/v
-C CONVERT WINDS FROM DIR/SPEED (DEG & METERS/SEC) TO GRID U-COMP/V-COMP
-C  (METERS/SEC)
-      DO N = 1,NL
-         IF(IQ(N,4).GE.16)  CYCLE
-         CALL UV(DAT(N,5),DAT(N,6),U,V)
-         DAT(N,5) = U
-         DAT(N,6) = V
-      ENDDO
+      IF(SUBSET_d .NE. 'NC002017')  THEN
+C FOR ALL TYPES EXCEPT VAD WIND REPORTS FROM LEVEL 2 DECODER, CONVERT
+C  WINDS FROM DIR/SPEED (DEGREES & M/SEC) TO GRID U-COMP/V-COMP (M/SEC)
+C  (VAD WIND REPORTS FROM LEVEL 2 DECODER ARE ALREADY U-COMP/V-COMP)
+         DO N = 1,NL
+            IF(IQ(N,4).GE.16)  CYCLE
+            CALL UV(DAT(N,5),DAT(N,6),U,V)
+            DAT(N,5) = U
+            DAT(N,6) = V
+         ENDDO
       END IF
 C KOUNT COUNTS NO. OF REPORTS UNPACKED (& NOT SKIPPED) FROM FILE
       KOUNT = KOUNT + 1
@@ -5941,16 +6126,6 @@ C CALL SUBR. 'STOROB' TO WRITE REPORT PIECES IN MOBS ARRAY
       RETURN 1
  2090 CONTINUE
       RETURN 2
-   99 CONTINUE
-C-----------------------------------------------------------------------
-C NO. OF LEVELS IN A REPORT EXCEEDS THE LIMIT OF "MXLVL" -- STOP 99
-      PRINT 7789, MXLVL,STNID,RDATA(1),RDATA(2),IDATA(9)
- 7789 FORMAT(/5X,'######  TOT. NO. LVLS >',I4,' FOR STNID = ',A8,
-     $ '  AT LAT = ',F6.2,' N  LON = ',F7.2,' E   TYPE = ',I4,/,15X,
-     $ ' -- NO MORE RPTS CAN BE WRITTEN TO FILE, STOP 99'/)
-      CALL W3TAGE('PREPOBS_PREPDATA')
-      CALL ERREXIT(99)
-C-----------------------------------------------------------------------
       END
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
@@ -6138,7 +6313,7 @@ C
 C$$$
       SUBROUTINE SMERGE(NM,NSIG,N5,NP,NH,N15,NLEV,IPRT,STOP)
       PARAMETER (MXWRDH = 15)
-      PARAMETER (MXLVL = 5000)
+      PARAMETER (MXLVL = 600)
       PARAMETER (NUMVAR = 6, NUMQMS = 5)
       PARAMETER (NUMDAT = NUMVAR + (2 * NUMQMS))
       PARAMETER (MAXOBS = 3500)
@@ -7056,7 +7231,7 @@ C
 C$$$
       SUBROUTINE WNDBYP(NM,NS,NP,KLVL,TMP,JQ,JR,IPRT,VTMP)
       PARAMETER (MXWRDH = 15)
-      PARAMETER (MXLVL = 5000)
+      PARAMETER (MXLVL = 600)
       PARAMETER (NUMVAR = 6, NUMQMS = 5)
       PARAMETER (NUMDAT = NUMVAR + (2 * NUMQMS))
       DIMENSION  TMP(MXLVL,NUMDAT),KS(MXLVL),IQ(MXLVL,NUMQMS),
@@ -7572,7 +7747,7 @@ C
 C$$$
       SUBROUTINE WNDBYZ(NM,NS,NP,NH,KLVL,TMP,JQ,IPRT,VTMP)
       PARAMETER (MXWRDH = 15)
-      PARAMETER (MXLVL = 5000)
+      PARAMETER (MXLVL = 600)
       PARAMETER (NUMVAR = 6, NUMQMS = 5)
       PARAMETER (NUMDAT = NUMVAR + (2 * NUMQMS))
       PARAMETER (MAXOBS = 3500)
@@ -8373,7 +8548,7 @@ C
 C$$$
       SUBROUTINE FILWND(KLVL,TMP,JQ,JR,IPRT)
       PARAMETER (MXWRDH = 15)
-      PARAMETER (MXLVL = 5000)
+      PARAMETER (MXLVL = 600)
       PARAMETER (NUMVAR = 6, NUMQMS = 5)
       PARAMETER (NUMDAT = NUMVAR + (2 * NUMQMS))
       DIMENSION TMP(MXLVL,NUMDAT),JQ(MXLVL,NUMQMS),IPRT(2),
@@ -8564,7 +8739,7 @@ C
 C$$$
       SUBROUTINE FILDPT(KLVL,TMP,JQ,JR,IPRT)
       PARAMETER (MXWRDH = 15)
-      PARAMETER (MXLVL = 5000)
+      PARAMETER (MXLVL = 600)
       PARAMETER (NUMVAR = 6, NUMQMS = 5)
       PARAMETER (NUMDAT = NUMVAR + (2 * NUMQMS))
       DIMENSION  TMP(MXLVL,NUMDAT),JQ(MXLVL,NUMQMS),IPRT(2),
@@ -8788,7 +8963,7 @@ C$$$
       PARAMETER (MXWRDH = 15)
       PARAMETER (MXTYPV =  3)
       PARAMETER (MXWRDL =  6)
-      PARAMETER (MXLVL = 5000)
+      PARAMETER (MXLVL = 600)
       PARAMETER (NUMVAR = 6, NUMQMS = 5)
       PARAMETER (NUMDAT = NUMVAR + (2 * NUMQMS))
       PARAMETER (MXBLVL = 255)
@@ -8807,7 +8982,7 @@ C$$$
       COMMON/DATA/KOUNT,IDATE(4),IDAT10,MP_PROCESS,WRMISS
       COMMON/UPALIM/LEVPM,LEVST,LEVQQ,TDLIM,SPCIAL,ISQNUM_UPA
       COMMON/RPTHDR/SUBSET_d,STNID,HDR(2:MXWRDH)
-      COMMON/PARM2/PG4243,KTEMP
+      COMMON/PARM2/PG4243,KTEMP,i2many_lvls
       COMMON/PARM5/FILLZ,FILLT,FILLW,FILLM,LSWIND,LSMASS,CWINDO,NPZ
       COMMON/PARM6/MODPRT,IFLUA,STNPRT(3)
       COMMON/LFMSFC/LFMAXI,LFMAXJ,FMESHL,FLONVT,FPOLEI,FPOLEJ,MARLND,
@@ -9307,7 +9482,7 @@ C
 C$$$
       SUBROUTINE BALLOON_DRIFT(IPRT,I,PSTA,LL)
       PARAMETER (MXWRDH = 15)
-      PARAMETER (MXLVL = 5000)
+      PARAMETER (MXLVL = 600)
       PARAMETER (NUMVAR = 6, NUMQMS = 5)
       PARAMETER (NUMDAT = NUMVAR + (2 * NUMQMS))
       PARAMETER (MAXOBS = 3500)
@@ -9681,7 +9856,7 @@ C     IS SET TO REPORTED LAT/LON
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    FILLX
-C   PRGMMR: KEYSER           ORG: NP22        DATE: 2008-09-25
+C   PRGMMR: KEYSER           ORG: NP22        DATE: ????-??-??
 C
 C ABSTRACT: SENDS EACH FILLED REPORT PASSED IN THROUGH "HDR/MOBS/
 C   IPMSL/PWAT/xRAD/REQV/CLTOP" ARRAYS TO PREPBUFR ENCODER
@@ -9776,7 +9951,7 @@ C     "ASCATW" VIA NEW NAMELIST SWITCHES "JPASCD" (DEF=6*9999) AND
 C     IAWNDO (DEF=-3,+3); 1-DIM ARRAY OBS2 RETURNED FROM IW3UNPBF
 C     INCREASED FROM 41 TO 42 WORDS TO HOLD MOISTURE QUALITY (CODE
 C     TABLE) FOR ACARS REPORTS
-C 2010-03-09  D. A. KEYSER -- 1-DIM ARRAY OBS2 RETURNED FROM IW3UNPBF
+C ????-??-??  D. A. KEYSER -- 1-DIM ARRAY OBS2 RETURNED FROM IW3UNPBF
 C     INCREASED FROM 42 TO 43 WORDS TO HOLD SATELLITE ZENITH ANGLE
 C     (DEGREES, FOR ALL SATWND TYPES)
 C
@@ -9811,7 +9986,7 @@ C$$$
       PARAMETER (MXWRDH = 15)
       PARAMETER (MXTYPV =  3)
       PARAMETER (MXWRDL =  6)
-      PARAMETER (MXLVL = 5000)
+      PARAMETER (MXLVL = 600)
       PARAMETER (MXPWT =  5)
       PARAMETER (MXBLVL = 255)
       PARAMETER (MAXOBS = 3500)
@@ -9920,10 +10095,10 @@ C CORRECT HGHT LBL TO THICK. TO 1000 MB FOR RTOVS OR ATOVS SAT. SNDINGS
       MSLTB2 = MSLTB1
       IF(NFILE.NE.IUNIT(8))  THEN
          PRINT 905, KOUNT,STNID,HDR(3),HDR(2),MLEV,HDR(4),NINT(HDR(6)),
-     $    NINT(HDR(7)),NINT(HDR(9)),NINT(HDR(10))
+     $    NINT(HDR(8)),NINT(HDR(7)),NINT(HDR(9)),NINT(HDR(10))
   905 FORMAT(/'>> (',I6,') ID ',A8,' @',F7.2,' N LAT/',F6.2,' E LON: ',
-     $ '# LVLS=',I4,'  D-TIM=',F9.5,' HR  ANL R.T.=',I3,'  DUMP R.T.=',
-     $ I3,'   IT=',I3.3,' ELV=',I5)
+     $ '# LVLS=',I4,'  D-TIM=',F9.5,' HR  ANL RT=',I3,'/',I4,'  DUMP ',
+     $ 'RT=',I3,'  IT=',I3.3,' ELV=',I5)
       ELSE
          PRINT 915, KOUNT,STNID,HDR(3),HDR(2),MLEV,HDR(4),NINT(HDR(6)),
      $    NINT(HDR(7)),NINT(HDR(9)),NINT(HDR(10)),NINT(RDATA2(2))
@@ -10172,7 +10347,7 @@ C**********************************************************************
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    GETC06
-C   PRGMMR: D. A. KEYSER     ORG: NP22       DATE: 2008-09-25
+C   PRGMMR: ????????????     ORG: NP22       DATE: ????-??-??
 C
 C ABSTRACT: RETRIEVES SINGLE LEVEL {AIRCRAFT FLIGHT-LEVEL, SATWND (ALL
 C   TYPES), RECCO} REPORTS FROM DATA LEVEL CAT. 6.  RECCOS MAY INCLUDE
@@ -10415,7 +10590,7 @@ C     VESTIGE FROM THE OLD I*2 PREPDA DAYS); IF NEAREST INTEGER FOR Q
 C     IS 0 MG/KG, IT IS RESET TO 1 MG/KG (.001 G/KG) TO ENSURE THAT
 C     LEVELS WITH VERY LOW SPECIFIC HUMIDITY ARE PROCESSED (Q MUST BE >
 C     0 TO BE PROCESSED)
-C 2010-03-09  D. A. KEYSER -- FOR ALL SATELLITE-DERIVED WIND REPORTS,
+C ????-??-??  D. A. KEYSER -- FOR ALL SATELLITE-DERIVED WIND REPORTS,
 C     NOW ENCODES PREPBUFR REPORT SUB-TYPE (MNEMONIC "TSB", PREVIOUSLY
 C     MISSING) AS BUFR SATELLITE ID TIMES 10 PLUS "SATELLITE DERIVED
 C     WIND COMPUTATION METHOD ("SWCM" - BUFR CODE TABLE 0-02-023),
@@ -10423,10 +10598,10 @@ C     ALLOWS GSI TO IDENTIFY CLOUD-TOP VS. DEEP-LAYER WV WINDS AND IR
 C     VS. VISIBLE WINDS FOR METEOSAT AND JMA SINCE, UNLIKE NESDIS,
 C     BOTH HAVE SAME RPT TYPES (250-JMA & 254-EUMETSAT FOR WV, 242/252-
 C     JMA & 243/253-EUMETSAT FOR IR/VIS)
-C 2014-01-15  S. Melchior -- SUBROUTINE GETC06 WAS MODIFIED TO TRAP RPTS
-C     WHOSE WIND INFORMATION EXCEEDS THE 32767 LIMIT.  IF THE LIMIT IS
-C     EXCEEDED THE ENTIRE REPORT WILL SKIP BEING ENCODED INTO THE
-C     OUTPUT PREPBUFR FILE.
+C ????-??-??  S. Melchior -- MODIFIED TO TRAP RPTS WHOSE WIND
+C     INFORMATION EXCEEDS THE 32767 LIMIT.  IF THE LIMIT IS EXCEEDED
+C     THE ENTIRE REPORT WILL SKIP BEING ENCODED INTO THE OUTPUT
+C     PREPBUFR FILE.
 C
 C USAGE:    CALL GETC06(NN,CYCLET,*,*)
 C   INPUT ARGUMENT LIST:
@@ -10450,7 +10625,7 @@ C$$$
       PARAMETER (MXWRDH = 15)
       PARAMETER (MXTYPV =  3)
       PARAMETER (MXWRDL =  6)
-      PARAMETER (MXLVL = 5000)
+      PARAMETER (MXLVL = 600)
       PARAMETER (MXBLVL = 255)
       PARAMETER (MAXOBS = 3500)
       PARAMETER (NUMOBS2 = 43)
@@ -10606,11 +10781,16 @@ C           =6-EUMETSAT/METEOSAT-EVEN (GEOSTATIONARY);
 C           =7-NASA/MODIS AQUA (POLAR-ORBITING);
 C           =8-NASA/MODIS TERRA (POLAR-ORBITING)
 C IPD IS DEFINED AS FOLLOWS:
-C  =1-CONVENTIONAL IR CLOUD DRIFT;      =2-CONVENTIONAL WATER VAPOR;
-C  =3-CONVENTIONAL VISIBLE CLOUD DRIFT; =4-HI-DENS IR CLOUD DRIFT;
-C  =5-HI-DENS VIS CLOUD DRIFT;          =6-HI-DENS IMAGER W.VPR-CLD TOP;
-C  =7-HI-DENS IMAGER W.VPR-DEEP LYR;    =8-HI-DENS SOUNDR W.VPR-CLD TOP;
-C  =9-HI-DENS SOUNDR W.VPR-DEEP LYR;   =10-PICTURE TRIPLET CLOUD DRIFT
+C           = 1-CONVENTIONAL IR CLOUD DRIFT (CLOUD TOP);
+C           = 2-CONVENTIONAL IMAGER WATER VPR (CLOUD TOP OR DEEP LAYER);
+C           = 3-CONVENTIONAL VISIBLE CLOUD DRIFT (CLOUD TOP);
+C           = 4-HIGH-DENSITY IR CLOUD DRIFT (CLOUD TOP);
+C           = 5-HIGH-DENSITY VISIBLE CLOUD DRIFT (CLOUD TOP);
+C           = 6-HIGH-DENSITY IMAGER WATER VAPOR (CLOUD TOP);
+C           = 7-HIGH-DENSITY IMAGER WATER VAPOR (DEEP LAYER);
+C           = 8-HIGH-DENSITY SOUNDER WATER VAPOR (CLOUD TOP);
+C           = 9-HIGH-DENSITY SOUNDER WATER VAPOR (DEEP LAYER);
+C           =10-PICTURE TRIPLET CLOUD DRIFT
 C-----------------------------------------------------------------------
 C IDENTIFY LATITUDE (PHISWN) BAND INDEX ---> IBAND
          DO IBAND = 1,5
@@ -10625,9 +10805,10 @@ C DETERMINED FROM CHARACTER IN POSITION 8 OF STN. ID AND FROM CLOUD
 C  MASK INDICATOR
 C
 C   CHARACTER IN POSITION 8 OF STN. ID:
-C        1 - 'C' ---> CONVENTIONAL IR CLOUD-DRIFT
-C        2 - 'V' ---> CONVENTIONAL WATER VAPOR (ALWAYS CLOUD TOP)
-C        3 - 'B' ---> CONVENTIONAL VISIBLE CLOUD-DRIFT
+C        1 - 'C' ---> CONVENTIONAL IR CLOUD-DRIFT (ALWAYS CLOUD TOP)
+C        2 - 'V' ---> CONVENTIONAL IMAGER WATER VAPOR (CLOUD TOP OR
+C                     DEEP LAYER)
+C        3 - 'B' ---> CONVENTIONAL VISIBLE CLOUD-DRIFT (ALWAYS CLD TOP)
 C        4 - 'I' ---> HIGH-DENSITY IR CLOUD-DRIFT (ALWAYS CLOUD TOP)
 C        5 - 'Z' ---> HIGH-DENSITY VISIBLE CLOUD-DRIFT (ALWAYS CLD TOP)
 C        6 - 'W' ---> HIGH-DENSITY IMAGER WATER VAPOR (CLOUD TOP)
@@ -11404,8 +11585,9 @@ C STORE V-COMP OBS (*100 M/SEC) IN WORD 4 OF MOBS WIND LEVEL
             MOBS(1,4,LL) = NINT((VCOMP * 100.0) + 0.005)
          else
            print 1681, stnid,kw
- 1681 format(24X,'* * * * *   WIND REPORT TOSSED, ID = ',A8,', LEVEL',I3
-     $,' WIND IS ERRONEOUSLY LARGE, SET TO MISSING  * * * * *')
+ 1681 format(5X,'* * * * *   WIND REPORT TOSSED, ID = ',A8,', LEVEL',I3
+     $,' EITHER U- OR V-COMP ERRONEOUSLY LARGE, SET TO MISSING  * * * ',
+     $ '* *')
            icallw = -1
            go to 6000
          END IF
@@ -12510,7 +12692,7 @@ C  RTOVS VS. ATOVS INDICATED BY CHARACTER 7 OF STN. ID ("R" OR "A")
 C
 CCC
       PARAMETER (MXWRDH = 15)
-      PARAMETER (MXLVL = 5000)
+      PARAMETER (MXLVL = 600)
       PARAMETER (NUMVAR = 6, NUMQMS = 5)
       PARAMETER (NUMDAT = NUMVAR + (2 * NUMQMS))
       PARAMETER (MXBLVL = 255)
@@ -13081,7 +13263,7 @@ C                {GOES-07(251), GOES-11(255), GOES-15(259), ...}
 
 CCC
       PARAMETER (MXWRDH = 15)
-      PARAMETER (MXLVL = 5000)
+      PARAMETER (MXLVL = 600)
       PARAMETER (NUMVAR = 6, NUMQMS = 5)
       PARAMETER (NUMDAT = NUMVAR + (2 * NUMQMS))
       PARAMETER (MXBLVL = 255)
@@ -13991,7 +14173,7 @@ C+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    SFCDTA
-C   PRGMMR: D. A. KEYSER     ORG: NP22       DATE: 2010-06-07
+C   PRGMMR: ????????????     ORG: NP22       DATE: ????-??-??
 C
 C ABSTRACT: PERFORMS SEVERAL FUNCTIONS: UNPACKS SURFACE RPTS (IW3UNPBF
 C   FORMAT) ONE AT A TIME, PERFORMING SEVERAL CHECKS SUCH AS WHETHER
@@ -14192,6 +14374,31 @@ C     2 OR 15 WHEN THEY SHOULD HAVE BEEN SET TO 3 OR 13, RESP.) (NOTE
 C     THAT MESONETS TO NOT REPORT PRESS. SO ALTIMETER SETTING IS USED
 C     TO CALCULATE PRESS. AND THE ALTIMETER Q.M. IS TRANSFERRED TO
 C     PRESS.)
+C ???-??-??  ???????????  -- Add 12'th word to following namelist
+C     switches to account for Coast Guard tide gauge (surface marine)
+C     reports: FWINDO, JSURFM, JSURFW
+C ???-??-??  ???????????  -- Added new namelist switch NPKRPT ..., if
+C     true all of the below is true: will process reports that would
+C     otherwise be tossed due to their having a missing pstn -- in
+C     order to still allow for a q calculation, these reports
+C     temporarily estimate pstn from the U.S. std. atmosphere value and
+C     assign it a minimum q.m. of 3 while also permanently assigning
+C     the moisture q.m. a minimum value of 3 - in the end, pstn obs and
+C     qm is encoded as missing for these reports - these reports are
+C     then assigned new PREPBUFR report types ...., ATLAS buoys are
+C     handled by ..., MESONETS will no longer have "x" in character 8
+C     of id
+C ??-??-??   ???????????  -- Report type 183, ..., now store moisture
+C     quality marks no less than 3 (before they stored in observed
+C     quality mark coming in from the dump)
+C  etc., etc.
+C ????-??-??  ??????????  -- Modified to always encode wind speed obs
+C     in m/sec and wind direction obs for all types of surface reports
+C     (even if one or the other are missing but also if both are
+C     present); removed old logic which encoded wind speed only for
+C     METAR reports when direction was missing and speed was .LE. 3
+C     m/sec (direction was never encoded in any situation for surface
+C     reports)
 C 2014-01-15  S. Melchior -- [Commentary forthcoming]
 C
 C USAGE:    CALL SFCDTA
@@ -14220,7 +14427,7 @@ C$$$
       PARAMETER (MXWRDH = 15)
       PARAMETER (MXTYPV =  3)
       PARAMETER (MXWRDL =  6)
-      PARAMETER (MXLVL = 5000)
+      PARAMETER (MXLVL = 600)
       PARAMETER (MXBLVL = 255)
       PARAMETER (MAXOBS = 3500)
       PARAMETER (NUMOBS2 = 43)
@@ -14312,12 +14519,12 @@ C CHECK TO SEE IF ADPSFC DATA SHOULD BE PROCESSED
 C CHECK TO SEE IF SFCBOG DATA SHOULD BE PROCESSED
          IF(MIN(JSURFM(3),JSURFM(7)).GT.0)  GO TO 7008
       ELSE  IF(NN.EQ.3)  THEN
-         PFRALT_save=PFRALT
+         PFRALT_save=PFRALT ! DAK: added by Shelley, but is it needed?
          IF(MIN(JSURFM(10),JSURFW(10)).EQ.9999) GO TO 7008
 C MESONET REPORTS ALWAYS GET PFRALT=.TRUE.
          PFRALT=.TRUE.
       ELSE  IF(NN.GT.3)  THEN
-         PFRALT=PFRALT_save ! set PRFALT back to its original value
+         PFRALT=PFRALT_save ! set PFRALT back to its original value
                             !  since it was hardwired as TRUE for
                             !  mesonets
       END IF
@@ -14341,7 +14548,9 @@ C COUNT ALL SKIPPED REPORTS
 C***********************************************************************
 C***********************************************************************
  2100 CONTINUE
-C set ipstnflg to 0 (clean slate) prior to unpacking each report
+C initialize ipstnflg as 0 prior to unpacking each new report (will be
+C  set to 1 if a report has missing pressure and it is kept, i.e.,
+C  npkrpt=T for the particular type)
       ipstnflg = 0
 C CALL UNPREPBF TO UNPACK THE NEXT REPORT
       CALL UNPREPBF(IFLAG,CYCLET,IOPENED,DSNAME,IDSDAT,IDSDMP_8,*7000)
@@ -14369,8 +14578,8 @@ C IFLAG = 1 RETURNS DATA SET INFO (ONLY) AFTER FIRST CALL
      $                 fwindo(12)
   872 FORMAT(42X,'SURFACE SHIP ',28('.'),F5.0/42X,'BUOY ',36('.'),F5.0/
      $ 42X,'C-MAN PLATFORM ',26('.'),F5.0/42X,'AUTOMATED TIDE GAUGE ',
-     $ 'STATIONS ',11('.'),F5.0/42X,'COAST GUARD TIDE GAUGE ',18('.'),
-     $ F5.0/)
+     $ 'STATIONS ',11('.'),F5.0/42X,'COAST GUARD TIDE GAUGE STATIONS ',
+     $ 9('.'),F5.0/)
          ELSE  IF(NN.EQ.5)  THEN
             PRINT 2872, FWINDO(3),FWINDO(7)
  2872 FORMAT(42X,'OPC/NOS POINT SEA-LEVEL PRESSURE BOGUS ..',F5.0,
@@ -14434,7 +14643,8 @@ C   ITYP =  9 ===> AUTOMATED TIDE GAUGE STATION
 C   ITYP = 10 ===> MESONET SURFACE (COOPERATIVE NETWORKS)
 C   ITYP = 11 ===> SURFACE SYNOPTIC LAND STATION (MOBILE)
 C   ITYP = 12 ===> COAST GUARD TIDE GAUGE STATION
-C   ITYP = 13 ===> RECCO/DROPWINSONDE WITH NO SPLASH-LEVEL MASS
+C   ITYP = 13-19 > RESERVED FOR FUTURE TYPES
+C   ITYP = 20 ===> RECCO/DROPWINSONDE WITH NO SPLASH-LEVEL MASS
 C                  INFORMATION (INVALID TYPE)
 C   ITYP = 30 ===> "OTHER" (INVALID TYPE)
 
@@ -14452,12 +14662,12 @@ C  OF THE SFC R. TYPE - DEFAULT IS 0 ==> OCEANIC WITH VALID PSTN
          INSTR = 2
       ELSE  IF(ITYP.EQ.10)  THEN
          INSTR = 8
-      ELSE  IF(ITYP.GT.12)  THEN
+      ELSE  IF(ITYP.GT.19)  THEN
 C SKIP ALL INVALID SURFACE TYPES (WITH NO COUNT)
-CCCCC    IF(ITYP.EQ.12)  PRINT 8755, STNID,RDATA(1),RDATA(2),IDATA(9)
+CCCCC    IF(ITYP.EQ.20)  PRINT 8755, STNID,RDATA(1),RDATA(2),IDATA(9)
 C8755 FORMAT(' * * TOTAL REPORT TOSSED  -ID=',A8,', LAT=',F7.2,'N, ',
 CCCCC$ 'LON=',F8.2,'E, RTYP',I4,' - RECCO/DROP, NOT SPLASH-LEVEL MASS')
-CCCCC    IF(ITYP.EQ.13)  PRINT 8757, STNID,RDATA(1),RDATA(2),IDATA(9)
+CCCCC    IF(ITYP.EQ.30)  PRINT 8757, STNID,RDATA(1),RDATA(2),IDATA(9)
 C8757 FORMAT(' * * TOTAL REPORT TOSSED  -ID=',A8,', LAT=',F7.2,'N, ',
 CCCCC$ 'LON=',F8.2,'E, RTYP',I4,' - NOT A VALID SURFACE REPORT')
          GO TO 2100
@@ -14505,12 +14715,13 @@ C TEST FOR OVERLAND MARINE REPORTS
       IF(MARLND)  GO TO 1490
 C-----------------------------------------------------------------------
 C TEST FOR ALL SURFACE MARINE TYPES EXCEPT C-MAN, AUTOMATED TIDE
-C                  GAUGE STNS, AND COAST GUARD TIDE GAUGE STNS
-C                  FOR OVER LAND CRITERIA
+C           GAUGE STNS, AND COAST GUARD TIDE GAUGE STNS
+C                       FOR OVER LAND CRITERIA
 C              IF MET SUCH RPTS ARE GIVEN PREPBUFR T.V.=15
 C-----------------------------------------------------------------------
-C EXCLUDE SFC LAND (+ MESONET), C-MAN AND TIDE GAUGE STNS FROM TEST
-      IF(SFLAND.OR.ITYP.EQ.6.OR.ITYP.EQ.9.or.ityp.eq.12)  GO TO 1490
+C EXCLUDE SFC LAND (+ MESONET), C-MAN, AUTOMATED TIDE GAUGE AND COAST
+C  GUARD TIDE GAUGE STNS FROM TEST
+      IF(SFLAND.OR.ITYP.EQ.6.OR.ITYP.EQ.9.OR.ityp.EQ.12)  GO TO 1490
 C EXCLUDE PMSL BOGUS REPORTS OVER GREENLAND FROM TEST
       IF(MSLBOG.AND.NINT(RDATA(1)*100.).GE.6000.AND.
      $ NINT(RDATA(1)*100.).LE.8500.AND.NINT(RDATA(2)*100.).GE.30000.AND.
@@ -14672,7 +14883,7 @@ C.......................................................................
 C WILL TOSS LAND OR GREAT LAKES REPORTS W/ MISSING OR STRANGE ELEVATION
 C  BUT ALL OTHER MARINE REPORTS GET ELEVATION SET TO 0 IN THIS CASE
          IF(SFLAND)  THEN
-            if(ityp.ne.10) then
+            if(ityp.ne.10) then ! DAK: added by Shelley - why?
             PRINT 954, STNID,RDATA(1),RDATA(2),IDATA(9)
   954 FORMAT(' * * TOTAL REPORT TOSSED  -ID=',A8,', LAT=',F7.2,'N, ',
      $ 'LON=',F8.2,'E, RTYP',I4,' - OVER LAND, MISSING ELEVATION ')
@@ -14902,22 +15113,37 @@ C             THESE BUOYS IN THE RAP (AND BEFORE THAT RUC2A) VERSION
             END IF
          END IF
          IF(ATLAS)  THEN
-C ATLAS BUOYS ARE PROCESSED; SET PMSL=1013; INSTR WILL IDENTIFY SPECIFIC
-C  R. TYPE (ONLY WIND IS ACTUALLY PROCESSED)
-            if(.not.npkrpt(ityp)) then
-              PMSL = 10130.
-              INSTR = 22
-            else
-              pmsl = 10130.
-              instr = 22
-              ipstnflg=1
-            endif
+C ATLAS BUOYS ARE PROCESSED; SET PMSL=1013; INSTR WILL IDENTIFY
+C  SPECIFIC R. TYPE (ONLY WIND IS ACTUALLY PROCESSED)
+            PMSL = 10130.
+            INSTR = 22
+  ! DAK: did not change line below, but won't this force ATLAS buoys to
+  !      now be encoded into PREPBUFR file with missing PSTN instead of
+  !      PSTN=1-13.0 ??  is it ok to change a long-established "rule"
+  !      ATLAS buoys still seem to get r.t. 282 right? (not changed to
+  !      294)
+            if(npkrpt(ityp)) ipstnflg=1
+         else  if(npkrpt(ityp)) then
+C All other surface types are processed if NPKRPT is TRUE for that type
+C Generate PSTN from standard atmosphere PMSL (1013.25 mb), observed
+C  temperature and elevation (via fcn "PR") (use standard atmosphere
+C  temperature if temperature missing (should use virt. temperature
+C  here, but can't calculate it since pstn missing!)
+            tt = 288.15
+            if(temp.lt.xmiss) tt = (temp * 0.1) + 273.16
+cfix?       if(temp.lt.ymiss) tt = (temp * 0.1) + 273.16
+            pstn = pr(1013.25,tt,elev) * 10
+            ipstnflg=1
+c           pstn pb tbl val set to min of 3
+            imp = max(3,imp)
+c           q pb tbl val set to min of 3
+            imq = imp
+            go to 1862
          ELSE  IF(ITYP.EQ.10)  THEN
-C OTHERWISE, IF MESONET GENERATE PSTN FROM STD. ATMOS PMSL (1013.25 MB),
-C  OBSERVED TEMP & ELEV (VIA FCN "PR") (USE STD. ATMOS. TEMP IF TEMP
-C  MSG) (NOTE: SHOULD USE VIRT. TEMP HERE, BUT CAN'T CALC. SINCE PSTN
-C  MSG!)
-           if(.not.npkrpt(ityp)) then
+C OTHERWISE, IF MESONET GENERATE PSTN FROM STANDARD ATMOSPHERE PMSL
+C  (1013.25 MB), OBSERVED TEMPERATURE AND ELEVATION (VIA FCN "PR") (USE
+C  STANDARD ATMOSPHERE TEMPERATURE IF TEMPERATURE MISSING (SHOULD USE
+C  VIRT. TEMPERATURE HERE, BUT CAN'T CALCULATE IT SINCE PSTN MISSING!)
             TT = 288.15
             IF(TEMP.LT.XMISS.AND.TEMP.GT.-1000.) TT= (TEMP * 0.1)+273.16
 cfix?       IF(TEMP.LT.YMISS.AND.TEMP.GT.-1000.) TT= (TEMP * 0.1)+273.16
@@ -14928,37 +15154,14 @@ C CHARACTER 8 OF STNID SET TO 'x' TO IDENTIFY THESE (SINCE THEY STILL
 C  GET PREPBUFR REPORT TYPE 188/288)
             STNID(8:8) = 'x'
             GO TO 1862
-           else
-             tt = 288.15
-             if(temp.lt.xmiss) tt = (temp * 0.1) + 273.16
-             pstn = pr(1013.25,tt,elev) * 10
-             ipstnflg=1
-c            pstn pb tbl val set to min of 3
-             imp = max(3,imp)
-c            q pb tbl val set to min of 3
-             imq = imp
-             go to 1862
-           endif
          ELSE
-C OTHERWISE TOSS REPORT
-           if(.not.npkrpt(ityp)) then
-             IF(IPRINT.EQ.0)  PRINT 955, STNID,RDATA(1),RDATA(2),
-     $         HDR(13),IDATA(9)
+C OTHERWISE, TOSS REPORT
+            IF(IPRINT.EQ.0)  PRINT 955, STNID,RDATA(1),RDATA(2),HDR(13),
+     $       IDATA(9)
   955 FORMAT(' * * TOTAL REPORT TOSSED  -ID=',A8,', LAT=',F7.2,'N, ',
      $ 'LON=',F8.2,'E, TIME',F11.5,'UTC, RTYP',I4,' - PMSL AND PSTN ',
      $ 'MISSING  ')
             GO TO 2090
-           else
-             tt = 288.15
-             if(temp.lt.xmiss) tt = (temp * 0.1) + 273.16
-             pstn = pr(1013.25,tt,elev) * 10
-             ipstnflg=1
-c            pstn pb tbl val set to min of 3
-             imp = max(3,imp)
-c            q pb tbl val set to min of 3
-             imq = imp
-             go to 1862
-           endif
          END IF
  1762    CONTINUE
 C......................................................................
@@ -14986,8 +15189,10 @@ C  OTHERWISE TREAT AS LAND REPORT WITH MISSING PSTN
             END IF
          END IF
          IF(ELEV.LE.7.5) THEN
-C IF ELEV < 7.5M SET PSTN=PMSL NON-MARINE RPTS: PSTN PREPBUFR TBL VALUE
-C  SET TO GREATER OF 2 OR PMSL PREPBUFR TABLE VALUE
+C IF ELEV < 7.5M SET PSTN=PMSL
+
+C FOR NON-MARINE RPTS: PSTN PREPBUFR TBL VALUE SET TO GREATER OF 2 OR
+C  PMSL PREPBUFR TABLE VALUE
             IMP = MAX(2,IM0)
 C FOR MARINE REPORTS, PSTN PREPBUFR TBL VALUE SET EQUAL TO PMSL TBL VAL.
             IF(.NOT.SFLAND)  IMP = IM0
@@ -15001,6 +15206,11 @@ C   GRID IF DATA THINNING TURNED ON ==> IN THIS CASE RPT PROCESSED BUT
 C   ALL VARIABLES RECEIVE PREPBUFR TABLE VALUES OF 15
 C IF ELEV > 7.5 M, WILL  ATTEMPT PSTN CALC. FOR ALL OTHER RPTS AS USUAL
             IF(.NOT.SFLAND)  THEN
+c DAK: Check this logic now that sfc reports with BOTH missing PSTN &
+c      missing PMSL can be retained if npkrpt(ityp)=T: seems like
+c      marine rpts with both pressurex missing will be retained whilst
+c      those with a valid PMSL but > 7.5 m elev will still be tossed
+c      here EVEN when npkrpt(ityp)=T -- this does not seem right!
           IF(IPRINT.EQ.0)PRINT 956,STNID,RDATA(1),RDATA(2),IDATA(9),ELEV
   956 FORMAT(' * * TOTAL REPORT TOSSED  -ID=',A8,', LAT=',F7.2,'N, ',
      $ 'LON=',F8.2,'E, RTYP',I4,' - MARINE WITH PSTN MISSING, ELEV=',
@@ -15016,9 +15226,9 @@ C IF ELEV > 7.5 M, WILL  ATTEMPT PSTN CALC. FOR ALL OTHER RPTS AS USUAL
                IFLTH = 1
                IFLSF = 1
             END IF
-C OTHERWISE GENERATE PSTN FROM PMSL, TEMP, AND ELEV (VIA FCN "PR") (USE
-C  STD. ATMOS. TEMP IF TEMP MSG)
-C  (NOTE: SHOULD USE VIRT. TEMP HERE, BUT CAN'T CALC. SINCE PSTN MSG!)
+C OTHERWISE GENERATE PSTN FROM PMSL, TEMPERATURE, & ELEVATION (VIA FCN
+C  "PR") (USE STANDARD ATMOSPHERE TEMPERATURE IF TEMPERATURE MISSING)
+C  (SHOULD USE VIRT. TEMP. HERE BUT CAN'T CALCULATE SINCE PSTN MISSING!)
             TT = 288.15
             IF(TEMP.LT.XMISS.AND.TEMP.GT.-1000.) TT= (TEMP * 0.1)+273.16
 cfix?       IF(TEMP.LT.YMISS.AND.TEMP.GT.-1000.) TT= (TEMP * 0.1)+273.16
@@ -15027,7 +15237,7 @@ C PSTN PREPBUFR TABLE VALUE SET TO MINIMUM OF 3 HERE
             IMP = MAX(3,IM0)
 C specific humidity qm set to minimum of 3 for pb rpt typ 183
             imq = imp
-C RESET INSTR TO REFLECT SURFACE TYPE FOR LAST DIGIT OF R. TYPE
+C RESET INSTR TO REFLECT SURFACE TYPE FOR LAST DIGIT OF R. TYPE (183)
             IF(INSTR.EQ.1.OR.INSTR.EQ.7)  INSTR = 3
             DVAL = 0.0
          END IF
@@ -15039,20 +15249,9 @@ C               SPECIAL TESTS FOR SURFACE WIND REPORTS
 C-----------------------------------------------------------------------
 C SPLASH-LEVEL REPORTS CONTAIN ONLY MASS PART - SKIP WIND PART
       IF(ITYP.EQ.5)  GO TO 1800
-      IMSG_DIR = 0
-      IF(MAX(RDATA(L+2),RDATA(L+3)).GE.YMISS)  THEN
-c If either wind dir or speed is missing, set IMSG_DIR=1.
-        if(nint(rdata(l+3)).le.ymiss) then
-c         speed available; dir missing
-          IMSG_DIR = 1
-        else if(nint(rdata(l+2)).le.ymiss) then
-c         dir available; speed missing
-          IMSG_DIR = 1
-        else
-c         neither speed nor dir available
-          GO TO 1800
-        end if
-      END IF
+c If neither wind direction not speed available, SKIP wind part
+      IF(min(RDATA(L+2),RDATA(L+3)).GE.XMISS)  GO TO 1800
+cfix? IF(min(RDATA(L+2),RDATA(L+3)).GE.YMISS)  GO TO 1800
 C SKIP PARTICULAR TYPE OF SURFACE WIND REPORT IF JSURFW(ITYP) = 9999
       IF(JSURFW(ITYP).NE.0)  GO TO 1800
 C FLAG ALL SFC LAND WINDS OUTSIDE LFM GRD IF THINNING HAS BEEN TURNED ON
@@ -15079,21 +15278,45 @@ C TOSS REPORT IF WIND IS MISSING (CAN THIS EVER HAPPEN?)
      $   ', PREPBUFR TABLE VALUE IMW(=',I2,') .GE. ',I2,'   * * * * *')
          GO TO 1800
       END IF
-C CONVERT WIND DIRECTION & SPEED TO U- AND V-COMPONENTS
-      IF(IMSG_DIR.EQ.0)  CALL UV(RDATA(L+2),RDATA(L+3)*0.1,UCOMP,VCOMP)
+C CONVERT WIND DIRECTION & SPEED TO U- AND V-COMPONENTS if both present
+      IF(min(RDATA(L+2),RDATA(L+3)).lt.xmiss)  
+cfix? IF(min(RDATA(L+2),RDATA(L+3)).lt.ymiss)  
+     $ CALL UV(RDATA(L+2),RDATA(L+3)*0.1,UCOMP,VCOMP)
 C-----------------------------------------------------------------------
  1800 CONTINUE
 C DO SURFACE DEWPOINT DEPRESSION NEXT
       IF(ITYP.EQ.5)  GO TO 2150
       DPDP = NINT(RDATA(L+5))
 c     imq=max(imq,nint(rdata(l+12)))
-      if(ipstnflg.eq.0) then
-        if(imq.eq.15) then
-          IMQ = NINT(RDATA(L+12))
-        else
-          IMQ = max(imq,NINT(RDATA(L+12)))
-        endif
+
+c DAK: I see 2 problems in 7 lines of logic below:
+c       1) If a rpt with ipstnflg=1 has IMQ=3 but it's rpted moisture
+c          qm (RDATA(L+12)) is 14 (purged, e.g.), IMQ will remain 3
+c          when, in previous production code (with IMQ=NINT(RDATA(L+12))
+c          for all reports), it would have been set to 14.
+c       2) ATLAS buoys always get ipstnflg set to 1.  However, unlike
+c          other types of reports with ipstnflg set to 1, their IMQ
+c          value is never re-set from its value of 15.  Thus the logic
+c          here will pass IMQ on with a value of 15, when in current
+c          production it would be set to the reported moisture qm
+c          (since IMQ = NINT(RDATA(L+12)) for all reports).
+c-------------------
+cccc  if(ipstnflg.eq.0) then
+cccc    if(imq.eq.15) then
+cccc      IMQ = NINT(RDATA(L+12))
+cccc    else
+cccc      IMQ = max(imq,NINT(RDATA(L+12)))
+cccc    endif
+cccc  endif
+c-------------------
+c DAK: So try this logic instead:
+c-------------------
+      if(imq.eq.15) then
+        IMQ = NINT(RDATA(L+12))
+      else
+        IMQ = max(imq,NINT(RDATA(L+12)))
       endif
+c-------------------
  2150 CONTINUE
 C***********************************************************************
 C     SURFACE DATA IN BOTH DATA LEVEL CATEGORIES 8 AND 51 COME HERE
@@ -15106,10 +15329,15 @@ C***********************************************************************
          MNDX = 3
       END IF
       ISQNUM(MNDX) = ISQNUM(MNDX) + 1
-      IF(MAX(UCOMP,VCOMP).GE.XMISS)  THEN
-cfix? IF(MAX(UCOMP,VCOMP).GE.YMISS)  THEN
+      IF(MAX(UCOMP,VCOMP).GE.XMISS.and.min(rdata(l+2),rdata(l+3)).ge.
+     $ xmiss)  THEN
+cfix? IF(MAX(UCOMP,VCOMP).GE.YMISS.and.min(rdata(l+2),rdata(l+3)).ge.
+cfix?$ ymiss)  THEN
+C Come here is either u-comp or v-comp (or both) missing -- AND --
+C  direction and speed BOTH missing
          IF(ATLAS)  THEN
-C ATLAS BUOYS (MSG PSTN & PMSL) SKIPPED IF NO VALID WIND
+C .. ATLAS BUOY (MSG PSTN & PMSL) REPORTS COMPLETELY SKIPPED in this
+C    case (there is no mass piece)
             KOUNT = KOUNT - 1
             ISQNUM(MNDX) = ISQNUM(MNDX) - 1
             IF(IRNMRK.NE.4)  THEN
@@ -15122,8 +15350,11 @@ C ATLAS BUOYS (MSG PSTN & PMSL) SKIPPED IF NO VALID WIND
      $ 'LON=',F8.2,'E, RTYP',I4,' - BUOY WITH MISSING PRESS & WIND')
             END IF
             GO TO 2090
+         else
+C .. All other (non-ATLAS) reports skip wind processing in this case
+C    (move on to mass piece processing)
+            GO TO 11
          END IF
-         IF(IMSG_DIR.EQ.0)  GO TO 11
       END IF
 C-----------------------------------------------------------------------
 C      FILL IN WIND INFORMATION FOR SURFACE LAND OR MARINE REPORT
@@ -15135,31 +15366,35 @@ C  PREPBUFR REPORT TYPE 283)
       IF(HDR(6).EQ.283)  HDR(6) = 284
 C INITIALIZE BOTTOM LEVEL OF MOBS ARRAY
       MOBS(1:MXTYPV,1:MXWRDL,1:1) = IMISS
-c if ipstnflg=1 (and npkrpt(ityp)=T) assign new prepbufr report
-c based on dump type
-      if(idata(9).eq.511.or.idata(9).eq.514) then
-        if(npkrpt(1).and.ipstnflg.eq.1) hdr(6)=292
-      endif
-      if(idata(9).eq.512) then
-        if(npkrpt(8).and.ipstnflg.eq.1) hdr(6)=293
-      endif
-      if(idata(9).eq.522.or.idata(9).eq.523) then
-        if(npkrpt(2).and.ipstnflg.eq.1) hdr(6)=294
-      endif
-      if(idata(9).eq.531) then
-        if(npkrpt(6).and.ipstnflg.eq.1) hdr(6)=294
-      endif
-      if(idata(9).eq.532) then
-        if(npkrpt(9).and.ipstnflg.eq.1) hdr(6)=294
-      endif
-      if(idata(9).eq.534) then
-        if(npkrpt(12).and.ipstnflg.eq.1) hdr(6)=294
-      endif
-      if(idata(9).eq.540) then
-        if(npkrpt(10).and.ipstnflg.eq.1) hdr(6)=295
-      endif
-      if(idata(9).eq.561) then
-        if(npkrpt(4).and.ipstnflg.eq.1) hdr(6)=294
+      if(ipstnflg.eq.1) then
+C For reports with missing pressure {ipstnflg=1 when npkrpt(ityp)=T},
+C  assign new PREPBUFR report type based on dump report type
+         if(idata(9).eq.511.or.idata(9).eq.514) then
+            hdr(6) = 292  ! synoptic land (fixed or mobile)
+         else if(idata(9).eq.512) then
+            hdr(6) = 293  ! METAR
+         else if(idata(9)/10.eq.52) then
+            hdr(6) = 294  ! ship
+         else if(idata(9)/10.eq.53) then
+            hdr(6) = 294  ! Platform (C-MAN, tide gauge, Coast Guard)
+         else if(idata(9).eq.540) then
+            hdr(6) = 295  ! mesonet
+         else if(idata(9).eq.561) then
+            hdr(6) = 294  ! buoys arriving in WMO FM13 format (fixed)
+c DAK: original logic did not include below 2 lines, I am adding them so
+c      buoys in T29 562 other than ATLAS will correctly get new 294
+c      report type if PSTN is missing (seems otherwise they would retain
+c      280 report type which would not be correct)
+c      will not change report type to 294 for ATLAS, so they will remain
+c      report type 282 (this is as before my addition of below line)
+         else if(idata(9).eq.562.and..not.ATLAS) then
+            hdr(6) = 294  ! buoys arriving in WMO FM18 format (fixed or
+                          ! drifting - but EXCLUDING ATLAS
+         else
+C ... would not expect to get here but just in case should trap report
+            print 955, stnid,rdata(1),rdata(2),hdr(13),idata(9)
+            go to 2090
+         endif
       endif
 C INITIALIZE IPMSL ARRAY (WILL REMAIN MISSING FOR WIND REPORTS)
       IPMSL = IMISS
@@ -15174,26 +15409,16 @@ C STORE P, W PREPBUFR TABLE VALUES IN WORDS 1,3,4 OF MOBS WIND LEVEL 1
       MOBS(2,1,1) = IMPW
       MOBS(2,3,1) = IMW
       MOBS(2,4,1) = IMW
-C store wind speed and direction qm in words 5,6 of mobs wind level 1
-      mobs(2,5,1) = imw
-      mobs(2,6,1) = imw
-      IF(IMSG_DIR.EQ.0)  THEN
-         IF(MAX(NINT(UCOMP*100.),NINT(VCOMP*100.)).LT.32767)  THEN
+      IF(MAX(NINT(UCOMP*100.),NINT(VCOMP*100.)).LT.32767)  THEN
 C STORE U-COMP OBS (*100 M/SEC) IN WORD 3 OF MOBS WIND LEVEL 1
-            MOBS(1,3,1) = NINT((UCOMP * 100.0) + 0.005)
+         MOBS(1,3,1) = NINT((UCOMP * 100.0) + 0.005)
 C STORE V-COMP OBS (*100 M/SEC) IN WORD 4 OF MOBS WIND LEVEL 1
-            MOBS(1,4,1) = NINT((VCOMP * 100.0) + 0.005)
-c store wind dir and spd in words 5, 6 of mobs wind level 1
-            mobs(1,5,1) = nint(rdata(l+2))
-            mobs(1,6,1) = rdata(l+3)
-         END IF
-      ELSE
-c Reports with either missing direction or missing speed IMSG_DIR=1)
-c come here to store wind dir obs in word 5 of mobs wind level 1 and
-c wind speed obs in word 6 of mobs wind level 1.
-         mobs(1,5,1) = nint(rdata(l+2))
-         MOBS(1,6,1) = RDATA(L+3)
+         MOBS(1,4,1) = NINT((VCOMP * 100.0) + 0.005)
       END IF
+C store wind direction obs (degrees) in word 5 of mobs wind level 1
+      if(nint(rdata(l+2)).lt.32767)  mobs(1,5,1) = nint(rdata(l+2))
+C store wind speed obs (*10 m/sec) in word 6 of mobs wind level 1
+      if(nint(rdata(l+3)).lt.32767)  mobs(1,6,1) = nint(rdata(l+3))
 C SET REPORT SEQ. NUMBER TO "ISQNUM(1)" IF SURFACE LAND (EXCL.
 C  MESONETS), TO "ISQNUM(2) IF SURFACE MARINE, OR TO "ISQNUM(3)" IF
 C  MESONET AND STORE IN HDR(11)
@@ -15236,31 +15461,26 @@ C FOR NON-BOGUS TYPES, PREPBUFR REPORT TYPE IS BASED ON INSTR
       IF(.NOT.MSLBOG)  HDR(6) = 180 + INSTR
 C INITIALIZE BOTTOM LEVEL OF MOBS ARRAY
       MOBS(1:MXTYPV,1:MXWRDL,1:1) = IMISS
-C if ipstnflg=1 (and npkrpt(ityp)=T) reset hdr(6) to new report
-C type.
-      if(idata(9).eq.511.or.idata(9).eq.514) then
-        if(npkrpt(1).and.ipstnflg.eq.1) hdr(6)=192
-      endif
-      if(idata(9).eq.512) then
-        if(npkrpt(8).and.ipstnflg.eq.1) hdr(6)=193
-      endif
-      if(idata(9).eq.522.or.idata(9).eq.523) then
-        if(npkrpt(2).and.ipstnflg.eq.1) hdr(6)=194
-      endif
-      if(idata(9).eq.531) then
-        if(npkrpt(6).and.ipstnflg.eq.1) hdr(6)=194
-      endif
-      if(idata(9).eq.532) then
-        if(npkrpt(9).and.ipstnflg.eq.1) hdr(6)=194
-      endif
-      if(idata(9).eq.534) then
-        if(npkrpt(12).and.ipstnflg.eq.1) hdr(6)=194
-      endif
-      if(idata(9).eq.540) then
-        if(npkrpt(10).and.ipstnflg.eq.1) hdr(6)=195
-      endif
-      if(idata(9).eq.561.or.idata(9).eq.562) then
-        if(npkrpt(4).and.ipstnflg.eq.1) hdr(6)=194
+      if(ipstnflg.eq.1) then
+C For reports with missing pressure {ipstnflg=1 when npkrpt(ityp)=T},
+C  assign new PREPBUFR report type based on dump report type
+         if(idata(9).eq.511.or.idata(9).eq.514) then
+            hdr(6) = 192  ! synoptic land (fixed or mobile)
+         else if(idata(9).eq.512) then
+            hdr(6) = 193  ! METAR
+         else if(idata(9)/10.eq.52) then
+            hdr(6) = 194  ! ship
+         else if(idata(9)/10.eq.53) then
+            hdr(6) = 194  ! Platform (C-MAN, tide gauge, Coast Guard)
+         else if(idata(9).eq.540) then
+            hdr(6) = 195  ! mesonet
+         else if(idata(9)/10.eq.56) then
+            hdr(6) = 194  ! buoys (all types)
+         else
+C ... would not expect to get here but just in case should trap report
+            print 955, stnid,rdata(1),rdata(2),hdr(13),idata(9)
+            go to 2090
+         endif
       endif
 C INITIALIZE IPMSL ARRAY
       IPMSL = IMISS
@@ -15330,6 +15550,7 @@ cfix? IF(PMSL.LT.YMISS.AND.SFLAND)  THEN
 C IF PMSL VALID AND THIS IS LAND REPORT, STORE PMSL OBS (*10 MB) AND
 C  PREPBUFR TABLE VALUE IN IPMSL ARRAY
          IF(NINT(PMSL).LT.32767)  THEN
+! DAK: Here is where sea-level pressure is stored ONLY for land reports
             IPMSL(1) = NINT(PMSL)
             IF(IFLSF.EQ.1.AND.(IM0.LE.3.OR.IM0.GT.15))  IM0 = 15
             IPMSL(2) = IM0
@@ -15383,50 +15604,72 @@ C YOU HAVE LOOKED AT ALL SFC DATA FILES, RETURN
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    ISSEL
-C   PRGMMR: D. A. KEYSER     ORG: NP22       DATE: 2004-09-09
+C   PRGMMR: ????????????     ORG: NP22       DATE: ????-??-??
 C
-C ABSTRACT: FUNCTION -- CONVERTS A SURFACE DUMP REPORT TYPE TO A
-C   'TYPE' RECOGNIZED IN SUBROUTINE 'SFCDTA' - THIS 'TYPE' THEN POINTS
-C   TO THE PARTICULAR TYPE OF SURFACE DATA BEING PROCESSED {EITHER LAND
-C   (FIXED OR MOBILE), SHIP, PMSL BOGUS (BOTH TYPES), BUOY, SPLASH-LEVEL
-C   (FROM DROPWINSONDES ONLY), MESONET, OR OTHER}.
+C ABSTRACT: FUNCTION -- TRANSLATES THE SURFACE DUMP REPORT TYPE TO AN
+C   INTEGER VALUE USED BY SUBROUTINE SFCDTA TO DIFFERENTIATE TYPES OF
+C   SURFACE REPORTS BEING PROCESSED {EITHER LAND (SYNOPTIC FIXED,
+C   SYNOPTIC MOBILE, OR METAR), MARINE (SHIP, BUOY, SPLASH-LEVEL
+C   DROPWINSONDE, C-MAN PLATFORM, AUTOMATED TIDE GAUGE, COAST GUARD
+C   TIDE GAUGE), PMSL BOGUS (OPC/NOS POINT, AUSTRALIAN PAOBS), MESONET,
+C   OR "OTHER" (DEFAULT, INVALID)}.
 C
 C PROGRAM HISTORY LOG:
 C   UNKNOWN
 C 1988-04-11  D. A. KEYSER -- DOCBLOCKING/COMMENTING
-C 1988-09-14  D. A. KEYSER -- EXPANDED TO INCLUDE SPLASH-LEVEL DROPS.
-C 1988-12-22  D. A. KEYSER -- EXPANDED TO INCLUDE C-MAN PLAT. EXPLICITLY
-C 1989-02-03  D. A. KEYSER -- RECOGNIZES SAT. MOISTURE BOGUS & RAOB/PBAL
-C    & PUTS THEM IN ADD'L 'OTHER' CATEGORIES
-C 1990-01-11  D. A. KEYSER -- CONVERTED TO VS FORTRAN(77) & RESTRUCTURED
+C 1988-09-14  D. A. KEYSER -- EXPANDED TO INCLUDE SPLASH-LEVEL DROPS
+C 1988-12-22  D. A. KEYSER -- EXPANDED TO INCLUDE C-MAN PLATFORM
+C 1989-02-03  D. A. KEYSER -- RECOGNIZES SAT. MOISTURE BOGUS AND RAOB/
+C    PIBAL AND PUTS THEM IN ADDITIONAL "OTHER" CATEGORIES
+C 1990-01-11  D. A. KEYSER -- CONVERTED TO VS FORTRAN(77), RESTRUCTURED
 C 1991-01-03  D. A. KEYSER -- 3 PMSL BOGUS TYPES (POINT, PAOBS, DIGIT.)
-C 1995-08-24  D. A. KEYSER -- R.T. 182'S NOW NOT PROCESSED IF CAT. 2
-C    SFC PRESS. MSG (UNLESS CAT. 3 SFC PRESS. AVAIL.), OR IF CAT. 2 SFC
-C    PRESS. IS LESS THAN 1MB
+C 1995-08-24  D. A. KEYSER -- R.TYPE 182'S NOW NOT PROCESSED IF CAT. 2
+C    SFC PRESSURE MISSING (UNLESS CAT. 3 SFC PRESSURE AVAILABLE), OR IF
+C    CAT. 2 SFC PRESSURE IS LESS THAN 1 MB
 C 1998-06-09  D. A. KEYSER -- STREAMLINED PROCESSING
 C 1999-08-04  D. A. KEYSER -- UPDATED LOGIC TO PROPERLY PROCESS
 C    AUSTRALIAN SEA-LEVEL PRESSURE BOGUS DATA (PAOBS)
 C 2000-09-22  D. A. KEYSER -- ADDED PROCESSING OF AUTOMATED TIDE GAUGE
-C    STN DATA (SFC MARINE TYPE, ON29 R.T. 533)
-C 2000-12-05  D. A. KEYSER -- CHANGED ON29 REPORT TYPE (T29) FOR SFC
+C    STN DATA (READ FROM "SFCSHP" DUMP, DUMP REPORT TYPE 533)
+C 2000-12-05  D. A. KEYSER -- CHANGED DUMP REPORT TYPE FOR SURFACE
 C    MARINE AUTOMATED TIDE GAUGE REPORTS FROM 533 TO 532 SO THEY AGREE
 C    WITH REPORT TYPE IN QUIPS PROCESSING
 C 2004-09-09  D. A. KEYSER -- NOW CHECKS ACTUAL DUMP REPORT TYPE RATHER
 C    THAN DUMP REPORT TYPE DIVIDED BY TEN; ADDED PROCESSING OF MESONET
-C    DATA, READ FROM "MSONET" DUMP FILE DUMP R. TYPE 540, GET PREPBUFR
-C    R. TYPE 188/288, PROCESSED INTO PREPBUFR FILE UNDER NEW TBL A
-C    ENTRY "MSONET";  ADDED PROCESSING OF MOBILE SFC SYNOPTIC LAND RPTS
-C    NOW POSSIBLY INCL. IN "ADPSFC" DUMP FILE DUMP R. TYPE 514, INCL.
-C    WITH EXISTING PREPBUFR R. TYPES 181/183/281/284, PROCESSED INTO
-C    PREPBUFR FILE UNDER EXISTING TBL A ENTRY "ADPSFC"
+C    DATA (READ FROM "MSONET" DUMP, DUMP REPORT TYPE 540); ADDED
+C    PROCESSING OF MOBILE SURFACE SYNOPTIC LAND REPORTS (READ FROM
+C    "ADPSFC" DUMP, DUMP REPORT TYPE 514)
+C ????-??-?? ????????????  -- ADDED PROCESSING OF COAST GUARD TIDE
+C    GAUGE STATION DATA (READ FROM "SFCSHP" DUMP, DUMP REPORT TYPE
+C    534); INVALID "OTHER" (DEFAULT) OUTPUT "TYPE" CHANGED FROM 13 TO
+C    30; INVALID RECCO/DROPWINSONDE WITH NO SPLASH-LEVEL MASS OUTPUT
+C    TYPE CHANGED FROM 12 TO 20
 C 2014-01-15  S. Melchior -- [Commentary forthcoming]
 C
 C USAGE:    XX = ISSEL(ITYPDMP)
 C   INPUT ARGUMENT LIST:
 C     ITYPDMP - DUMP REPORT TYPE
 C
-C REMARKS: 'ISSEL' RETURNED IS TYPE USED TO OBTAIN PREPBUFR REPORT
-C   TYPE; CALLED BY SUBROUTINE 'SFCDTA'.
+C REMARKS: CALLED BY SUBROUTINE 'SFCDTA'.
+C   'ISSEL' RETURNED IS TRANSLATED INTEGER VALUE USED BY SUBROUTINE
+C   SFCDTA TO DIFFERENTIATE TYPES OF SURFACE REPORTS BEING PROCESSED:
+C         1 ..... SURFACE SYNOPTIC LAND STATION (FIXED)
+C                 (INCLUDING WMO RESOLUTION 40)
+C         2 ..... SHIP (FIXED AND MOVING)
+C         3 ..... OPC/NOS POINT MEAN SEA-LEVEL PRESSURE BOGUS
+C         4 ..... BUOY (FIXED AND DRIFTING))
+C         5 ..... SPLASH-LEVEL MASS FROM DROPS/RECCO WITH PMSL OBS
+C         6 ..... C-MAN PLATFORM
+C         7 ..... AUSTRALIAN SEA-LEVEL PRESSURE BOGUS - PAOBS
+C         8 ..... SURFACE METAR LAND
+C         9 ..... AUTOMATED TIDE GAUGE STATION
+C        10 ..... MESONET SURFACE (COOPERATIVE NETWORKS)
+C        11 ..... SURFACE SYNOPTIC LAND STATION (MOBILE)
+C        12 ..... COAST GUARD TIDE GAUGE STATION
+C        13-19 .. RESERVED FOR FUTURE TYPES
+C        20 ..... RECCO/DROPWINSONDE WITH NO SPLASH-LEVEL MASS
+C                 INFORMATION (INVALID TYPE)
+C        30 ..... "OTHER" (INVALID TYPE)
 C
 C ATTRIBUTES:
 C   LANGUAGE: FORTRAN 90
@@ -15455,23 +15698,22 @@ C          ---        ---        ---         --- ---
 
       DATA  YMISS/99998.8/
 
-      I = 30
+      ISSEL0 = 30
 
-      IF(ITYPDMP.GT.30.AND.ITYPDMP.LT.563)  I = JTYPE(ITYPDMP)
+      IF(ITYPDMP.GT.30.AND.ITYPDMP.LT.563)  ISSEL0 = JTYPE(ITYPDMP)
 
-
-      IF(I.EQ.3)  THEN
-C AUSTRALIAN PAOBS RESET I = 7 (OPC/NOS POINT BOGUS MAINTAIN I = 3)
-         IF(STNID(1:1).EQ.'P')  I = 7
-      ELSE  IF(I.EQ.5)  THEN
+      IF(ISSEL0.EQ.3)  THEN
+C AUSTRALIAN PAOBS RESET ISSEL0=7 (OPC/NOS POINT BOGUS RETAIN ISSEL0=3)
+         IF(STNID(1:1).EQ.'P')  ISSEL0 = 7
+      ELSE  IF(ISSEL0.EQ.5)  THEN
 
 C COME HERE FOR RECCOS/DROPS (EXCEPT FOR RECCOS WITH PMSL -
 C                 THESE HAVE ALREADY BEEN EXAMINED)
 C ------------------------------------------------------------------
 
          IF(IDATA(15).EQ.0)  THEN
-C  ... IF NO CAT. 2 LEVELS, THEN NOT A SPLASH-LEVEL DROP, RESET I = 13
-            I = 13
+C  ... IF NO CAT. 2 LEVELS, THEN NOT A SPLASH-LEVEL DROP, RESET ISSEL0=20
+            ISSEL0 = 20
          ELSE  IF(NINT(RDATA(IDATA(16))).GE.32750.OR.
      $    (NINT(RDATA(IDATA(16)))*0.1).LT.PMAND(LEVST))  THEN
             IF(NINT(RDATA(IDATA(16))).GE.YMISS)  THEN
@@ -15484,14 +15726,15 @@ C  ... IF NO CAT. 2 LEVELS, THEN NOT A SPLASH-LEVEL DROP, RESET I = 13
                   END IF
                END IF
             END IF
-C  ... IF PRESS ON 1ST CAT. 2 LVL MISSING OR < PMAND(LEVST) RESET I = 13
-            I = 13
+C  ... IF PRESS ON 1ST CAT. 2 LVL MISSING OR < PMAND(LEVST) RESET
+C      ISSEL0 TO 20
+            ISSEL0 = 20
          END IF
       END IF
 
   999 CONTINUE
 
-      ISSEL = I
+      ISSEL = ISSEL0
 
       RETURN
       END
@@ -15569,7 +15812,7 @@ C$$$
       PARAMETER (MXWRDH = 15)
       PARAMETER (MXTYPV =  3)
       PARAMETER (MXWRDL =  6)
-      PARAMETER (MXLVL = 5000)
+      PARAMETER (MXLVL = 600)
       PARAMETER (MAXOBS = 3500)
       CHARACTER*8  STNID,DSNAME,SUBSET_d
       CHARACTER*46 CTEXT(4)
@@ -15914,9 +16157,10 @@ C$$$
       PARAMETER (MXWRDH = 15)
       PARAMETER (MXTYPV =  3)
       PARAMETER (MXWRDL =  6)
-      PARAMETER (MXLVL = 5000)
+      PARAMETER (MXLVL = 600)
       PARAMETER (MXBLVL = 255)
       PARAMETER (MAXOBS = 3500)
+      PARAMETER (NUMOBS2 = 43)
       CHARACTER*6  NAME(4)
       CHARACTER*8  STNID,STNPRT,DSNAME,DNAME(4),SUBSET_d
       INTEGER  KOUNW(6),IDATA(MAXOBS),IBWNDO(2,4),MDATE(4),IRPTY(4)
@@ -15934,7 +16178,7 @@ C$$$
      $ JPWDSD(6),KSKPSC(4),KMSGSC(4),KBDYSC(4),KTIMSC(4),KNTSCT(4),
      $ JPASCD(6),IAWNDO(2)
       COMMON/SKPSUB/SUBSKP(0:255,0:200)
-      COMMON/DIRECT/OBS3(5,MXBLVL,7),OBS2(42),NOBS3(7),RDATA2(24)
+      COMMON/DIRECT/OBS3(5,MXBLVL,7),OBS2(NUMOBS2),NOBS3(7),RDATA2(24)
       COMMON /BUFRLIB_MISSING/BMISS
       EQUIVALENCE  (RDATA,IDATA)
       DATA  PHISCT/-90.,-70.,-20.,0.,20.,70.,90./,YMISS/99998.8/,
@@ -16450,7 +16694,7 @@ C BRIEFLY SUMMARIZE
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    W3FIZZ
-C   PRGMMR: D. A. KEYSER     ORG: NP22       DATE: 2008-09-25
+C   PRGMMR: D. A. KEYSER     ORG: NP22       DATE: ????-??-??
 C
 C ABSTRACT: INTERFACES BETWEEN A PREPROCESSED REPORT (IN "HHDR/MOBS
 C   IPMSL/PWAT/xRAD/REQV/CLTOP" ARRAYS) AND THE GENERALIZED BUFR
@@ -16637,9 +16881,20 @@ C     BUFRLIB ROUTINE DRFINI TO ALLOW FOR POSSIBLE NESTED REPLICATION
 C     OF LEVEL INFO SEQUENCES; MOISTURE QUALITY (CODE TABLE) FOR ACARS
 C     REPORTS, ENCODED INTO PREPBUFR FILE (MNEMONIC MSTQ) FOR USE BY
 C     FUTURE DOWNSTREAM NRL AIRCRAFT Q.C. MODULE
-C 2010-03-09  D. A. KEYSER -- SATELLITE ZENITH ANGLE (DEGREES) ENCODED
+C ????-??-??  D. A. KEYSER -- SATELLITE ZENITH ANGLE (DEGREES) ENCODED
 C     INTO PREPBUFR FILE FOR ALL SATWND TYPES FOR USE BY GSI (TO
 C     POSSIBLY SCREEN SATWNDS WITH HIGH SAZA VALUES)
+C ????-??-??  ??????????  -- Recognizes 192-195 and 292-295 as ....bs
+C ????-??-??  ??????????  -- Removed encoding of "SQM" (wind speed
+C     quality mark) for certain METAR reports which had encoded "SOB"
+C     as all surface reports now encode wind qm as "WQM" regardless of
+C     whether or not it also encodes DDO, SOB, UOB or VOB
+C ????-??-??  ??????????  -- Added new mnemonic "PMIN" (mean sea-level
+C     pressure indicator) which is encoded with a value of zero for all
+C     reports with an observed mean sea-level pressure encoded in
+C     "PMO".  "PMIN" will be encoded with a value of 1 in w3emc routine
+C     gblevents for cases where a mean sea-level pressure is derived
+C     (see docblock in gblevents for more information).
 C 2014-01-15  S. Melchior -- [Commentary forthcoming]
 C
 C USAGE:    CALL W3FIZZ(IER)
@@ -16729,102 +16984,205 @@ C  MNEMONICS PASSED INTO SUBROUTINE "UFBINT".
       DATA HEADR1/'SID  XOB YOB DHR NUL TYP T29 TSB ITP ELV SQN SIRC '/
       DATA HEADR2/'NUL   NUL NUL RFFL RPT TCOR NUL  NUL  SAID        '/
       DATA HEADR3/'PROCN NUL NUL NUL  NUL QIFY QIFN EEQF             '/
+
       DATA  OBSSTR1/
+       ! PROFLR vvvvv
      $     'POB UOB  VOB  NUL NUL ZOB CAT NUL NUL DDO  FFO  NUL    ',
+       ! VADWND vvvvv
      $     'POB UOB  VOB  NUL NUL ZOB CAT NUL NUL DDO  FFO  NUL    ',
+       ! ADPUPA vvvvv
      $     'POB UOB  VOB  TOB QOB ZOB CAT TVO TDO DDO  FFO  XDR    ',
+       ! AIRCAR vvvvv
      $     'POB UOB  VOB  TOB QOB ZOB CAT TVO TDO DDO  FFO  TRBX10 ',
+       ! AIRCFT vvvvv
      $     'POB UOB  VOB  TOB QOB ZOB CAT TVO TDO DDO  FFO  RCT    ',
+       ! SATWND vvvvv
      $     'POB UOB  VOB  TOB NUL ZOB CAT TVO NUL DDO  FFO  NUL    ',
+       ! SATEMP vvvvv
      $     'POB NUL  NUL  TOB QOB ZOB CAT TVO TDO NUL  NUL  NUL    ',
+       ! SPSSMI vvvvv
      $     'POB UOB  VOB  NUL NUL NUL CAT NUL NUL DDO  FFO  PWO    ',
+       ! ADPSFC vvvvv
      $     'POB UOB  VOB  TOB QOB ZOB CAT TVO TDO DDO  SOB  NUL    ',
+       ! SFCSHP vvvvv
      $     'POB UOB  VOB  TOB QOB ZOB CAT TVO TDO DDO  SOB  NUL    ',
+       ! SFCBOG vvvvv
      $     'POB NUL  NUL  NUL NUL ZOB CAT NUL NUL NUL  NUL  NUL    ',
+       ! ERS1DA vvvvv
      $     'POB UOB  VOB  NUL NUL NUL CAT NUL NUL DDO  FFO  NUL    ',
+       ! GOESND vvvvv
      $     'POB PW1O PW2O TOB QOB ZOB CAT TVO TDO PW3O PW4O PRSS   ',
+       ! QKSWND vvvvv
      $     'POB UOB  VOB  NUL NUL NUL CAT NUL NUL DDO  FFO  NUL    ',
+       ! MSONET vvvvv
      $     'POB UOB  VOB  TOB QOB ZOB CAT TVO TDO DDO  SOB  NUL    ',
+       ! GPSIPW vvvvv
      $     'NUL NUL  NUL  NUL NUL NUL CAT NUL NUL NUL  PRSS PWO    ',
+       ! RASSDA vvvvv
      $     'POB NUL  NUL  TOB NUL ZOB CAT TVO NUL NUL  NUL  NUL    ',
+       ! WDSATR vvvvv
      $     'POB UOB  VOB  NUL NUL NUL CAT NUL NUL DDO  FFO  NUL    ',
+       ! ASCATW vvvvv
      $     'POB UOB  VOB  NUL NUL NUL CAT NUL NUL DDO  FFO  NUL    '/
+
       DATA  OBSSTR2/
+       ! PROFLR vvvvv
      $     ' NUL    NUL  NUL   NUL    NUL    NUL                   ',
+       ! VADWND vvvvv
      $     ' NUL    NUL  NUL   NUL    NUL    NUL                   ',
+       ! ADPUPA vvvvv
      $     ' YDR    HRDR NUL   NUL    NUL    NUL                   ',
+       ! AIRCAR vvvvv
      $     ' TRBX21 POAF PCAT  TRBX32 TRBX43 MSTQ                  ',
+       ! AIRCFT vvvvv
      $     ' ROLF   POAF PCAT  TRBX   NUL    NUL                   ',
+       ! SATWND vvvvv
      $     ' NUL    NUL  NUL   NUL    NUL    NUL                   ',
+       ! SATEMP vvvvv
      $     ' NUL    NUL  NUL   NUL    NUL    NUL                   ',
+       ! SPSSMI vvvvv
      $     ' REQV   NUL  NUL   NUL    NUL    NUL                   ',
+       ! ADPSFC vvvvv
      $     ' PMO    ALSE PMIN  NUL    NUL    NUL                   ',
+       ! SFCSHP vvvvv
      $     ' PMO    NUL  PMIN  NUL    NUL    NUL                   ',
+       ! SFCBOG vvvvv
      $     ' NUL    NUL  NUL   NUL    NUL    NUL                   ',
+       ! ERS1DA vvvvv
      $     ' NUL    NUL  NUL   NUL    NUL    NUL                   ',
+       ! GOESND vvvvv
      $     ' CDTP   TOCC GCDTT NUL    NUL    NUL                   ',
+       ! QKSWND vvvvv
      $     ' NUL    NUL  NUL   NUL    NUL    NUL                   ',
+       ! MSONET vvvvv
      $     ' NUL    ALSE NUL   NUL    NUL    NUL                   ',
+       ! GPSIPW vvvvv
      $     ' NUL    NUL  NUL   NUL    NUL    NUL                   ',
+       ! RASSDA vvvvv
      $     ' NUL    NUL  NUL   NUL    NUL    NUL                   ',
+       ! WDSATR vvvvv
      $     ' REQV   NUL  NUL   NUL    NUL    NUL                   ',
+       ! ASCATW vvvvv
      $     ' NUL    NUL  NUL   NUL    NUL    NUL                   '/
-      DATA  QMSSTR/'PQM WQM  NUL NUL ZQM NUL  NUL   NUL   NUL   ',
+
+      DATA  QMSSTR/
+       ! PROFLR vvvvv
      $             'PQM WQM  NUL NUL ZQM NUL  NUL   NUL   NUL   ',
+       ! VADWND vvvvv
+     $             'PQM WQM  NUL NUL ZQM NUL  NUL   NUL   NUL   ',
+       ! ADPUPA vvvvv
      $             'PQM WQM  TQM QQM ZQM NUL  NUL   NUL   NUL   ',
+       ! AIRCAR vvvvv
      $             'PQM WQM  TQM QQM ZQM NUL  NUL   NUL   NUL   ',
+       ! AIRCFT vvvvv
      $             'PQM WQM  TQM QQM ZQM NUL  NUL   NUL   NUL   ',
+       ! SATWND vvvvv
      $             'PQM WQM  TQM NUL ZQM NUL  NUL   NUL   NUL   ',
+       ! SATEMP vvvvv
      $             'PQM NUL  TQM QQM ZQM NUL  NUL   NUL   NUL   ',
+       ! SPSSMI vvvvv
      $             'PQM WQM  NUL NUL NUL PWQ  RRTQM NUL   NUL   ',
-     $             'PQM WQM  TQM QQM ZQM SQM  PMQ   NUL   NUL   ',
-     $             'PQM WQM  TQM QQM ZQM SQM  PMQ   NUL   NUL   ',
+       ! ADPSFC vvvvv
+     $             'PQM WQM  TQM QQM ZQM NUL  PMQ   NUL   NUL   ',
+       ! SFCSHP vvvvv
+     $             'PQM WQM  TQM QQM ZQM NUL  PMQ   NUL   NUL   ',
+       ! SFCBOG vvvvv
      $             'PQM NUL  NUL NUL ZQM NUL  NUL   NUL   NUL   ',
+       ! ERS1DA vvvvv
      $             'PQM WQM  NUL NUL NUL NUL  NUL   NUL   NUL   ',
+       ! GOESND vvvvv
      $             'PQM PW1Q TQM QQM ZQM PW2Q PW3Q  PW4Q  CTPQM ',
+       ! QKSWND vvvvv
      $             'PQM WQM  NUL NUL NUL NUL  NUL   NUL   NUL   ',
-     $             'PQM WQM  TQM QQM ZQM SQM  NUL   NUL   NUL   ',
+       ! MSONET vvvvv
+     $             'PQM WQM  TQM QQM ZQM NUL  NUL   NUL   NUL   ',
+       ! GPSIPW vvvvv
      $             'NUL NUL  NUL NUL NUL PWQ  NUL   NUL   NUL   ',
+       ! RASSDA vvvvv
      $             'PQM NUL  TQM NUL ZQM NUL  NUL   NUL   NUL   ',
+       ! WDSATR vvvvv
      $             'PQM WQM  NUL NUL NUL NUL  NUL   NUL   NUL   ',
+       ! ASCATW vvvvv
      $             'PQM WQM  NUL NUL NUL NUL  NUL   NUL   NUL   '/
-      DATA  PGMSTR/'PPC ZPC WPC  DFP  NUL NUL NUL   NUL   NUL   ',
+
+      DATA  PGMSTR/
+       ! PROFLR vvvvv
      $             'PPC ZPC WPC  DFP  NUL NUL NUL   NUL   NUL   ',
+       ! VADWND vvvvv
+     $             'PPC ZPC WPC  DFP  NUL NUL NUL   NUL   NUL   ',
+       ! ADPUPA vvvvv
      $             'PPC ZPC WPC  DFP  TPC QPC NUL   NUL   NUL   ',
+       ! AIRCAR vvvvv
      $             'PPC ZPC WPC  DFP  TPC QPC NUL   NUL   NUL   ',
+       ! AIRCFT vvvvv
      $             'PPC ZPC WPC  DFP  TPC QPC NUL   NUL   NUL   ',
+       ! SATWND vvvvv
      $             'PPC ZPC WPC  DFP  TPC NUL NUL   NUL   NUL   ',
+       ! SATEMP vvvvv
      $             'PPC ZPC NUL  NUL  TPC QPC NUL   NUL   NUL   ',
+       ! SPSSMI vvvvv
      $             'PPC NUL WPC  DFP  NUL NUL PWP   RRTPC NUL   ',
+       ! ADPSFC vvvvv
      $             'PPC ZPC WPC  DFP  TPC QPC NUL   NUL   NUL   ',
+       ! SFCSHP vvvvv
      $             'PPC ZPC WPC  DFP  TPC QPC NUL   NUL   NUL   ',
+       ! SFCBOG vvvvv
      $             'PPC ZPC NUL  NUL  NUL NUL NUL   NUL   NUL   ',
+       ! ERS1DA vvvvv
      $             'PPC NUL WPC  DFP  NUL NUL NUL   NUL   NUL   ',
+       ! GOESND vvvvv
      $             'PPC ZPC PW1P PW2P TPC QPC PW3P  PW4P  CTPPC ',
+       ! QKSWND vvvvv
      $             'PPC NUL WPC  DFP  NUL NUL NUL   NUL   NUL   ',
+       ! MSONET vvvvv
      $             'PPC ZPC WPC  DFP  TPC QPC NUL   NUL   NUL   ',
+       ! GPSIPW vvvvv
      $             'NUL NUL NUL  NUL  NUL NUL PWP   NUL   NUL   ',
+       ! RASSDA vvvvv
      $             'PPC ZPC NUL  NUL  TPC NUL NUL   NUL   NUL   ',
+       ! WDSATR vvvvv
      $             'PPC NUL WPC  DFP  NUL NUL NUL   NUL   NUL   ',
+       ! ASCATW vvvvv
      $             'PPC NUL WPC  DFP  NUL NUL NUL   NUL   NUL   '/
-      DATA  RSNSTR/'PRC ZRC WRC  DFR  NUL NUL NUL   NUL   NUL   ',
+
+      DATA  RSNSTR/
+       ! PROFLR vvvvv
      $             'PRC ZRC WRC  DFR  NUL NUL NUL   NUL   NUL   ',
+       ! VADWND vvvvv
+     $             'PRC ZRC WRC  DFR  NUL NUL NUL   NUL   NUL   ',
+       ! ADPUPA vvvvv
      $             'PRC ZRC WRC  DFR  TRC QRC NUL   NUL   NUL   ',
+       ! AIRCAR vvvvv
      $             'PRC ZRC WRC  DFR  TRC QRC NUL   NUL   NUL   ',
+       ! AIRCFT vvvvv
      $             'PRC ZRC WRC  DFR  TRC QRC NUL   NUL   NUL   ',
+       ! SATWND vvvvv
      $             'PRC ZRC WRC  DFR  TRC NUL NUL   NUL   NUL   ',
+       ! SATEMP vvvvv
      $             'PRC ZRC NUL  NUL  TRC QRC NUL   NUL   NUL   ',
+       ! SPSSMI vvvvv
      $             'PRC NUL WRC  DFR  NUL NUL PWR   RRTRC NUL   ',
+       ! ADPSFC vvvvv
      $             'PRC ZRC WRC  DFR  TRC QRC NUL   NUL   NUL   ',
+       ! SFCSHP vvvvv
      $             'PRC ZRC WRC  DFR  TRC QRC NUL   NUL   NUL   ',
+       ! SFCBOG vvvvv
      $             'PRC ZRC NUL  NUL  NUL NUL NUL   NUL   NUL   ',
+       ! ERS1DA vvvvv
      $             'PRC NUL WRC  DFR  NUL NUL NUL   NUL   NUL   ',
+       ! GOESND vvvvv
      $             'PRC ZRC PW1R PW2R TRC QRC PW3R  PW4R  CTPRC ',
+       ! QKSWND vvvvv
      $             'PRC NUL WRC  DFR  NUL NUL NUL   NUL   NUL   ',
+       ! MSONET vvvvv
      $             'PRC ZRC WRC  DFR  TRC QRC NUL   NUL   NUL   ',
+       ! GPSIPW vvvvv
      $             'NUL NUL NUL  NUL  NUL NUL PWR   NUL   NUL   ',
+       ! RASSDA vvvvv
      $             'PRC ZRC NUL  NUL  TRC NUL NUL   NUL   NUL   ',
+       ! WDSATR vvvvv
      $             'PRC NUL WRC  DFR  NUL NUL NUL   NUL   NUL   ',
+       ! ASCATW vvvvv
      $             'PRC NUL WRC  DFR  NUL NUL NUL   NUL   NUL   '/
 
       DATA SUBSET/'PROFLR  ','VADWND  ','ADPUPA  ','AIRCAR  ',
@@ -17340,7 +17698,7 @@ C NOTE THAT THIS REPORT (SUBSET) NOT PROCESSED DUE TO NO. LEVELS = 0
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    FIZZ01
-C   PRGMMR: D. A. KEYSER     ORG: NP22       DATE: 2012-11-27
+C   PRGMMR: D. A. KEYSER     ORG: NP22       DATE: ????-??-??
 C
 C ABSTRACT: PARSES THE "HHDR/MOBS/IPMSL/PWAT/xRAD/REQV/CLTOP" ARRAYS
 C   (HOLDING ONE PREPROCESSED REPORT) INTO THE APPROPRIATE ARRAYS
@@ -17506,6 +17864,24 @@ C     (SEQUENCE NUMBER) ENCODED INTO PREPBUFR FILE FROM 99998 TO 524286
 C     (NEEDED BECAUSE THERE CAN NOW BE > 99998 MDCRS REPORTS IN A
 C     MONOLITHIC "AIRCAR" DUMP FILE - THIS CAUSES PREPACQC TO FAIL IN
 C     SERIAL PREPBUFR PROCESSING RUNS, E.G. IN SDMEDIT)
+C ????-??-??  ??????????  -- Modified to always encode wind speed obs
+C     in m/sec and wind direction obs for all types of surface reports
+C     (even if one or the other are missing but also if both are
+C     present); removed old logic which encoded wind speed only for
+C     METAR reports when direction was missing and speed was .LE. 3
+C     m/sec (direction was never encoded in any situation for surface
+C     reports), also removed encoding of wind speed quality mark for
+C     these types of METAR reports - all surface reports now encode
+C     single wind qm as regardless of whether or not it also encodes
+C     direction, speed, u-comp or v-comp {note this change does not
+C     affect non-surface reports which can still encode speed in knots
+C     and direction when u-comp and v-comp wind are also encoded.
+C ????-??-??  ??????????  -- Added new mnemonic "PMIN" (mean sea-level
+C     pressure indicator) which is encoded with a value of zero for all
+C     reports with an observed mean sea-level pressure encoded in
+C     "PMO".  "PMIN" will be encoded with a value of 1 in w3emc routine
+C     gblevents for cases where a mean sea-level pressure is derived
+C     (see docblock in gblevents for more information).
 C 2014-01-15  S. Melchior -- [Commentary forthcoming]
 C
 C USAGE:    CALL FIZZ01(KI,NI,JI,SUBSET,SINGLE)
@@ -17530,7 +17906,7 @@ C$$$
       PARAMETER (MXWRDH = 15)
       PARAMETER (MXTYPV =  3)
       PARAMETER (MXWRDL =  6)
-      PARAMETER (MXLVL = 5000)
+      PARAMETER (MXLVL = 600)
       PARAMETER (MXPWT =  5)
       PARAMETER (MXBLVL = 255, MHDRWD = 29, MOBSWD = 12, MOB2WD = 6)
       PARAMETER (MQMSWD =  9)
@@ -17760,9 +18136,7 @@ C IF PRESSURE ON THIS LEVEL IS MISSING, SKIP THIS LEVEL
             QMS4 = MIN(15,MOBS(2,4,L))
             RSN4 = MOBS(3,4,L)
             OBS5 = MOBS(1,5,L)
-            qms5 = min(15,mobs(2,5,L))
             OBS6 = MOBS(1,6,L)
-            qms6 = min(15,mobs(2,6,L))
 C OUT=.TRUE. --> NO VALID DATA ON THIS LEVEL
             OUT = (MIN(OBS2,OBS3,OBS4,OBS5,OBS6).GE.YMISS)
             IF(L.EQ.1)  THEN
@@ -17772,9 +18146,20 @@ C --> PROCESSING UNIQUE TO FIRST MOBS LEVEL
                IF(IPMSL(1).LT.YMISS)  THEN
 C STORE MEAN SEA-LEVEL PRESSURE OBS., TABLE VALUE, and indicator
 C  {CURRENTLY IPMSL(1) VALID ONLY FOR SURFACE LAND MASS REPORTS}
+! DAK: Note sea-level pressure is stored ONLY for land reports (IPMSL
+!      filled back in subr. SFCDTA only when SFLAND=T)
+!      Should this be expanded to fill it for marine reports & mesonet
+!      repots as well (although now all mesonets have missing pmsl ob,
+!      if do expand for mesonets, OB2(1,1) currently 'NUL' would have
+!      to be changed to "PMO" in subr. w3fizz)
+!      My concern: gblevents in RTMA and URMA will always find marine
+!                  reports (and mesonets) with missing pmsl & derive it
+!                  when, at kleast for marine reports, it is may have
+!                  been reported but just not stored in PREPBUFR - am I
+!                  missing something?
                   OB2(1,1) = IPMSL(1) * 0.1
                   QMS(7,1)  = MIN(15,IPMSL(2))
-                  ob2(3,1) = 0.
+                  ob2(3,1) = 0.! indicator (PMIN) is 0 for observed PMSL
                END IF 
                IF(MOBS(2,1,1).EQ.99.OR.NI.GE.8)  THEN
 C RAOB, PIBAL, MULTI-LEVEL RECCOS, DROPS, CLASS, PROFILER, VAD WINDS,
@@ -17795,9 +18180,11 @@ C IF NO VALID DATA ON THIS LEVEL, GO ON TO NEXT LEVEL
                NLV = NLV + 1
 C.......................................................................
 C STORE LEVEL PRESSURE OBS, TABLE VALUE, PROGRAM CODE AND REASON CODE
-c if ipstnflg=0, Pstn (OBS1) was never manipulated so keep
-c original/current value.
-c if ipstnflg=1, keep Pstn (OBS(1,nlv)) initialized as missing
+C If ipstnflg=0, Pstn (OBS1) was never manipulated so encode original/
+C current value. If ipstnflg=1, Pstn was estimated for surface reports
+C with missing pressure that are set to be kept (npkrpt=T for the
+C particular type) only to obtain a value for q - do not encode this
+C Pstn but instead store as missing (default)
                if(ipstnflg.eq.0) then
                  OBS(1,NLV) = OBS1 * 0.1
                  QMS(1,NLV) = QMS1
@@ -17886,19 +18273,18 @@ C STORE U- & V-COMP OBS; WIND TABLE VALUE, PROGRAM CODE AND REASON CODE
                      END IF
                      IF(RSN4.LT.YMISS)  RSN(3,NLV) = RSN4
 C.......................................................................
-                     IF(MAX(OBS5,OBS6).LT.YMISS) THEN
-C STORE WIND DIRECTION AND SPEED (KNOTS) OBS AND WIND PROGRAM CODE
-                        OBS(10,NLV) = OBS5
-c                       sfc data multiplied by 0.1
-                        if(subset.eq.'ADPSFC'.or.subset.eq.'SFCSHP'.or.
-     $                  subset.eq.'MSONET') then
-                          obs(11,nlv) = obs6 * 0.1
-                        else
-                          OBS(11,NLV) = OBS6
-                        end if
-                        PGM(4,NLV)  = PCODE
-                        qms(6,nlv) = qms4
-                     END IF
+                     if(subset.ne.'ADPSFC'.and.subset.ne.'SFCSHP'.and.
+     $                  subset.ne.'MSONET') then
+                        IF(MAX(OBS5,OBS6).LT.YMISS) THEN
+C For non-surface reports, STORE WIND DIRECTION AND SPEED (KNOTS) OBS
+C  if BOTH are present - also store WIND direction/speed PROGRAM CODE
+C  (note: this can only happen if u-comp and v-comp wind obs are also
+C         BOTH present)
+                           OBS(10,NLV) = OBS5
+                           OBS(11,NLV) = OBS6
+                           PGM(4,NLV)  = PCODE
+                        END IF
+                     end if
 C.......................................................................
                      IF(OBS2.LT.YMISS)  THEN
 C IF SUBSET = AIRCAR, AIRCFT, OR SATWND (CAT. 6 LVLS) OR IF A CAT. 4
@@ -17920,21 +18306,28 @@ C.......................................................................
 C FOR SUBSET = WDSATR, STORE RAIN RATE (MM/SEC) OBS
 C.......................................................................
                      IF(SUBSET.EQ.'WDSATR  ')  OB2(1,NLV) = REQV
-                  else if(obs6.ge.ymiss.and.obs5.lt.ymiss) then
-c                   if wind dir is present and speed is missing, store
-c                   direction ob
-                    obs(10,nlv) = obs5
-                  else if(obs5.ge.ymiss.and.obs6.lt.ymiss) then
-c                   if wind speed is present and dir is missing, store
-c                   speed ob (m/s) and qm.  If sfc data multiply by
-c                   0.1; otherwise, no multiplying factor.
-                    if(subset.eq.'ADPSFC'.or.subset.eq.'SFCSHP'.or.
-     $              subset.eq.'MSONET') then
-                      obs(11,nlv) = obs6 * 0.1
-                    else
-                      obs(11,nlv) = obs6
-                    end if
-                    qms(6,nlv) = qms4
+                  end if
+                  if(subset.eq.'ADPSFC'.or.subset.eq.'SFCSHP'.or.
+     $                  subset.eq.'MSONET') then
+                     if(obs5.lt.ymiss)  then
+C.......................................................................
+C For surface reports, store wind direction obs if present (note: this
+C  can happen even if u-comp wind, v-comp wind and/or wind speed obs
+C  are missing) - also store wind table value in case not stored above
+C.......................................................................
+                        obs(10,nlv) = obs5
+                        qms(2,nlv) = qms4
+                     end if
+                     if(obs6.lt.ymiss)  then
+C.......................................................................
+C For surface reports, store wind speed obs (m/sec) if present (note:
+C  this can happen even if u-comp wind, v-comp wind and/or wind
+C  direction obs are missing) - also store wind table value in case not
+C  stored above
+C.......................................................................
+                        obs(11,nlv) = obs6 * 0.1
+                        qms(2,nlv) = qms4
+                     end if
                   end if
                ELSE  IF(KI.EQ.1)  THEN
 C-----------------------------------------------------------------------
@@ -18071,7 +18464,7 @@ C. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
                END IF
             ELSE
 C TOO MANY REPORT LEVELS -- PROCESS WHAT YOU HAVE, PRINT DIAGNOSTIC AND
-C   MOVE ON TO NEXT REPORTSTOP
+C   MOVE ON TO NEXT REPORT
                PRINT 102, MXBLVL,STNID,MXBLVL
   102 FORMAT(/5X,'++++++ WARNING, TOO MANY REPORT LEVELS (> ',I4,') -',
      $ 'ID=',A8,' -- PROCESS BOTTOM ',I4,' LEVELS'/)
@@ -18188,7 +18581,7 @@ C   MACHINE:  NCEP WCOSS
 C
 C$$$
       BLOCK DATA
-      PARAMETER (MXLVL = 5000)
+      PARAMETER (MXLVL = 600)
       PARAMETER (MAXOBS = 3500)
       PARAMETER (XMISS = 99999.)
       PARAMETER (IMISS = 99999)
@@ -18216,7 +18609,7 @@ C$$$
      $ JSURFM(12),JSURFW(12),FWINDO(12),PFRALT,npkrpt(12)
       COMMON/UPALIM/LEVPM,LEVST,LEVQQ,TDLIM,SPCIAL,ISQNUM_UPA
       COMMON/COUNT/KKTYPE(100:299)
-      COMMON/PARM2/PG4243,KTEMP
+      COMMON/PARM2/PG4243,KTEMP,i2many_lvls
       COMMON/PARM3/RECCON,RWINDO,UWINDO,RECSLM,FLRECO,VWINDO,VADWIN,
      $ IVADFL,IVADSP,FLDMGS,FLDMAF,FLDMFR,DROPSN,DWINDO
       COMMON/PARM4/ICODE
@@ -18332,5 +18725,5 @@ C$$$
      $      TDRIFTLL/MXLVL*XMISS/,UDRIFT/MXLVL*XMISS/,
      $      VDRIFT/MXLVL*XMISS/,XDRIFT/MXLVL*XMISS/,YDRIFT/MXLVL*XMISS/,
      $      TDRIFT_LL/MXLVL*XMISS/,KFLAG/5*0/,LFLAG/3*0/,PLO/XMISS/,
-     $      IFLTIM/0/,JJ/0/,II/0/,ipstnflg/0/
+     $      IFLTIM/0/,JJ/0/,II/0/,ipstnflg/0/,i2many_lvls/0/
       END
