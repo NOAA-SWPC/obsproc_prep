@@ -316,7 +316,7 @@ files:
          surface, level) increased from 102 to 200 to account for some MAP
          profilers with more levels than before.
    !!! - The resulting "IDMAX" is now 2270, up from 1200 before.
-      gblevents (in w3emc library - version ?????):
+      gblevents (in w3emc library - version 2.2.0):
        - Added new namelist switch "DOPMSL" which, when TRUE, derives pmsl
          (mnemonic "PMO") from reported station pressure ("POB"), station
          height/elevation ("ZOB") and the just-computed virtual temperature for

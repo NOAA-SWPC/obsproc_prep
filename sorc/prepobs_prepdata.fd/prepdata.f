@@ -14387,7 +14387,7 @@ C     the moisture q.m. a minimum value of 3 - in the end, pstn obs and
 C     qm is encoded as missing for these reports - these reports are
 C     then assigned new PREPBUFR report types ...., ATLAS buoys are
 C     handled by ..., MESONETS will no longer have "x" in character 8
-C     of id
+C     of id.
 C ??-??-??   ???????????  -- Report type 183, ..., now store moisture
 C     quality marks no less than 3 (before they stored in observed
 C     quality mark coming in from the dump)
@@ -15119,7 +15119,7 @@ C  SPECIFIC R. TYPE (ONLY WIND IS ACTUALLY PROCESSED)
             INSTR = 22
   ! DAK: did not change line below, but won't this force ATLAS buoys to
   !      now be encoded into PREPBUFR file with missing PSTN instead of
-  !      PSTN=1-13.0 ??  is it ok to change a long-established "rule"
+  !      PSTN=1013.0 ??  is it ok to change a long-established "rule"
   !      ATLAS buoys still seem to get r.t. 282 right? (not changed to
   !      294)
             if(npkrpt(ityp)) ipstnflg=1
@@ -15208,7 +15208,7 @@ C IF ELEV > 7.5 M, WILL  ATTEMPT PSTN CALC. FOR ALL OTHER RPTS AS USUAL
             IF(.NOT.SFLAND)  THEN
 c DAK: Check this logic now that sfc reports with BOTH missing PSTN &
 c      missing PMSL can be retained if npkrpt(ityp)=T: seems like
-c      marine rpts with both pressurex missing will be retained whilst
+c      marine rpts with both pressures missing will be retained whilst
 c      those with a valid PMSL but > 7.5 m elev will still be tossed
 c      here EVEN when npkrpt(ityp)=T -- this does not seem right!
           IF(IPRINT.EQ.0)PRINT 956,STNID,RDATA(1),RDATA(2),IDATA(9),ELEV
@@ -15249,7 +15249,7 @@ C               SPECIAL TESTS FOR SURFACE WIND REPORTS
 C-----------------------------------------------------------------------
 C SPLASH-LEVEL REPORTS CONTAIN ONLY MASS PART - SKIP WIND PART
       IF(ITYP.EQ.5)  GO TO 1800
-c If neither wind direction not speed available, SKIP wind part
+c If neither wind direction nor speed available, SKIP wind part
       IF(min(RDATA(L+2),RDATA(L+3)).GE.XMISS)  GO TO 1800
 cfix? IF(min(RDATA(L+2),RDATA(L+3)).GE.YMISS)  GO TO 1800
 C SKIP PARTICULAR TYPE OF SURFACE WIND REPORT IF JSURFW(ITYP) = 9999
@@ -15333,7 +15333,7 @@ C***********************************************************************
      $ xmiss)  THEN
 cfix? IF(MAX(UCOMP,VCOMP).GE.YMISS.and.min(rdata(l+2),rdata(l+3)).ge.
 cfix?$ ymiss)  THEN
-C Come here is either u-comp or v-comp (or both) missing -- AND --
+C Come here if either u-comp or v-comp (or both) missing -- AND --
 C  direction and speed BOTH missing
          IF(ATLAS)  THEN
 C .. ATLAS BUOY (MSG PSTN & PMSL) REPORTS COMPLETELY SKIPPED in this
@@ -18154,7 +18154,7 @@ C  {CURRENTLY IPMSL(1) VALID ONLY FOR SURFACE LAND MASS REPORTS}
 !      to be changed to "PMO" in subr. w3fizz)
 !      My concern: gblevents in RTMA and URMA will always find marine
 !                  reports (and mesonets) with missing pmsl & derive it
-!                  when, at kleast for marine reports, it is may have
+!                  when, at least for marine reports, it may have
 !                  been reported but just not stored in PREPBUFR - am I
 !                  missing something?
                   OB2(1,1) = IPMSL(1) * 0.1

@@ -1316,7 +1316,7 @@ if [ "$PREPDATA" = 'YES' ]; then
    cd $DATA 
 
 set +u
-   if [ -z "$PREPBUFR_APP" -o "PARALLEL" = 'YES' ]; then
+   if [ -z "$PREPBUFR_APP" -o "$PARALLEL" = 'YES' ]; then
 set -u
       if [ ! -s ${tstsp}status.${tmmark}.bufr_d -a \
            ! -s ${COMSP}status.${tmmark}.bufr_d ]; then
