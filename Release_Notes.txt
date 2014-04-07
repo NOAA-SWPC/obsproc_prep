@@ -7,31 +7,31 @@ files:
  *obsproc_prep/fix/prepobs_prep.bufrtable
  *obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
  *obsproc_prep/fix/syndat_weight
-&*obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
-&*obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
-&*obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
-&*obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
-&*obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
-&*obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
-&*obsproc_prep/sorc/prepobs_listheaders.fd/makefile
-&*obsproc_prep/sorc/prepobs_monoprepbufr.fd/makefile
-&*obsproc_prep/sorc/prepobs_monoprepbufr.fd/monoprepbufr.f90
-&*obsproc_prep/sorc/prepobs_mpcopybufr.fd/makefile
-&*obsproc_prep/sorc/prepobs_mpcopybufr.fd/mpcopybufr.f90
-&*obsproc_prep/sorc/prepobs_oiqcbufr.fd/makefile
-&*obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
-&*obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
-&*obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
-&*obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
-&*obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
-&*obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
-&*obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
-&*obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
-&*obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
-&*obsproc_prep/sorc/prepobs_prepacqc.fd/prepacqc.f
-&*obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_mer.f
-&*obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
-&*obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
+ *obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
+ *obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
+ *obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
+ *obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
+ *obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
+ *obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
+ *obsproc_prep/sorc/prepobs_listheaders.fd/makefile
+ *obsproc_prep/sorc/prepobs_monoprepbufr.fd/makefile
+ *obsproc_prep/sorc/prepobs_monoprepbufr.fd/monoprepbufr.f90
+ *obsproc_prep/sorc/prepobs_mpcopybufr.fd/makefile
+ *obsproc_prep/sorc/prepobs_mpcopybufr.fd/mpcopybufr.f90
+ *obsproc_prep/sorc/prepobs_oiqcbufr.fd/makefile
+ *obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
+ *obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
+ *obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
+ *obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
+ *obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
+ *obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
+ *obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
+ *obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
+ *obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
+ *obsproc_prep/sorc/prepobs_prepacqc.fd/prepacqc.f
+ *obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_mer.f
+ *obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
+ *obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
  *obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
  *obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
  *obsproc_prep/sorc/prepobs_prepdata.fd/makefile
@@ -43,27 +43,27 @@ files:
  *obsproc_prep/sorc/prepobs_prepdata.fd/w3tovseds.f
  *obsproc_prep/sorc/prepobs_prepdata.fd/w3tovsmnd.f
  *obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
-&*obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
-&*obsproc_prep/sorc/prepobs_prevents.fd/makefile
-&*obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
-&*obsproc_prep/sorc/prepobs_profcqc.fd/makefile
-&*obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
-&*obsproc_prep/sorc/syndat_syndata.fd/makefile
-&*obsproc_prep/sorc/syndat_syndata.fd/syndata.f
-&*obsproc_prep/sorc/build.sh
-&*obsproc_prep/sorc/clean.sh
-&*obsproc_prep/sorc/install.sh
-&*obsproc_prep/sorc/load_libs.rc
-&*obsproc_prep/sorc/README.build
-&*obsproc_prep/sorc/setlibs.rc
-&*obsproc_prep/ush/prepobs_cqcbufr.sh
-&*obsproc_prep/ush/prepobs_cqcvad.sh
-&*obsproc_prep/ush/prepobs_makeprepbufr.sh
-&*obsproc_prep/ush/prepobs_oiqcbufr.sh
-&*obsproc_prep/ush/prepobs_prepacqc.sh
-&*obsproc_prep/ush/prepobs_prevents.sh
-&*obsproc_prep/ush/prepobs_profcqc.sh
-&*obsproc_prep/ush/prepobs_syndata.sh
+ *obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
+ *obsproc_prep/sorc/prepobs_prevents.fd/makefile
+ *obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
+ *obsproc_prep/sorc/prepobs_profcqc.fd/makefile
+ *obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
+ *obsproc_prep/sorc/syndat_syndata.fd/makefile
+ *obsproc_prep/sorc/syndat_syndata.fd/syndata.f
+ *obsproc_prep/sorc/build.sh
+ *obsproc_prep/sorc/clean.sh
+ *obsproc_prep/sorc/install.sh
+ *obsproc_prep/sorc/load_libs.rc
+ *obsproc_prep/sorc/README.build
+ *obsproc_prep/sorc/setlibs.rc
+ *obsproc_prep/ush/prepobs_cqcbufr.sh
+ *obsproc_prep/ush/prepobs_cqcvad.sh
+ *obsproc_prep/ush/prepobs_makeprepbufr.sh
+ *obsproc_prep/ush/prepobs_oiqcbufr.sh
+ *obsproc_prep/ush/prepobs_prepacqc.sh
+ *obsproc_prep/ush/prepobs_prevents.sh
+ *obsproc_prep/ush/prepobs_profcqc.sh
+ *obsproc_prep/ush/prepobs_syndata.sh
 
 ( * - changed)
 
