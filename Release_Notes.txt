@@ -188,6 +188,7 @@ files:
          BENEFIT: ADPSFC, SFCSHP, and MSONET reports that do not contain
                   station pressure information are now retained (previously,
                   they were discarded) when NPKRPT(x)=TRUE for surface ITYP=x.
+                  They are now available for the analysis.
         !!!       Currently this is the case in the ..., ..., ... networks.
        - Added new mnemonic "PMIN" (mean sea-level pressure indicator) which
          is encoded with a value of zero for all reports with an observed mean
