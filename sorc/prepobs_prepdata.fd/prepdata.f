@@ -14519,7 +14519,6 @@ C CHECK TO SEE IF ADPSFC DATA SHOULD BE PROCESSED
 C CHECK TO SEE IF SFCBOG DATA SHOULD BE PROCESSED
          IF(MIN(JSURFM(3),JSURFM(7)).GT.0)  GO TO 7008
       ELSE  IF(NN.EQ.3)  THEN
-         PFRALT_save=PFRALT ! DAK: added by Shelley, but is it needed?
          IF(MIN(JSURFM(10),JSURFW(10)).EQ.9999) GO TO 7008
 C MESONET REPORTS ALWAYS GET PFRALT=.TRUE.
          PFRALT=.TRUE.
@@ -14883,12 +14882,10 @@ C.......................................................................
 C WILL TOSS LAND OR GREAT LAKES REPORTS W/ MISSING OR STRANGE ELEVATION
 C  BUT ALL OTHER MARINE REPORTS GET ELEVATION SET TO 0 IN THIS CASE
          IF(SFLAND)  THEN
-            if(ityp.ne.10) then ! DAK: added by Shelley - why?
             PRINT 954, STNID,RDATA(1),RDATA(2),IDATA(9)
   954 FORMAT(' * * TOTAL REPORT TOSSED  -ID=',A8,', LAT=',F7.2,'N, ',
      $ 'LON=',F8.2,'E, RTYP',I4,' - OVER LAND, MISSING ELEVATION ')
             GO TO 2090
-            end if
          ELSE  IF(NINT(RDATA(1)*100.).GE.4100.AND.NINT(RDATA(1)*100.)
      $    .LE.5000.AND.NINT(RDATA(2)*100.).GE.26700.AND.
      $    NINT(RDATA(2)*100.).LE.28500)  THEN
@@ -15117,12 +15114,6 @@ C ATLAS BUOYS ARE PROCESSED; SET PMSL=1013; INSTR WILL IDENTIFY
 C  SPECIFIC R. TYPE (ONLY WIND IS ACTUALLY PROCESSED)
             PMSL = 10130.
             INSTR = 22
-  ! DAK: did not change line below, but won't this force ATLAS buoys to
-  !      now be encoded into PREPBUFR file with missing PSTN instead of
-  !      PSTN=1013.0 ??  is it ok to change a long-established "rule"
-  !      ATLAS buoys still seem to get r.t. 282 right? (not changed to
-  !      294)
-            if(npkrpt(ityp)) ipstnflg=1
          else  if(npkrpt(ityp)) then
 C All other surface types are processed if NPKRPT is TRUE for that type
 C Generate PSTN from standard atmosphere PMSL (1013.25 mb), observed
@@ -15200,23 +15191,10 @@ C FOR ATLAS BUOYS WHERE PSTN & PMSL ORIG. MSG, PSTN PREPBUFR TV SET TO 3
             IF(INSTR.EQ.22)  IMP = 3
             PSTN = PMSL
          ELSE
-C IF ELEV > 7.5 M, WON'T ATTEMPT PSTN CALC. FOR MARINE RPTS ==> SKIPPED
 C IF ELEV > 7.5 M, WILL  ATTEMPT PSTN CALC. FOR ANY REPORT OUTSIDE LFM
 C   GRID IF DATA THINNING TURNED ON ==> IN THIS CASE RPT PROCESSED BUT
 C   ALL VARIABLES RECEIVE PREPBUFR TABLE VALUES OF 15
 C IF ELEV > 7.5 M, WILL  ATTEMPT PSTN CALC. FOR ALL OTHER RPTS AS USUAL
-            IF(.NOT.SFLAND)  THEN
-c DAK: Check this logic now that sfc reports with BOTH missing PSTN &
-c      missing PMSL can be retained if npkrpt(ityp)=T: seems like
-c      marine rpts with both pressures missing will be retained whilst
-c      those with a valid PMSL but > 7.5 m elev will still be tossed
-c      here EVEN when npkrpt(ityp)=T -- this does not seem right!
-          IF(IPRINT.EQ.0)PRINT 956,STNID,RDATA(1),RDATA(2),IDATA(9),ELEV
-  956 FORMAT(' * * TOTAL REPORT TOSSED  -ID=',A8,', LAT=',F7.2,'N, ',
-     $ 'LON=',F8.2,'E, RTYP',I4,' - MARINE WITH PSTN MISSING, ELEV=',
-     $ F5.0,', > 7.5M')
-               GO TO 2090
-            END IF
             IF(.NOT.LFM)  THEN
       IF(IPRINT.EQ.0)  PRINT 957, STNID,RDATA(1),RDATA(2),IDATA(9),ELEV
   957 FORMAT(' + + TOTAL REPORT FLAGGED -ID=',A8,', LAT=',F7.2,'N, ',
@@ -15287,30 +15265,6 @@ C-----------------------------------------------------------------------
 C DO SURFACE DEWPOINT DEPRESSION NEXT
       IF(ITYP.EQ.5)  GO TO 2150
       DPDP = NINT(RDATA(L+5))
-c     imq=max(imq,nint(rdata(l+12)))
-
-c DAK: I see 2 problems in 7 lines of logic below:
-c       1) If a rpt with ipstnflg=1 has IMQ=3 but it's rpted moisture
-c          qm (RDATA(L+12)) is 14 (purged, e.g.), IMQ will remain 3
-c          when, in previous production code (with IMQ=NINT(RDATA(L+12))
-c          for all reports), it would have been set to 14.
-c       2) ATLAS buoys always get ipstnflg set to 1.  However, unlike
-c          other types of reports with ipstnflg set to 1, their IMQ
-c          value is never re-set from its value of 15.  Thus the logic
-c          here will pass IMQ on with a value of 15, when in current
-c          production it would be set to the reported moisture qm
-c          (since IMQ = NINT(RDATA(L+12)) for all reports).
-c-------------------
-cccc  if(ipstnflg.eq.0) then
-cccc    if(imq.eq.15) then
-cccc      IMQ = NINT(RDATA(L+12))
-cccc    else
-cccc      IMQ = max(imq,NINT(RDATA(L+12)))
-cccc    endif
-cccc  endif
-c-------------------
-c DAK: So try this logic instead:
-c-------------------
       if(imq.eq.15) then
         IMQ = NINT(RDATA(L+12))
       else
@@ -15381,17 +15335,10 @@ C  assign new PREPBUFR report type based on dump report type
             hdr(6) = 295  ! mesonet
          else if(idata(9).eq.561) then
             hdr(6) = 294  ! buoys arriving in WMO FM13 format (fixed)
-c DAK: original logic did not include below 2 lines, I am adding them so
-c      buoys in T29 562 other than ATLAS will correctly get new 294
-c      report type if PSTN is missing (seems otherwise they would retain
-c      280 report type which would not be correct)
-c      will not change report type to 294 for ATLAS, so they will remain
-c      report type 282 (this is as before my addition of below line)
          else if(idata(9).eq.562.and..not.ATLAS) then
             hdr(6) = 294  ! buoys arriving in WMO FM18 format (fixed or
                           ! drifting - but EXCLUDING ATLAS
          else
-C ... would not expect to get here but just in case should trap report
             print 955, stnid,rdata(1),rdata(2),hdr(13),idata(9)
             go to 2090
          endif
@@ -15477,7 +15424,6 @@ C  assign new PREPBUFR report type based on dump report type
          else if(idata(9)/10.eq.56) then
             hdr(6) = 194  ! buoys (all types)
          else
-C ... would not expect to get here but just in case should trap report
             print 955, stnid,rdata(1),rdata(2),hdr(13),idata(9)
             go to 2090
          endif
