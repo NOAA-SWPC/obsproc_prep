@@ -380,8 +380,8 @@ files:
  Preimplementation Testing Requirements:
  ---------------------------------------
    There are no jobs in obsproc_prep.  All jobs executing this version of
-   obsproc_prep will be part of the parallel-production test of the obsproc 
-   phase 2 implementation.
+   obsproc_prep will be part of the parallel-production test of the OBSPROC 
+   Phase 2 bundle.
 
 
  Dissemination:
