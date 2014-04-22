@@ -13,7 +13,6 @@ EXECdir=../exec
 
 for sdir in $dir_list;do 
  dir=${sdir%\/}  # chop trailing slash if necessary
- [ $dir = bufr_tranwindsat.fd ] && continue  # this code isn't ready
  cd $dir
  make install
  cd ..

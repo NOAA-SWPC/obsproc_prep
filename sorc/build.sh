@@ -12,7 +12,6 @@ source ./setlibs.rc  # use this if existing library modules don't quite cover al
 
 for sdir in $dir_list; do
  dir=${sdir%\/}  # chop trailing slash if necessary
- [ $dir = bufr_tranwindsat.fd ] && continue  # this code isn't ready
  cd $dir
  make clobber
  make
