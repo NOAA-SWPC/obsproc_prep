@@ -128,6 +128,30 @@ files:
    prepobs_mpcopybufr, prepobs_oiqcbufr, prepobs_prepacpf, prepobs_prevents,
    prepobs_profcqc, syndat_syndata:
     - No change to source.
+   prepobs_prepdata, prepobs_prevents, syndat_syndata:
+      gblevents (in w3emc library - version 2.2.0):
+       - Added new namelist switch "DOPMSL" which, when TRUE, derives pmsl
+         (mnemonic "PMO") from reported station pressure ("POB"), station
+         height/elevation ("ZOB") and the just-computed virtual temperature for
+         surface reports in cases when pmsl initially encoded in PREPBUFR file
+   !!!   by prepobs_prepdata is missing; e.g., for all marine and mesonet
+   !!!   reports right now (derivation done in subroutine GBLEVN08).  DOVTMP
+         must be TRUE and DOANLS must be FALSE ("PREVENTS" mode). The derived
+         pmsl either gets a quality mark ("PMQ") of 3 or inherits the station
+         pressure quality mark ("PQM"), whichever is greater. The value of the
+         pmsl indicator (new mnemonic "PMIN") is set to 1 to denote pmsl was
+         derived rather than observed.  The default for "DOPMSL" is FALSE
+         (normally only TRUE in RTMA and URMA runs).  It is forced to be FALSE
+         in "POSTEVENTS" mode (DOANLS=TRUE).
+         BENEFIT: More complete and thorough pressure information for surface
+                  data is available in the RTMA and URMA GSI via this derived
+                  pmsl since every report will have a pmsl now (whether
+                  observed or derived).  The RTMA/URMA GSI analyzes pmsl.
+       - In subroutine GBLEVN02, SFCSHP reports with calm winds and non-missing
+         background u- or v-component wind .ge. 5 m/sec are flagged with Q.M. 8
+         (event pgm "PREVENT", reason code 8).
+         BENEFIT: These data are suspect and will now not be assimilated by any
+                  GSI system.
    prepobs_cqcvad:
     - Increased total number of levels amongst all VAD reports that can be
       processed and total number of events amongst all VAD reports that can be
@@ -196,10 +220,10 @@ files:
          SYNOP or METAR). "PMIN" will be encoded with a value of 1 in w3emc
          routine GBLEVENTS for cases where a mean sea-level pressure is
          derived because it was encoded as missing in PREPBUFR file by
-         prepobs_prepdata in PREP (see below and docblock in GBLEVENTS for
-  !!!    more information); e.g., for all marine and mesonet reports right
-  !!!    now.  (See changes #1, 4 & 5 to fix file prepobs_prep.bufrtable
-         below.)  Other minor changes as well.
+         prepobs_prepdata in PREP (see GBLEVENTS change info above and docblock
+         in GBLEVENTS for more information); e.g., for all marine and mesonet
+     !!! reports right now.  (See changes #1, 4 & 5 to fix file
+     !!! prepobs_prep.bufrtable below.)  Other minor changes as well.
          BENEFIT: Downstream codes will be able to differentiate between
                   observed and derived PMO via the PMIN value.
        - Modified subroutine GETC06 to skip over PREPBUFR encoding if u- or
@@ -317,29 +341,6 @@ files:
          surface, level) increased from 102 to 200 to account for some MAP
          profilers with more levels than before.
    !!! - The resulting "IDMAX" is now 2270, up from 1200 before.
-      gblevents (in w3emc library - version 2.2.0):
-       - Added new namelist switch "DOPMSL" which, when TRUE, derives pmsl
-         (mnemonic "PMO") from reported station pressure ("POB"), station
-         height/elevation ("ZOB") and the just-computed virtual temperature for
-         surface reports in cases when pmsl initially encoded in PREPBUFR file
-   !!!   by prepobs_prepdata is missing; e.g., for all marine and mesonet
-   !!!   reports right now (derivation done in subroutine GBLEVN08).  DOVTMP
-         must be TRUE and DOANLS must be FALSE ("PREVENTS" mode). The derived
-         pmsl either gets a quality mark ("PMQ") of 3 or inherits the station
-         pressure quality mark ("PQM"), whichever is greater. The value of the
-         pmsl indicator (new mnemonic "PMIN") is set to 1 to denote pmsl was
-         derived rather than observed.  The default for "DOPMSL" is FALSE
-         (normally only TRUE in RTMA and URMA runs).  It is forced to be FALSE
-         in "POSTEVENTS" mode (DOANLS=TRUE).
-         BENEFIT: More complete and thorough pressure information for surface
-                  data is available in the RTMA and URMA GSI via this derived
-                  pmsl since every report will have a pmsl now (whether
-                  observed or derived).  The RTMA/URMA GSI analyzes pmsl.
-       - In subroutine GBLEVN02, SFCSHP reports with calm winds and non-missing
-         background u- or v-component wind .ge. 5 m/sec are flagged with Q.M. 8
-         (event pgm "PREVENT", reason code 8).
-         BENEFIT: These data are suspect and will now not be assimilated by any
-                  GSI system.
 
  Fixed file changes:
    prepobs_cqc_statbge, prepobs_landc, syndat_weight:
