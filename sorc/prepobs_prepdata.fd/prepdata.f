@@ -18099,7 +18099,7 @@ C  REPORTS}
 !      reports (IPMSL filled back in subr. SFCDTA only when SFLAND=T
 !      or when SFMAR=T).  Should this be expanded to fill it for
 !      mesonet reports as well (although now all mesonets have missing
-!      pmsl ob)? If do expland for mesonets, OB2(1,1) currently 'NUL',
+!      pmsl ob)? If do expand for mesonets, OB2(1,1) currently 'NUL',
 !      would have to be changed to "PMO" in subr. w3fizz).
 !      My concern: gblevents in RTMA and URMA will always find mesonet
 !                  reports with missing pmsl & derive it when it may
