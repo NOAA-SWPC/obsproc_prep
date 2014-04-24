@@ -14434,7 +14434,7 @@ C$$$
       CHARACTER*8   STNID,FILNAM(5),DSNAME,SUBSET_d
       CHARACTER*41  NAME1
       LOGICAL  LFM,MARLND,MSLBOG,ATLAS,PFRALT,SFLAND,SUBSKP,PFRALT_save,
-     $ npkrpt
+     $ npkrpt,sfmar
       INTEGER  IDATA(MAXOBS),NC(5),ISQNUM(3),NOBS3_SAVE(7)
       INTEGER(8)  IDSDMP_8
       REAL OBS2_SAVE(4:NUMOBS2),OBS3_SAVE(5,MXBLVL,7)
@@ -14653,6 +14653,8 @@ C   ITYP = 30 ===> "OTHER" (INVALID TYPE)
                                          ! Consider Mesonet as land here
       SFLAND = (ITYP.EQ.1.OR.ITYP.EQ.8.OR.ITYP.EQ.10.OR.ITYP.EQ.11)
       MSLBOG = (ITYP.EQ.3.OR.ITYP.EQ.7)
+      sfmar  = (ityp.eq.2.or.ityp.eq.4.or.ityp.eq.5.or.ityp.eq.6
+     $          .or.ityp.eq.9.or.ityp.eq.12)
 C FOR NON-BOGUS RPTS, 'INSTR' WILL SPECIFICALLY IDENTIFY THE LAST DIGIT
 C  OF THE SFC R. TYPE - DEFAULT IS 0 ==> OCEANIC WITH VALID PSTN
       INSTR = 0
@@ -15491,12 +15493,12 @@ C STORE SPECIFIC HUMIDITY (*10**6 G/G) IN WORD 4 OF MOBS MASS LEVEL 1;
 C  MUST BE < IMISS (99999) AND > 0 - IF NOT SET TO MISSING
       IF(INTQ.LT.IMISS.AND.INTQ.GT.0)  MOBS(1,4,1) = INTQ
    15 CONTINUE
-      IF(PMSL.LT.XMISS.AND.SFLAND)  THEN
+      IF(PMSL.LT.XMISS.AND.SFLAND.or.PMSL.LT.XMISS.and.sfmar)  THEN
+c     IF(PMSL.LT.XMISS.AND.SFLAND)  THEN
 cfix? IF(PMSL.LT.YMISS.AND.SFLAND)  THEN
 C IF PMSL VALID AND THIS IS LAND REPORT, STORE PMSL OBS (*10 MB) AND
 C  PREPBUFR TABLE VALUE IN IPMSL ARRAY
          IF(NINT(PMSL).LT.32767)  THEN
-! DAK: Here is where sea-level pressure is stored ONLY for land reports
             IPMSL(1) = NINT(PMSL)
             IF(IFLSF.EQ.1.AND.(IM0.LE.3.OR.IM0.GT.15))  IM0 = 15
             IPMSL(2) = IM0
@@ -18091,18 +18093,17 @@ C --> PROCESSING UNIQUE TO FIRST MOBS LEVEL
 
                IF(IPMSL(1).LT.YMISS)  THEN
 C STORE MEAN SEA-LEVEL PRESSURE OBS., TABLE VALUE, and indicator
-C  {CURRENTLY IPMSL(1) VALID ONLY FOR SURFACE LAND MASS REPORTS}
-! DAK: Note sea-level pressure is stored ONLY for land reports (IPMSL
-!      filled back in subr. SFCDTA only when SFLAND=T)
-!      Should this be expanded to fill it for marine reports & mesonet
-!      repots as well (although now all mesonets have missing pmsl ob,
-!      if do expand for mesonets, OB2(1,1) currently 'NUL' would have
-!      to be changed to "PMO" in subr. w3fizz)
-!      My concern: gblevents in RTMA and URMA will always find marine
-!                  reports (and mesonets) with missing pmsl & derive it
-!                  when, at least for marine reports, it may have
-!                  been reported but just not stored in PREPBUFR - am I
-!                  missing something?
+C  {CURRENTLY IPMSL(1) VALID ONLY FOR SURFACE LAND  AND MARINE MASS 
+C  REPORTS}
+! DAK: Note sea-level pressure is stored ONLY for land and marine
+!      reports (IPMSL filled back in subr. SFCDTA only when SFLAND=T
+!      or when SFMAR=T).  Should this be expanded to fill it for
+!      mesonet reports as well (although now all mesonets have missing
+!      pmsl ob)? If do expland for mesonets, OB2(1,1) currently 'NUL',
+!      would have to be changed to "PMO" in subr. w3fizz).
+!      My concern: gblevents in RTMA and URMA will always find mesonet
+!                  reports with missing pmsl & derive it when it may
+!                  have been reported but just not stored in PREPBUFR.
                   OB2(1,1) = IPMSL(1) * 0.1
                   QMS(7,1)  = MIN(15,IPMSL(2))
                   ob2(3,1) = 0.! indicator (PMIN) is 0 for observed PMSL
