@@ -1,7 +1,7 @@
 C$$$  MAIN PROGRAM DOCUMENTATION BLOCK
 C
 C MAIN PROGRAM: PREPOBS_PREPDATA
-C   PRGMMR: ??????????       ORG: NP22        DATE: ????-??-??
+C   PRGMMR: KEYSER/MELCHIOR/LING  ORG: NP22   DATE: 2014-04-25
 C
 C ABSTRACT: PREPARES DATA FOR USE IN ANALYSES FOR THE NDAS, NAM, GDAS,
 C   GFS, RAP (RAPID REFRESH), RTMA, AND URMA NETWORKS.  ALL ANALYSES
@@ -992,49 +992,60 @@ C     REGARDLESS OF THEIR LOCATION), THIS ALSO CAUSED AN ARRAY OVERFLOW
 C     SINCE KYJ COULD BE CALCULATED AS 38, 1 GREATER THAN THE LIMIT; IN
 C     SUBR. LNDCHK  FIXED S.H. BUGS WHICH CAUSED AN OVERFLOW IN KXI FOR
 C     ELON > 359.98 AND AN OVERFLOW IN KYJ FOR LAT > -0.01
-C ????-??-??  D. A. KEYSER -- FOR ALL SATELLITE-DERIVED WIND REPORTS,
-C     NOW ENCODES PREPBUFR REPORT SUB-TYPE (MNEMONIC "TSB", PREVIOUSLY
-C     MISSING) AS BUFR SATELLITE ID TIMES 10 PLUS "SATELLITE DERIVED
-C     WIND COMPUTATION METHOD ("SWCM" - BUFR CODE TABLE 0-02-023),
-C     ALLOWS GSI TO IDENTIFY CLOUD-TOP VS. DEEP-LAYER WV WINDS AND IR
-C     VS. VISIBLE WINDS FOR METEOSAT AND JMA SINCE, UNLIKE NESDIS,
-C     BOTH HAVE SAME RPT TYPES (250-JMA & 254-EUMETSAT FOR WV, 242/252-
-C     JMA & 243/253-EUMETSAT FOR IR/VIS); 1-DIM ARRAY OBS2 RETURNED
-C     FROM IW3UNPBF INCREASED FROM 42 TO 43 WORDS TO HOLD SATELLITE
-C     ZENITH ANGLE (DEGREES, FOR ALL SATWND TYPES), ENCODED INTO
-C     PREPBUFR FILE (MNEMONIC SAZA) FOR USE BY GSI (TO POSSIBLY SCREEN
-C     SATWNDS WITH HIGH SAZA VALUES); ADDED IRNMRK=10 FOR UNRESTRICTED
-C     MESOSCALE ANALYSIS (URMA) NETWORK
-C ????-??-??  ???????????  -- DIFFERENTIATE BETWEEN RADAR CODED MESSAGE
-C  AND NEW LEVEL 2 DECODER VAD WIND REPORTS VIA USE OF REPORT SUBTYPE
-C  (TSB=1 FOR FORMER AND =2 FOR LATTER)
-C ????-??-??  ???????????? -- DO NOT CONVERT WINDS FROM DIR/SPEED TO
-C     U/V FOR NEW VAD WIND REPORTS FROM LEVEL 2 DECODER SINCE THESE ARE
-C     ALREADY U/V AND ARE STORED IN M/SEC
-C ???-??-??  ???????????  -- Add 12'th word to following namelist
-C     switches to account for Coast Guard tide gauge (surface marine)
-C     reports: FWINDO, JSURFM, JSURFW
-C ???-??-??  ???????????  -- Added new namelist switch NPKRPT ..., if
-C     true all of the below is true: will process reports that would
-C     otherwise be tossed due to their having a missing pstn -- in
-C     order to still allow for a q calculation, these reports
-C     temporarily estimate pstn from the U.S. std. atmosphere value and
-C     assign it a minimum q.m. of 3 while also permanently assigning
-C     the moisture q.m. a minimum value of 3 - in the end, pstn obs and
-C     qm is encoded as missing for these reports - these reports are
-C     then assigned new PREPBUFR report types ...., ATLAS buoys are
-C     handled by ..., MESONETS will no longer have "x" in character 8
-C     of id
-C ????-??-??  S. Melchior -- SUBROUTINE GETC06 WAS MODIFIED TO TRAP
-C     RPTS WHOSE WIND INFORMATION EXCEEDS THE 32767 LIMIT.  IF THE
-C     LIMIT IS EXCEEDED THE ENTIRE REPORT WILL SKIP BEING ENCODED INTO
-C     THE OUTPUT PREPBUFR FILE.
-C ????-??-??  ??????????  -- Modified to always encode wind speed obs
-C     in m/sec ("SOB") and wind direction obs ("DDO") for all types of
-C     surface reports (even if one or the other are missing but also if
-C     both are present); removed old logic which encoded "SOB" only for
-C     METAR reports when direction was missing and speed was .LE. 3
-C     m/sec (direction was never encoded in any situation for surface
+C 2014-04-25  D. A. Keyser --
+C          - For all satellite-derived wind reports, now encodes
+C     PREPBUFR report sub-type (mnemonic "TSB", previously missing) as
+C     BUFR satellite id times 10 plus "Satellite Derived Wind
+C     Computation Method ("SWCM" - BUFR code table 0-02-023), allows
+C     GSI to identify cloud-top vs. deep-layer WV winds and IR vs.
+C     visible winds for METEOSAT and JMA since, unlike NESDIS, both
+C     have same report types (250-JMA & 254-EUMETSAT for WV, 242/252-
+C     JMA & 243/253-EUMETSAT for IR/VIS).
+C          - 1-dim array OBS2 returned from IW3UNPBF increased from 42
+C     to 43 words to hold satellite zenith angle (degrees, for all
+C     SATWND types), encoded into PREPBUFR file (mnemonic SAZA) for use
+C     by GSI (to possibly screen SATWNDS with high SAZA values).
+C          -  Added IRNMRK=10 for UnRestricted Mesoscale Analysis (URMA)
+C     network.
+C          - No longer aborts with RC=99 if number of levels in a
+C     report exceeds the limit of "MXLVL".  Instead, now skips the
+C     offending report(s) and, at the very end, posts a message to the
+C     JOBLOG file noting how many reports were skipped due to this
+C     issue.
+C 2014-04-25  S. Melchior  -- 
+C          - Added processing of Coast Guard tide gauge data (read from
+C     SFCSHP dump, dump report type 534). A 12'th word added to
+C     following namelist switches to account for these new reports:
+C     FWINDO, JSURFM, JSURFW.
+C          - Added new namelist switch NPKRPT, if TRUE all of the below
+C     occurs: will process reports that would otherwise be tossed due
+C     to their having a missing pstn; these reports estimate pstn from
+C     the reported or U.S. std. atmosphere pmsl, the reported or U.S.
+C     std. atmosphere sensible temperature, and the reported elevation
+C     (only marine reports > 7.5 m can have a reported pmsl and fall
+C     into this category); this estimated pstn (POB) is used to
+C     estimate q (QOB); both POB and QOB are assigned minimum q.m.'s
+C     (PQM, QQM) of 3; estimated POB is encoded into PREPBUFR file;
+C     these reports are then assigned new PREPBUFR report types 192/292
+C     (SYNOP), 193/293 (METAR), 194/294 (marine), 195/295 (mesonet);
+C     ATLAS buoy wind reports which also have missing pstn and pmsl
+C     will continue to be processed as before (PREPBUFR report type 282
+C     - note: this means that if an ATLAS buoy ever had T,q info, its
+C     mass piece would still be tossed rather than getting into
+C     PREPBUFR file under under report type 194 (may need to fix this
+C     logic someday); MESONETS will no longer have "x" in character 8
+C     of id, instead they will get PREPBUFR report types 195/295 rather
+C     than 188/288.
+C          - Subroutine GETC06 modified to trap reports whose wind
+C     information exceeds the 32767 limit.  If the limit is exceeded,
+C     the entire report will skip being encoded into the output
+C     PREPBUFR file.
+C          - Modified to always encode wind speed obs in m/sec ("SOB")
+C     and wind direction obs ("DDO") for all types of surface reports
+C     (even if one or the other are missing but also if both are
+C     present); removed old logic which encoded "SOB" only for METAR
+C     reports when direction was missing and speed was .LE. 3 m/sec
+C     (direction was never encoded in any situation for surface
 C     reports), also removed encoding of "SQM" (wind speed quality
 C     mark) for these types of METAR reports - all surface reports now
 C     encode wind qm as "WQM" regardless of whether or not it also
@@ -1042,23 +1053,27 @@ C     encodes direction, speed, u-comp or v-comp {note this change does
 C     not affect non-surface reports which can still encode speed
 C     in knots ("FFO") and direction ("DDO") when "UOB" and "VOB" are
 C     also encoded.
-C ????-??-??  ??????????  -- Added new mnemonic "PMIN" (mean sea-level
-C     pressure indicator) which is encoded with a value of zero for all
-C     reports with an observed mean sea-level pressure encoded in
-C     "PMO".  "PMIN" will be encoded with a value of 1 in w3emc routine
-C     gblevents for cases where a mean sea-level pressure is derived
-C     (see docblock in gblevents for more information).
-C ????-??-??  ??????????  --  Increase the maximum number of levels
-C     that can be processed from 300 to 600.  This allows runs that
-C     might include interpolated levels (e.g., special AFOS graphics,
-C     IRNMRK=2) to still work properly as more and more radiosonde
-C     levels become available in the new RRS.
-C ????-??-??  ???????????? -- NO LONGER ABORTS WITH RC=99 IF NUMBER OF
-C     LEVELS IN A REPORT EXCEEDS THE LIMIT OF "MXLVL".  INSTEAD, NOW
-C     SKIPS THE OFFENDING REPORT(S) AND, AT THE VERY END, POSTS A
-C     MESSAGE TO THE JOBLOG FILE NOTING HOW MANY REPORTS WERE SKIPPED
-C     DUE TO THIS ISSUE.
-C 2014-01-15  S. Melchior -- [Commentary forthcoming]
+C          - Added new mnemonic "PMIN" (mean sea-level pressure
+C     indicator) which is encoded with a value of zero for all reports
+C     with an observed mean sea-level pressure encoded in "PMO".
+C     "PMIN" will be encoded with a value of 1 in w3emc routine
+C     GBLEVENTS for cases where a mean sea-level pressure is derived
+C     (see docblock in GBLEVENTS for more information).
+C          - Report type 183 now stores moisture quality mark no lower
+C     than 3 (suspect) (before type 183 stored observed moisture
+C     quality mark read from the ADPSFC dump file).
+C 2014-04-25  Y. Ling      --
+C          - Handles new VAD wind reports from Level 2 decoder.
+C     Differentiates between these and existing Radar Coded Message
+C     (RCM) VAD wind reports via use of report subtype (TSB=1 for RCM
+C     and =2 for Level 2).  No conversion of winds from dir/speed to
+C     u/v for VAD wind reports from Level 2 decoder since these are
+C     already u/v and are stored in m/sec
+C          - Increase the maximum number of levels that can be
+C     processed from 300 to 600.  This allows runs that might include
+C     interpolated levels (e.g., special AFOS graphics, IRNMRK=2) to
+C     still work properly as more and more radiosonde levels become
+C     available in the new RRS.
 C
 C USAGE:
 C   INPUT FILES:
@@ -1844,9 +1859,13 @@ C                   pfralt=T;
 C                3) marine reports with a missing station pressure
 C                   observation and a missing sea-level pressure
 C                   observation
+C                4) marine reports with a missing station pressure
+C                   observation a reported missing sea-level pressure
+C                   observation and an elevation > 7.5 meters
 C       =   .TRUE.   process the surface report in one of the above
-C                    situations, but store pstn as missing and give it
-C                    a new report type (more on that later)
+C                    situations, store pstn estimated from reported
+C                    info and possibly U.S. Std. Atmos., and give
+C                    report a new report type (more on that later)
 C       =   .FALSE.  toss the surface report in one of the above
 C                    situations
 C                         -- or --
@@ -1855,14 +1874,16 @@ C              reports with a missing station pressure observation and
 C              a missing altimeter setting (note: all mesonets have a
 C              a missing sea-level pressure observation, and all have
 C              hardwired pfralt=T)
-C       =   .TRUE.   process the surface mesonet report, but store pstn
-C                    as missing and give it a new report type (more on
-C                    that later)
-C       =   .FALSE.  process the surface mesonet report, but store pstn
-C                    as the U.S. Std. Atmos. value, and set character 8
-C                    of the stnid to "x" (instead of the usual blank)
-C                    (these remain report type 188/288)
-C                                         (def - npkrpt(12)/12*.false./)
+C       =   .TRUE.   process the surface mesonet report, store pstn
+C                    estimated from reported info and possibly U.S.
+C                    Std. Atmos, and give report a new report type
+C                    (more on that later)
+C       =   .FALSE.  process the surface mesonet report, store pstn
+C                    estimated from reported info and possibly U.S.
+C                    Std. Atmos., and set character 8 of the stnid to
+C                    "x" (instead of the usual blank) (these reports
+C                    remain report type 188/288)
+C                                        (def - npkrpt(12)/12*.false./)
 C {NOTE: PMSL BOGUS (BOTH) & SPL-LVL REPORTS NEVER PROCESS A WIND PART)
 CC
 C    PFRALT - FOR NON-MESONET SURFACE LAND (ONLY) REPORTS WITH MISSING
@@ -1876,18 +1897,18 @@ C             {NOTE1: THE FOLLOWING DOES NOT APPLY TO MESONET REPORTS:
 C                     IN THE CASE OF PFRALT=F OR MISSING ALTIMETER
 C                     SETTING, IF SURFACE LAND REPORTS HAVE MISSING
 C                     STATION PRESSURE, THEN IT WILL BE ESTIMATED FROM
-C                     PMSL IF ITS NON-MISSING AND THE REPORTS WILL GET
-C                     A PREPBUFR REPORT TYPE 183/284 (UNLESS ELEV IS <
-C                     7.5 M IN WHICH CASE PSTN IS SET TO PMSL AND
-C                     PREPBUFR R.T. 181/281 IS ASSIGNED); IF PMSL IS
-C                     ALSO MISSING, THEN ONE OF THE FOLLOWING WILL
-C                     OCCUR:
-C                      1) IF NPKRPT=T FOR THE SFC TYPE, PSTN IS ENCODED
-C                         AS MISSING IN PREPBUFR FILE (ALTHOUGH Q IS
-C                         STILL CALCULATED FROM ITS U.S. STANDARD
-C                         ATMOS. VALUE), THESE GET PREPBUFR REPORT TYPE
-C                         192/292 IF SYNOPTIC AND PREPBUFR REPORT TYPE
-C                         193/193 IF METAR;
+C                     PMSL IF ITS NON-MISSING AND ENCODED INTO PREPBUFR
+C                     FILE, AND THE REPORTS WILL GET A PREPBUFR REPORT
+C                     TYPE 183/284 (UNLESS ELEV IS < 7.5 M IN WHICH
+C                     CASE PSTN IS SET TO PMSL AND PREPBUFR R.T. 181/
+C                     281 IS ASSIGNED); IF PMSL IS ALSO MISSING, THEN
+C                     ONE OF THE FOLLOWING WILL OCCUR:
+C                      1) IF NPKRPT=T FOR THE SFC TYPE, PSTN IS
+C                         ESTIMATED FROM U.S. STANDARD ATMOS. PMSL
+C                         (1013.25 MB) AND ENCODED INTO PREPBUFR FILE,
+C                         AND THE REPORTS WILL GET A PREPBUFR REPORT
+C                         TYPE 192/292 IF SYNOPTIC AND PREPBUFR REPORT
+C                         TYPE 193/193 IF METAR;
 C                      2) IF NPKRPT=F FOR THE SFC TYPE, THE REPORT WILL
 C                         BE SKIPPED}
 C             (NOTE2: PFRALT=T WILL ALSO ENCODE ALTIMETER SETTING INTO
@@ -1907,11 +1928,10 @@ C                       STNID IS SET TO 'a', THESE GET PREPBUFR REPORT
 C                       TYPE 188/288;
 C                     - IF BOTH PSTN AND ALTIMETER SETTING ARE MISSING,
 C                       THEN ONE OF THE FOLLOWING WILL OCCUR:
-C                        1) IF NPKRPT(10)=T, PSTN IS ENCODED AS MISSING
-C                           IN PREPBUFR FILE (ALTHOUGH Q IS STILL
-C                           CALCULATED FROM ITS U.S. STANDARD ATMOS.
-C                           VALUE), THESE GET PREPBUFR REPORT TYPE
-C                           195/295;
+C                        1) IF NPKRPT(10)=T, PSTN IS ESTIMATED FROM
+C                           U.S. STANDARD ATMOS. PMSL (1013.25 MB) AND
+C                           ENCODED INTO PREPBUFR FILE, THESE GET
+C                           PREPBUFR REPORT TYPE 195/295;
 C                        2) IF NPKRPT(10)=F, THE U.S. STANDARD
 C                           ATMOSPHERE IS USED TO ESTIMATE PSTN, PSTN
 C                           IS ENCODED INTO PREPBUFR WITH THIS VALUE,
@@ -2386,7 +2406,6 @@ C                         LAND M/SEC * 10)
 
 C         C O N T E N T S   O F   T H E   A R R A Y   I P M S L
 C         (MEAN SEA-LEVEL PRESSURE DATA FOR A SINGLE MASS PIECE)
-C                  (APPLIES ONLY TO SURFACE LAND REPORTS)
  
 C                             IPMSL(MXTYPV)
 
@@ -2768,8 +2787,7 @@ C  IN INTERFACE WITH SUBROUTINE IW3UNPBF
      $ FLACMS,IACFTH,SUBSKP,JPGPSD,GWINDO,RASS,TWINDO,JPWDSD,IWWNDO,
      $ FLDMFR,WRMISS,SKGP45,JPASCD,IAWNDO,npkrpt
       NAMELIST/PARM/IUNIT
- ! DAK: update this date ...
-      CALL W3TAGB('PREPOBS_PREPDATA',2014,0092,0061,'NP22')
+      CALL W3TAGB('PREPOBS_PREPDATA',2014,0115,0061,'NP22')
 C DETERMINE MACHINE WORD LENGTH (BYTES) FOR BOTH INTEGERS AND REALS
       CALL WORDLENGTH(LWI,LWR)
       PRINT 2213, LWI,LWR
@@ -2812,7 +2830,7 @@ C    CARDS FILE, JUST AFTER NAMELIST TASK, BY THE MAKE_PREPBUFR SCRIPT)
          PRINT 321, NET(1)
       END IF
   321 FORMAT(/37X,'WELCOME TO THE UNIVERSAL ',A14,' DATA PREPROCESSOR'/
-     $ 48X,'WCOSS VERSION CREATED ?? ??? ????'/)
+     $ 48X,'WCOSS VERSION CREATED 25 APR 2014'/)
       PRINT 322, (IUNIT(I),I=1,8),IUNIT(16),IUNIT(17)
   322 FORMAT(//53X,'TABLE OF UNIT NUMBERS'/31X,
      $ 'INPUTS IN UNIT NUMBERS 11-50 - OUTPUTS IN UNIT NUMBERS 51-90'//
@@ -3262,7 +3280,7 @@ C-----------------------------------------------------------------------
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    PREP
-C   PRGMMR: ????????????     ORG: NP22       DATE: ????-??-??
+C   PRGMMR: KEYSER/LING      ORG: NP22       DATE: 2014-04-25
 C
 C ABSTRACT: PERFORMS SEVERAL FUNCTIONS - UNPACKS REPORTS ONE AT A TIME
 C   INTO UNPACKED IW3UNPBF FMT, PERFORMING SEVERAL CHECKS SUCH AS
@@ -3412,10 +3430,10 @@ C     WIND DATA READING FROM REPROCESSED DUMP FILE IN UNIT 39, ENCODING
 C     INTO NEW PREPBUFR REPORT TYPE 290 UNDER NEW PREPBUFR MESSAGE TYPE
 C     "ASCATW" VIA NEW NAMELIST SWITCHES "JPASCD" (DEF=6*9999) AND
 C     IAWNDO (DEF=-3,+3)
-C ????-??-??  ???????????  -- DIFFERENTIATE BETWEEN RADAR CODED MESSAGE
-C  AND NEW LEVEL 2 DECODER VAD WIND REPORTS VIA USE OF REPORT SUBTYPE
-C  (TSB=1 FOR FORMER AND =2 FOR LATTER)
-C 2014-01-15  S. Melchior -- [Commentary forthcoming]
+C 2014-04-25  Y. Ling      -- Handles new VAD wind reports from Level 2
+C     decoder.  Differentiates between these and existing Radar Coded
+C     Message (RCM) VAD wind reports via use of report subtype (TSB=1
+C     for RCM and =2 for Level 2).
 C
 C USAGE:    CALL PREP
 C   INPUT FILES:
@@ -5264,7 +5282,7 @@ C$$$
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    GETUPA
-C   PRGMMR: ?????????????    ORG: NP22       DATE: ????-??-??
+C   PRGMMR: KEYSER/LING      ORG: NP22       DATE: 2014-04-25
 C
 C ABSTRACT: RETRIEVES UPPER-AIR RAOB, PIBAL, DROPWINSONDE, CLASS,
 C   WIND PROFILER ORIGINATING FROM PILOT (PIBAL) FORMAT BULLETINS, VAD
@@ -5372,14 +5390,14 @@ C 2004-09-09  D. A. KEYSER -- ADDED PROCESSING OF NPN AND CAP RASS DATA
 C     READ FROM "RASSDA" DUMP FILE IN NEW DATA LVL CAT. 15, DUMP R.
 C     TYPE 77, GET PREPBUFR R. TYPE 126, PROCESSED INTO PREPBUFR FILE
 C     UNDER NEW TBL A ENTRY "RASSDA"
-C ????-??-??  ???????????? -- DO NOT CONVERT WINDS FROM DIR/SPEED TO
-C     U/V FOR NEW VAD WIND REPORTS FROM LEVEL 2 DECODER SINCE THESE ARE
-C     ALREADY U/V AND ARE STORED IN M/SEC
-C ????-??-??  ???????????? -- NO LONGER ABORTS WITH RC=99 IF NUMBER OF
-C     LEVELS IN A REPORT EXCEEDS THE LIMIT OF "MXLVL".  INSTEAD, NOW
-C     SKIPS THE OFFENDING REPORT(S) AND, AT THE VERY END, POSTS A
-C     MESSAGE TO THE JOBLOG FILE NOTING HOW MANY REPORTS WERE SKIPPED
-C     DUE TO THIS ISSUE.
+C 2014-04-25  D. A. Keyser -- No longer aborts with RC=99 if number of
+C     levels in a report exceeds the limit of "MXLVL".  Instead, now
+C     skips the offending report(s) and, at the very end, posts a
+C     message to the JOBLOG file noting how many reports were skipped
+C     due to this issue.
+C 2014-04-25  Y. Ling      -- No conversion of winds from dir/speed to
+C     u/v for VAD wind reports from Level 2 decoder since these are
+C     already u/v and are stored in m/sec
 C
 C USAGE:    CALL GETUPA(*,*)
 C   OUTPUT FILES:
@@ -9856,7 +9874,7 @@ C     IS SET TO REPORTED LAT/LON
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    FILLX
-C   PRGMMR: KEYSER           ORG: NP22        DATE: ????-??-??
+C   PRGMMR: KEYSER           ORG: NP22        DATE: 2014-04-25
 C
 C ABSTRACT: SENDS EACH FILLED REPORT PASSED IN THROUGH "HDR/MOBS/
 C   IPMSL/PWAT/xRAD/REQV/CLTOP" ARRAYS TO PREPBUFR ENCODER
@@ -9951,9 +9969,9 @@ C     "ASCATW" VIA NEW NAMELIST SWITCHES "JPASCD" (DEF=6*9999) AND
 C     IAWNDO (DEF=-3,+3); 1-DIM ARRAY OBS2 RETURNED FROM IW3UNPBF
 C     INCREASED FROM 41 TO 42 WORDS TO HOLD MOISTURE QUALITY (CODE
 C     TABLE) FOR ACARS REPORTS
-C ????-??-??  D. A. KEYSER -- 1-DIM ARRAY OBS2 RETURNED FROM IW3UNPBF
-C     INCREASED FROM 42 TO 43 WORDS TO HOLD SATELLITE ZENITH ANGLE
-C     (DEGREES, FOR ALL SATWND TYPES)
+C 2014-04-25  D. A. Keyser -- 1-dim array OBS2 returned from IW3UNPBF
+C     increased from 42 to 43 words to hold satellite zenith angle
+C     (degrees, for all SATWND types).
 C
 C
 C USAGE:    CALL FILLX(LL,IERF)
@@ -10347,7 +10365,7 @@ C**********************************************************************
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    GETC06
-C   PRGMMR: ????????????     ORG: NP22       DATE: ????-??-??
+C   PRGMMR: KEYSER/MELCHIOR  ORG: NP22       DATE: 2014-04-25
 C
 C ABSTRACT: RETRIEVES SINGLE LEVEL {AIRCRAFT FLIGHT-LEVEL, SATWND (ALL
 C   TYPES), RECCO} REPORTS FROM DATA LEVEL CAT. 6.  RECCOS MAY INCLUDE
@@ -10590,18 +10608,18 @@ C     VESTIGE FROM THE OLD I*2 PREPDA DAYS); IF NEAREST INTEGER FOR Q
 C     IS 0 MG/KG, IT IS RESET TO 1 MG/KG (.001 G/KG) TO ENSURE THAT
 C     LEVELS WITH VERY LOW SPECIFIC HUMIDITY ARE PROCESSED (Q MUST BE >
 C     0 TO BE PROCESSED)
-C ????-??-??  D. A. KEYSER -- FOR ALL SATELLITE-DERIVED WIND REPORTS,
-C     NOW ENCODES PREPBUFR REPORT SUB-TYPE (MNEMONIC "TSB", PREVIOUSLY
-C     MISSING) AS BUFR SATELLITE ID TIMES 10 PLUS "SATELLITE DERIVED
-C     WIND COMPUTATION METHOD ("SWCM" - BUFR CODE TABLE 0-02-023),
-C     ALLOWS GSI TO IDENTIFY CLOUD-TOP VS. DEEP-LAYER WV WINDS AND IR
-C     VS. VISIBLE WINDS FOR METEOSAT AND JMA SINCE, UNLIKE NESDIS,
-C     BOTH HAVE SAME RPT TYPES (250-JMA & 254-EUMETSAT FOR WV, 242/252-
-C     JMA & 243/253-EUMETSAT FOR IR/VIS)
-C ????-??-??  S. Melchior -- MODIFIED TO TRAP RPTS WHOSE WIND
-C     INFORMATION EXCEEDS THE 32767 LIMIT.  IF THE LIMIT IS EXCEEDED
-C     THE ENTIRE REPORT WILL SKIP BEING ENCODED INTO THE OUTPUT
-C     PREPBUFR FILE.
+C 2014-04-25  D. A. Keyser -- For all satellite-derived wind reports,
+C     now encodes PREPBUFR report sub-type (mnemonic "TSB", previously
+C     missing) as BUFR satellite id times 10 plus "Satellite Derived
+C     Wind Computation Method ("SWCM" - BUFR code table 0-02-023),
+C     allows GSI to identify cloud-top vs. deep-layer WV winds and IR
+C     vs. visible winds for METEOSAT and JMA since, unlike NESDIS, both
+C     have same report types (250-JMA & 254-EUMETSAT for WV, 242/252-
+C     JMA & 243/253-EUMETSAT for IR/VIS).
+C 2014-04-25  S. Melchior  -- Modified to trap reports whose wind
+C     information exceeds the 32767 limit.  If the limit is exceeded,
+C     the entire report will skip being encoded into the output
+C     PREPBUFR file.
 C
 C USAGE:    CALL GETC06(NN,CYCLET,*,*)
 C   INPUT ARGUMENT LIST:
@@ -14173,7 +14191,7 @@ C+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    SFCDTA
-C   PRGMMR: ????????????     ORG: NP22       DATE: ????-??-??
+C   PRGMMR: MELCHIOR         ORG: NP22       DATE: 2014-04-25
 C
 C ABSTRACT: PERFORMS SEVERAL FUNCTIONS: UNPACKS SURFACE RPTS (IW3UNPBF
 C   FORMAT) ONE AT A TIME, PERFORMING SEVERAL CHECKS SUCH AS WHETHER
@@ -14374,32 +14392,47 @@ C     2 OR 15 WHEN THEY SHOULD HAVE BEEN SET TO 3 OR 13, RESP.) (NOTE
 C     THAT MESONETS TO NOT REPORT PRESS. SO ALTIMETER SETTING IS USED
 C     TO CALCULATE PRESS. AND THE ALTIMETER Q.M. IS TRANSFERRED TO
 C     PRESS.)
-C ???-??-??  ???????????  -- Add 12'th word to following namelist
-C     switches to account for Coast Guard tide gauge (surface marine)
-C     reports: FWINDO, JSURFM, JSURFW
-C ???-??-??  ???????????  -- Added new namelist switch NPKRPT ..., if
-C     true all of the below is true: will process reports that would
-C     otherwise be tossed due to their having a missing pstn -- in
-C     order to still allow for a q calculation, these reports
-C     temporarily estimate pstn from the U.S. std. atmosphere value and
-C     assign it a minimum q.m. of 3 while also permanently assigning
-C     the moisture q.m. a minimum value of 3 - in the end, pstn obs and
-C     qm is encoded as missing for these reports - these reports are
-C     then assigned new PREPBUFR report types ...., ATLAS buoys are
-C     handled by ..., MESONETS will no longer have "x" in character 8
-C     of id.
-C ??-??-??   ???????????  -- Report type 183, ..., now store moisture
-C     quality marks no less than 3 (before they stored in observed
-C     quality mark coming in from the dump)
-C  etc., etc.
-C ????-??-??  ??????????  -- Modified to always encode wind speed obs
-C     in m/sec and wind direction obs for all types of surface reports
+C 2014-04-25  S. Melchior  -- 
+C          - Added processing of Coast Guard tide gauge data (read from
+C     SFCSHP dump, dump report type 534). A 12'th word added to
+C     following namelist switches to account for these new reports:
+C     FWINDO, JSURFM, JSURFW.
+C          - Added new namelist switch NPKRPT, if TRUE all of the below
+C     occurs: will process reports that would otherwise be tossed due
+C     to their having a missing pstn; these reports estimate pstn from
+C     the reported or U.S. std. atmosphere pmsl, the reported or U.S.
+C     std. atmosphere sensible temperature, and the reported elevation
+C     (only marine reports > 7.5 m can have a reported pmsl and fall
+C     into this category); this estimated pstn (POB) is used to
+C     estimate q (QOB); both POB and QOB are assigned minimum q.m.'s
+C     (PQM, QQM) of 3; estimated POB is encoded into PREPBUFR file;
+C     these reports are then assigned new PREPBUFR report types 192/292
+C     (SYNOP), 193/293 (METAR), 194/294 (marine), 195/295 (mesonet);
+C     ATLAS buoy wind reports which also have missing pstn and pmsl
+C     will continue to be processed as before (PREPBUFR report type 282
+C     - note: this means that if an ATLAS buoy ever had T,q info, its
+C     mass piece would still be tossed rather than getting into
+C     PREPBUFR file under under report type 194 (may need to fix this
+C     logic someday); MESONETS will no longer have "x" in character 8
+C     of id, instead they will get PREPBUFR report types 195/295 rather
+C     than 188/288.
+C          - Subroutine GETC06 modified to trap reports whose wind
+C     information exceeds the 32767 limit.  If the limit is exceeded,
+C     the entire report will skip being encoded into the output
+C     PREPBUFR file.
+C          - Modified to always encode wind speed obs in m/sec ("SOB")
+C     and wind direction obs ("DDO") for all types of surface reports
 C     (even if one or the other are missing but also if both are
-C     present); removed old logic which encoded wind speed only for
-C     METAR reports when direction was missing and speed was .LE. 3
-C     m/sec (direction was never encoded in any situation for surface
-C     reports)
-C 2014-01-15  S. Melchior -- [Commentary forthcoming]
+C     present); removed old logic which encoded "SOB" only for METAR
+C     reports when direction was missing and speed was .LE. 3 m/sec
+C     (direction was never encoded in any situation for surface
+C     reports), also removed encoding of "SQM" (wind speed quality
+C     mark) for these types of METAR reports - all surface reports now
+C     encode wind qm as "WQM" regardless of whether or not it also
+C     encodes direction, speed, u-comp or v-comp.
+C          - Report type 183 now stores moisture quality mark no lower
+C     than 3 (suspect) (before type 183 stored observed moisture
+C     quality mark read from the ADPSFC dump file).
 C
 C USAGE:    CALL SFCDTA
 C   INPUT FILES:
@@ -14434,7 +14467,7 @@ C$$$
       CHARACTER*8   STNID,FILNAM(5),DSNAME,SUBSET_d
       CHARACTER*41  NAME1
       LOGICAL  LFM,MARLND,MSLBOG,ATLAS,PFRALT,SFLAND,SUBSKP,PFRALT_save,
-     $ npkrpt,sfmar
+     $ npkrpt
       INTEGER  IDATA(MAXOBS),NC(5),ISQNUM(3),NOBS3_SAVE(7)
       INTEGER(8)  IDSDMP_8
       REAL OBS2_SAVE(4:NUMOBS2),OBS3_SAVE(5,MXBLVL,7)
@@ -14548,8 +14581,8 @@ C***********************************************************************
 C***********************************************************************
  2100 CONTINUE
 C initialize ipstnflg as 0 prior to unpacking each new report (will be
-C  set to 1 if a report has missing pressure and it is kept, i.e.,
-C  npkrpt=T for the particular type)
+C  set to 1 if a report has missing pressure and it is to be kept,
+C  i.e., npkrpt=T for the particular type)
       ipstnflg = 0
 C CALL UNPREPBF TO UNPACK THE NEXT REPORT
       CALL UNPREPBF(IFLAG,CYCLET,IOPENED,DSNAME,IDSDAT,IDSDMP_8,*7000)
@@ -14653,8 +14686,6 @@ C   ITYP = 30 ===> "OTHER" (INVALID TYPE)
                                          ! Consider Mesonet as land here
       SFLAND = (ITYP.EQ.1.OR.ITYP.EQ.8.OR.ITYP.EQ.10.OR.ITYP.EQ.11)
       MSLBOG = (ITYP.EQ.3.OR.ITYP.EQ.7)
-      sfmar  = (ityp.eq.2.or.ityp.eq.4.or.ityp.eq.5.or.ityp.eq.6
-     $          .or.ityp.eq.9.or.ityp.eq.12)
 C FOR NON-BOGUS RPTS, 'INSTR' WILL SPECIFICALLY IDENTIFY THE LAST DIGIT
 C  OF THE SFC R. TYPE - DEFAULT IS 0 ==> OCEANIC WITH VALID PSTN
       INSTR = 0
@@ -15098,6 +15129,19 @@ C             DATA ARE PROCESSED AS IF THEY WERE ATLAS BUOYS (I.E.,
 C             WILL BE PROCESSED W/ PREPBUFR REPORT TYPE 282, ETC.) -
 C             ALL REFERENCES TO "ATLAS" BUOYS FROM HERE ON REFER TO
 C             THESE BUOYS IN THE RAP (AND BEFORE THAT RUC2A) VERSION
+C  Also important: ATLAS buoy processing is not affected by value of
+C                  npkrpt.  Even if npkrpt=T, only a wind piece will be
+C                  processed (as report type 282). This means that if
+C                  an ATLAS buoy ever had T,q info, its mass piece
+C                  would still be tossed rather than getting into
+C                  PREPBUFR file under under report type 194.  It is
+C                  believed that most TRUE ATLAS buoys do not have T,q
+C                  info, but that is not for certain.  However, note
+C                  from point above that the RAP treats all buoys w/
+C                  missing pmsl & pstn as if they were ATLAS, so it
+C                  could potentially lose a number of 194-type mass
+C                  reports here.  LOOK INTO UPGRADING THIS LOGIC-??
+
          ATLAS = (IRNMRK.EQ.4.AND.ITYP.EQ.4)
          IF(.NOT.ATLAS)  THEN
             IF(IDATA(9).EQ.IATLAS) THEN
@@ -15193,12 +15237,45 @@ C FOR ATLAS BUOYS WHERE PSTN & PMSL ORIG. MSG, PSTN PREPBUFR TV SET TO 3
             IF(INSTR.EQ.22)  IMP = 3
             PSTN = PMSL
          ELSE
-C IF ELEV > 7.5 M, WILL  ATTEMPT PSTN CALC. FOR ANY REPORT OUTSIDE LFM
-C   GRID IF DATA THINNING TURNED ON ==> IN THIS CASE RPT PROCESSED BUT
-C   ALL VARIABLES RECEIVE PREPBUFR TABLE VALUES OF 15
-C IF ELEV > 7.5 M, WILL  ATTEMPT PSTN CALC. FOR ALL OTHER RPTS AS USUAL
+C IF ELEV > 7.5 M:
+C    For marine reports:
+C         If npkrpt=F, SKIP
+C         If npkrpt=T, RETAIN, estimate pstn (and use to get a value
+C                      for q), will later set report type to 194/294,
+C                      and will encode this estimated pstn into
+C                      PREPBUFR file
+C    For land reports:
+C         RETAIN, estimate pstn, will later set report type to 183/
+C          284, and will encode this estimated pstn into PREPBUFR
+C          file
+C
+C    For either land or marine reports that are RETAINED:
+C      --> If outside LFM grid and data thinning turned on (LFM=F) give
+C           all variables PREPBUFR table value of 15
+C      --> If inside LFM grid and data thinning turned off (LFM=T)
+C           pressure and moisture PREPBUFR table values both set to a
+C           minimum of 3
+C
+C      pstn is estimated from reported pmsl, sensible temperature (if
+C        missing use std. atmos. temperature), and elevation via fcn PR
+C        Note: Should use virtual temperature here but can't calculate
+C              this since pstn is missing
+
+            IF(.NOT.SFLAND)  THEN
+               if(npkrpt(ityp)) then
+                  ipstnflg=1
+               else
+                  IF(IPRINT.EQ.0) PRINT 956,STNID,RDATA(1),RDATA(2),
+     $             IDATA(9),ELEV
+  956 FORMAT(' * * TOTAL REPORT TOSSED  -ID=',A8,', LAT=',F7.2,'N, ',
+     $ 'LON=',F8.2,'E, RTYP',I4,' - MARINE WITH PSTN MISSING, ELEV=',
+     $ F5.0,', > 7.5M')
+                  GO TO 2090
+               end if
+            END IF
             IF(.NOT.LFM)  THEN
-      IF(IPRINT.EQ.0)  PRINT 957, STNID,RDATA(1),RDATA(2),IDATA(9),ELEV
+               IF(IPRINT.EQ.0)  PRINT 957, STNID,RDATA(1),RDATA(2),
+     $          IDATA(9),ELEV
   957 FORMAT(' + + TOTAL REPORT FLAGGED -ID=',A8,', LAT=',F7.2,'N, ',
      $ 'LON=',F8.2,'E, RTYP',I4,' - PSTN MISSING, ELEV=',F5.0,', > ',
      $ '7.5M, THINNED')
@@ -15206,20 +15283,17 @@ C IF ELEV > 7.5 M, WILL  ATTEMPT PSTN CALC. FOR ALL OTHER RPTS AS USUAL
                IFLTH = 1
                IFLSF = 1
             END IF
-C OTHERWISE GENERATE PSTN FROM PMSL, TEMPERATURE, & ELEVATION (VIA FCN
-C  "PR") (USE STANDARD ATMOSPHERE TEMPERATURE IF TEMPERATURE MISSING)
-C  (SHOULD USE VIRT. TEMP. HERE BUT CAN'T CALCULATE SINCE PSTN MISSING!)
             TT = 288.15
             IF(TEMP.LT.XMISS.AND.TEMP.GT.-1000.) TT= (TEMP * 0.1)+273.16
 cfix?       IF(TEMP.LT.YMISS.AND.TEMP.GT.-1000.) TT= (TEMP * 0.1)+273.16
             PSTN = PR(PMSL*0.1,TT,ELEV) * 10.
-C PSTN PREPBUFR TABLE VALUE SET TO MINIMUM OF 3 HERE
             IMP = MAX(3,IM0)
-C specific humidity qm set to minimum of 3 for pb rpt typ 183
             imq = imp
-C RESET INSTR TO REFLECT SURFACE TYPE FOR LAST DIGIT OF R. TYPE (183)
+C  report type: land get 183/284 via this change of INSTR to 3
+C               marine remain 180/280 as INSTR stays 0 (default)
+c                but will later be changed to 194/294
             IF(INSTR.EQ.1.OR.INSTR.EQ.7)  INSTR = 3
-            DVAL = 0.0
+            DVAL = 0.0  ! is this needed??
          END IF
 C+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       END IF
@@ -15272,7 +15346,6 @@ C DO SURFACE DEWPOINT DEPRESSION NEXT
       else
         IMQ = max(imq,NINT(RDATA(L+12)))
       endif
-c-------------------
  2150 CONTINUE
 C***********************************************************************
 C     SURFACE DATA IN BOTH DATA LEVEL CATEGORIES 8 AND 51 COME HERE
@@ -15341,7 +15414,12 @@ C  assign new PREPBUFR report type based on dump report type
             hdr(6) = 294  ! buoys arriving in WMO FM18 format (fixed or
                           ! drifting - but EXCLUDING ATLAS
          else
-            print 955, stnid,rdata(1),rdata(2),hdr(13),idata(9)
+C ... would not expect to get here but just in case should trap report
+            print 3955, stnid,rdata(1),rdata(2),hdr(13),idata(9)
+ 3955 FORMAT('--> should never see below print, due to ipstnflg=1 for ',
+     $ 'unrecongized T29 value:'/' * * TOTAL REPORT TOSSED  -ID=',A8,
+     $ ', LAT=',F7.2,'N, LON=',F8.2,'E, TIME',F11.5,'UTC, RTYP',I4,
+     $ ' - PMSL AND PSTN MISSING  ')
             go to 2090
          endif
       endif
@@ -15426,7 +15504,8 @@ C  assign new PREPBUFR report type based on dump report type
          else if(idata(9)/10.eq.56) then
             hdr(6) = 194  ! buoys (all types)
          else
-            print 955, stnid,rdata(1),rdata(2),hdr(13),idata(9)
+C ... would not expect to get here but just in case should trap report
+            print 3955, stnid,rdata(1),rdata(2),hdr(13),idata(9)
             go to 2090
          endif
       endif
@@ -15493,19 +15572,18 @@ C STORE SPECIFIC HUMIDITY (*10**6 G/G) IN WORD 4 OF MOBS MASS LEVEL 1;
 C  MUST BE < IMISS (99999) AND > 0 - IF NOT SET TO MISSING
       IF(INTQ.LT.IMISS.AND.INTQ.GT.0)  MOBS(1,4,1) = INTQ
    15 CONTINUE
-      IF(PMSL.LT.XMISS.AND.SFLAND.or.PMSL.LT.XMISS.and.sfmar)  THEN
-c     IF(PMSL.LT.XMISS.AND.SFLAND)  THEN
-cfix? IF(PMSL.LT.YMISS.AND.SFLAND)  THEN
-C IF PMSL VALID AND THIS IS LAND REPORT, STORE PMSL OBS (*10 MB) AND
-C  PREPBUFR TABLE VALUE IN IPMSL ARRAY
+      if(pmsl.lt.xmiss)  then
+cfix? if(pmsl.lt.ymiss)  THEN
+C IF PMSL VALID, STORE PMSL OBS (*10 MB) AND PREPBUFR TABLE VALUE IN
+C  IPMSL ARRAY
          IF(NINT(PMSL).LT.32767)  THEN
             IPMSL(1) = NINT(PMSL)
             IF(IFLSF.EQ.1.AND.(IM0.LE.3.OR.IM0.GT.15))  IM0 = 15
             IPMSL(2) = IM0
-C IF VALID PSTN FOR RPT HAS PREPBUFR TBL VAL = 3, CHANGE R. T. FROM 181
+C IF VALID PSTN FOR land RPT HAS PREPBUFR TBL VAL=3, CHG R.T. FROM 181
 C  OR 187 TO 183 (AS IF CALC. FROM PMSL & ELEV. USING STD. ATMOS.)
 C  (UNLESS MESONET)
-            IF(IMP.EQ.3.AND.ITYP.NE.10)  HDR(6) = 183
+            IF(IMP.EQ.3.AND.ITYP.NE.10.and.sfland)  HDR(6) = 183
          END IF
       END IF
 C SET REPORT SEQ. NUMBER TO "ISQNUM(1)" IF SURFACE LAND (EXCL.
@@ -15552,7 +15630,7 @@ C YOU HAVE LOOKED AT ALL SFC DATA FILES, RETURN
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    ISSEL
-C   PRGMMR: ????????????     ORG: NP22       DATE: ????-??-??
+C   PRGMMR: MELCHIOR/KEYSER  ORG: NP22       DATE: 2014-04-25
 C
 C ABSTRACT: FUNCTION -- TRANSLATES THE SURFACE DUMP REPORT TYPE TO AN
 C   INTEGER VALUE USED BY SUBROUTINE SFCDTA TO DIFFERENTIATE TYPES OF
@@ -15587,12 +15665,11 @@ C    THAN DUMP REPORT TYPE DIVIDED BY TEN; ADDED PROCESSING OF MESONET
 C    DATA (READ FROM "MSONET" DUMP, DUMP REPORT TYPE 540); ADDED
 C    PROCESSING OF MOBILE SURFACE SYNOPTIC LAND REPORTS (READ FROM
 C    "ADPSFC" DUMP, DUMP REPORT TYPE 514)
-C ????-??-?? ????????????  -- ADDED PROCESSING OF COAST GUARD TIDE
-C    GAUGE STATION DATA (READ FROM "SFCSHP" DUMP, DUMP REPORT TYPE
-C    534); INVALID "OTHER" (DEFAULT) OUTPUT "TYPE" CHANGED FROM 13 TO
-C    30; INVALID RECCO/DROPWINSONDE WITH NO SPLASH-LEVEL MASS OUTPUT
-C    TYPE CHANGED FROM 12 TO 20
-C 2014-01-15  S. Melchior -- [Commentary forthcoming]
+C 2014-04-25  S. Melchior  -- Added processing of Coast Guard tide
+C    gauge data (read from SFCSHP dump, dump report type 534).
+C 2014-04-25  D. A. Keyser -- Invalid "other" (default) output "type"
+C    changed from 13 TO 30.  Invalid RECCO/DROPWINSONDE with no splash-
+C    level mass output type changed from 12 to 20.
 C
 C USAGE:    XX = ISSEL(ITYPDMP)
 C   INPUT ARGUMENT LIST:
@@ -16642,7 +16719,7 @@ C BRIEFLY SUMMARIZE
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    W3FIZZ
-C   PRGMMR: D. A. KEYSER     ORG: NP22       DATE: ????-??-??
+C   PRGMMR: KEYSER/MELCHIOR  ORG: NP22       DATE: 2014-04-25
 C
 C ABSTRACT: INTERFACES BETWEEN A PREPROCESSED REPORT (IN "HHDR/MOBS
 C   IPMSL/PWAT/xRAD/REQV/CLTOP" ARRAYS) AND THE GENERALIZED BUFR
@@ -16829,21 +16906,24 @@ C     BUFRLIB ROUTINE DRFINI TO ALLOW FOR POSSIBLE NESTED REPLICATION
 C     OF LEVEL INFO SEQUENCES; MOISTURE QUALITY (CODE TABLE) FOR ACARS
 C     REPORTS, ENCODED INTO PREPBUFR FILE (MNEMONIC MSTQ) FOR USE BY
 C     FUTURE DOWNSTREAM NRL AIRCRAFT Q.C. MODULE
-C ????-??-??  D. A. KEYSER -- SATELLITE ZENITH ANGLE (DEGREES) ENCODED
-C     INTO PREPBUFR FILE FOR ALL SATWND TYPES FOR USE BY GSI (TO
-C     POSSIBLY SCREEN SATWNDS WITH HIGH SAZA VALUES)
-C ????-??-??  ??????????  -- Recognizes 192-195 and 292-295 as ....bs
-C ????-??-??  ??????????  -- Removed encoding of "SQM" (wind speed
-C     quality mark) for certain METAR reports which had encoded "SOB"
-C     as all surface reports now encode wind qm as "WQM" regardless of
-C     whether or not it also encodes DDO, SOB, UOB or VOB
-C ????-??-??  ??????????  -- Added new mnemonic "PMIN" (mean sea-level
-C     pressure indicator) which is encoded with a value of zero for all
-C     reports with an observed mean sea-level pressure encoded in
-C     "PMO".  "PMIN" will be encoded with a value of 1 in w3emc routine
-C     gblevents for cases where a mean sea-level pressure is derived
-C     (see docblock in gblevents for more information).
-C 2014-01-15  S. Melchior -- [Commentary forthcoming]
+C 2014-04-25  D. A. Keyser -- Satellite zenith angle (mnemonic SAZA,
+C     degrees) encoded into PREPBUFR file for all SATWND types for use
+C     by GSI (to possibly screen SATWNDS with high SAZA values).
+C 2014-04-25  S. Melchior  -- 
+C          - Recognizes new PREPBUFR report types 192/292 (SYNOP),
+C     193/293 (METAR), 194/294 (marine) and 195/295 (mesonet) for
+C     surface reports that have a missing pstn (only present if
+C     namelist switch NPKRPT is TRUE for the surface type in question).
+C          - Removed encoding of "SQM" (wind speed quality mark) for
+C     certain METAR reports which had encoded "SOB" as all surface
+C     reports now encode wind qm as "WQM" regardless of whether or not
+C     they also encode DDO, SOB, UOB or VOB.
+C          - Added new mnemonic "PMIN" (mean sea-level pressure
+C     indicator) which is encoded with a value of zero for all reports
+C     with an observed mean sea-level pressure encoded in "PMO".
+C     "PMIN" will be encoded with a value of 1 in w3emc routine
+C     GBLEVENTS for cases where a mean sea-level pressure is derived
+C     (see docblock in GBLEVENTS for more information).
 C
 C USAGE:    CALL W3FIZZ(IER)
 C   OUTPUT ARGUMENT LIST:
@@ -17646,7 +17726,7 @@ C NOTE THAT THIS REPORT (SUBSET) NOT PROCESSED DUE TO NO. LEVELS = 0
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    FIZZ01
-C   PRGMMR: D. A. KEYSER     ORG: NP22       DATE: ????-??-??
+C   PRGMMR: MELCHIOR         ORG: NP22       DATE: 2014-04-25
 C
 C ABSTRACT: PARSES THE "HHDR/MOBS/IPMSL/PWAT/xRAD/REQV/CLTOP" ARRAYS
 C   (HOLDING ONE PREPROCESSED REPORT) INTO THE APPROPRIATE ARRAYS
@@ -17812,25 +17892,29 @@ C     (SEQUENCE NUMBER) ENCODED INTO PREPBUFR FILE FROM 99998 TO 524286
 C     (NEEDED BECAUSE THERE CAN NOW BE > 99998 MDCRS REPORTS IN A
 C     MONOLITHIC "AIRCAR" DUMP FILE - THIS CAUSES PREPACQC TO FAIL IN
 C     SERIAL PREPBUFR PROCESSING RUNS, E.G. IN SDMEDIT)
-C ????-??-??  ??????????  -- Modified to always encode wind speed obs
-C     in m/sec and wind direction obs for all types of surface reports
+C 2014-04-25  S. Melchior  -- 
+C          - Modified to always encode wind speed obs in m/sec ("SOB")
+C     and wind direction obs ("DDO") for all types of surface reports
 C     (even if one or the other are missing but also if both are
-C     present); removed old logic which encoded wind speed only for
-C     METAR reports when direction was missing and speed was .LE. 3
-C     m/sec (direction was never encoded in any situation for surface
-C     reports), also removed encoding of wind speed quality mark for
-C     these types of METAR reports - all surface reports now encode
-C     single wind qm as regardless of whether or not it also encodes
-C     direction, speed, u-comp or v-comp {note this change does not
-C     affect non-surface reports which can still encode speed in knots
-C     and direction when u-comp and v-comp wind are also encoded.
-C ????-??-??  ??????????  -- Added new mnemonic "PMIN" (mean sea-level
-C     pressure indicator) which is encoded with a value of zero for all
-C     reports with an observed mean sea-level pressure encoded in
-C     "PMO".  "PMIN" will be encoded with a value of 1 in w3emc routine
-C     gblevents for cases where a mean sea-level pressure is derived
-C     (see docblock in gblevents for more information).
-C 2014-01-15  S. Melchior -- [Commentary forthcoming]
+C     present); removed old logic which encoded "SOB" only for METAR
+C     reports when direction was missing and speed was .LE. 3 m/sec
+C     (direction was never encoded in any situation for surface
+C     reports), also removed encoding of "SQM" (wind speed quality
+C     mark) for these types of METAR reports - all surface reports now
+C     encode wind qm as "WQM" regardless of whether or not it also
+C     encodes direction, speed, u-comp or v-comp {note this change does
+C     not affect non-surface reports which can still encode speed
+C     in knots ("FFO") and direction ("DDO") when "UOB" and "VOB" are
+C     also encoded.
+C          - Added new mnemonic "PMIN" (mean sea-level pressure
+C     indicator) which is encoded with a value of zero for all reports
+C     with an observed mean sea-level pressure encoded in "PMO".
+C     "PMIN" will be encoded with a value of 1 in w3emc routine
+C     GBLEVENTS for cases where a mean sea-level pressure is derived
+C     (see docblock in GBLEVENTS for more information).
+C          - Report type 183 now stores moisture quality mark no lower
+C     than 3 (suspect) (before type 183 stored observed moisture
+C     quality mark read from the ADPSFC dump file).
 C
 C USAGE:    CALL FIZZ01(KI,NI,JI,SUBSET,SINGLE)
 C   INPUT ARGUMENT LIST:
@@ -17902,7 +17986,6 @@ C$$$
       COMMON/DRIFT/DFTLON(MXLVL),DFTLAT(MXLVL),DFTTIM(MXLVL)
       COMMON/DATA/KOUNT,IDATE(4),IDAT10,MP_PROCESS,WRMISS
       COMMON/UPALIM/LEVPM,LEVST,LEVQQ,TDLIM,SPCIAL,ISQNUM_UPA
-      common/pstnflg/ipstnflg
       COMMON /BUFRLIB_MISSING/BMISS
 
       EQUIVALENCE  (RDATA,IDATA)
@@ -18094,17 +18177,7 @@ C --> PROCESSING UNIQUE TO FIRST MOBS LEVEL
 
                IF(IPMSL(1).LT.YMISS)  THEN
 C STORE MEAN SEA-LEVEL PRESSURE OBS., TABLE VALUE, and indicator
-C  {CURRENTLY IPMSL(1) VALID ONLY FOR SURFACE LAND  AND MARINE MASS 
-C  REPORTS}
-! DAK: Note sea-level pressure is stored ONLY for land and marine
-!      reports (IPMSL filled back in subr. SFCDTA only when SFLAND=T
-!      or when SFMAR=T).  Should this be expanded to fill it for
-!      mesonet reports as well (although now all mesonets have missing
-!      pmsl ob)? If do expand for mesonets, OB2(1,1) currently 'NUL',
-!      would have to be changed to "PMO" in subr. w3fizz).
-!      My concern: gblevents in RTMA and URMA will always find mesonet
-!                  reports with missing pmsl & derive it when it may
-!                  have been reported but just not stored in PREPBUFR.
+C  {CURRENTLY IPMSL(1) VALID ONLY FOR SURFACE MASS REPORTS}
                   OB2(1,1) = IPMSL(1) * 0.1
                   QMS(7,1)  = MIN(15,IPMSL(2))
                   ob2(3,1) = 0.! indicator (PMIN) is 0 for observed PMSL
@@ -18131,13 +18204,11 @@ C STORE LEVEL PRESSURE OBS, TABLE VALUE, PROGRAM CODE AND REASON CODE
 C If ipstnflg=0, Pstn (OBS1) was never manipulated so encode original/
 C current value. If ipstnflg=1, Pstn was estimated for surface reports
 C with missing pressure that are set to be kept (npkrpt=T for the
-C particular type) only to obtain a value for q - do not encode this
-C Pstn but instead store as missing (default)
-               if(ipstnflg.eq.0) then
-                 OBS(1,NLV) = OBS1 * 0.1
-                 QMS(1,NLV) = QMS1
-                 PGM(1,NLV) = PCODE
-               endif
+C particular type) - this pstn is also encoded (q.m. is minimum of 3)
+C (Note: ipstnflg is not passed into this subroutine as it is not used)
+               OBS(1,NLV) = OBS1 * 0.1
+               QMS(1,NLV) = QMS1
+               PGM(1,NLV) = PCODE
                IF(RSN1.LT.YMISS)  RSN(1,NLV) = RSN1
 C DATA LEVEL CATEGORY PROCESSING
                IF(.NOT.SINGLE)  THEN
