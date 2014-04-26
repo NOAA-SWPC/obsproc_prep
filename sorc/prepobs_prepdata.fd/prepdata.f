@@ -1054,9 +1054,9 @@ C     not affect non-surface reports which can still encode speed
 C     in knots ("FFO") and direction ("DDO") when "UOB" and "VOB" are
 C     also encoded.
 C          - Added new mnemonic "PMIN" (mean sea-level pressure
-C     indicator) which is encoded with a value of zero for all reports
-C     with an observed mean sea-level pressure encoded in "PMO".
-C     "PMIN" will be encoded with a value of 1 in w3emc routine
+C     indicator) which is encoded with a value of zero for all surface
+C     reports with an observed mean sea-level pressure encoded in
+C     "PMO".  "PMIN" will be encoded with a value of 1 in w3emc routine
 C     GBLEVENTS for cases where a mean sea-level pressure is derived
 C     (see docblock in GBLEVENTS for more information).
 C          - Report type 183 now stores moisture quality mark no lower
@@ -16919,9 +16919,9 @@ C     certain METAR reports which had encoded "SOB" as all surface
 C     reports now encode wind qm as "WQM" regardless of whether or not
 C     they also encode DDO, SOB, UOB or VOB.
 C          - Added new mnemonic "PMIN" (mean sea-level pressure
-C     indicator) which is encoded with a value of zero for all reports
-C     with an observed mean sea-level pressure encoded in "PMO".
-C     "PMIN" will be encoded with a value of 1 in w3emc routine
+C     indicator) which is encoded with a value of zero for all surface
+C     reports with an observed mean sea-level pressure encoded in
+C     "PMO".  "PMIN" will be encoded with a value of 1 in w3emc routine
 C     GBLEVENTS for cases where a mean sea-level pressure is derived
 C     (see docblock in GBLEVENTS for more information).
 C
@@ -17907,9 +17907,9 @@ C     not affect non-surface reports which can still encode speed
 C     in knots ("FFO") and direction ("DDO") when "UOB" and "VOB" are
 C     also encoded.
 C          - Added new mnemonic "PMIN" (mean sea-level pressure
-C     indicator) which is encoded with a value of zero for all reports
-C     with an observed mean sea-level pressure encoded in "PMO".
-C     "PMIN" will be encoded with a value of 1 in w3emc routine
+C     indicator) which is encoded with a value of zero for all surface
+C     reports with an observed mean sea-level pressure encoded in
+C     "PMO".  "PMIN" will be encoded with a value of 1 in w3emc routine
 C     GBLEVENTS for cases where a mean sea-level pressure is derived
 C     (see docblock in GBLEVENTS for more information).
 C          - Report type 183 now stores moisture quality mark no lower
