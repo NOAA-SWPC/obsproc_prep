@@ -14412,10 +14412,10 @@ C     ATLAS buoy wind reports which also have missing pstn and pmsl
 C     will continue to be processed as before (PREPBUFR report type 282
 C     - note: this means that if an ATLAS buoy ever had T,q info, its
 C     mass piece would still be tossed rather than getting into
-C     PREPBUFR file under under report type 194 (may need to fix this
-C     logic someday); MESONETS will no longer have "x" in character 8
-C     of id, instead they will get PREPBUFR report types 195/295 rather
-C     than 188/288.
+C     PREPBUFR file under report type 194 (may need to fix this logic
+C     someday); MESONETS will no longer have "x" in character 8 of id,
+C     instead they will get PREPBUFR report types 195/295 rather than
+C     188/288.
 C          - Subroutine GETC06 modified to trap reports whose wind
 C     information exceeds the 32767 limit.  If the limit is exceeded,
 C     the entire report will skip being encoded into the output
