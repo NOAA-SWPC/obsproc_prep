@@ -1016,7 +1016,7 @@ C 2014-04-25  S. Melchior  --
 C          - Added processing of Coast Guard tide gauge data (read from
 C     SFCSHP dump, dump report type 534). A 12'th word added to
 C     following namelist switches to account for these new reports:
-C     FWINDO, JSURFM, JSURFW.
+     FWINDO, JSURFM, JSURFW.
 C          - Added new namelist switch NPKRPT, if TRUE all of the below
 C     occurs: will process reports that would otherwise be tossed due
 C     to their having a missing pstn; these reports estimate pstn from
@@ -1032,10 +1032,10 @@ C     ATLAS buoy wind reports which also have missing pstn and pmsl
 C     will continue to be processed as before (PREPBUFR report type 282
 C     - note: this means that if an ATLAS buoy ever had T,q info, its
 C     mass piece would still be tossed rather than getting into
-C     PREPBUFR file under under report type 194 (may need to fix this
-C     logic someday); MESONETS will no longer have "x" in character 8
-C     of id, instead they will get PREPBUFR report types 195/295 rather
-C     than 188/288.
+C     PREPBUFR file under report type 194 (may need to fix this logic
+C     someday); MESONETS will no longer have "x" in character 8 of id,
+C     instead they will get PREPBUFR report types 195/295 rather than
+C     188/288.
 C          - Subroutine GETC06 modified to trap reports whose wind
 C     information exceeds the 32767 limit.  If the limit is exceeded,
 C     the entire report will skip being encoded into the output
@@ -15134,13 +15134,13 @@ C                  npkrpt.  Even if npkrpt=T, only a wind piece will be
 C                  processed (as report type 282). This means that if
 C                  an ATLAS buoy ever had T,q info, its mass piece
 C                  would still be tossed rather than getting into
-C                  PREPBUFR file under under report type 194.  It is
-C                  believed that most TRUE ATLAS buoys do not have T,q
-C                  info, but that is not for certain.  However, note
-C                  from point above that the RAP treats all buoys w/
-C                  missing pmsl & pstn as if they were ATLAS, so it
-C                  could potentially lose a number of 194-type mass
-C                  reports here.  LOOK INTO UPGRADING THIS LOGIC-??
+C                  PREPBUFR file under report type 194.  It is believed
+C                  that most TRUE ATLAS buoys do not have T,q info, but
+C                  that is not for certain.  However, note from point
+C                  above that the RAP treats all buoys w/ missing pmsl
+C                  & pstn as if they were ATLAS, so it could
+C                  potentially lose a number of 194-type mass reports
+C                  here.  LOOK INTO UPGRADING THIS LOGIC-??
 
          ATLAS = (IRNMRK.EQ.4.AND.ITYP.EQ.4)
          IF(.NOT.ATLAS)  THEN
