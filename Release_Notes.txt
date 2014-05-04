@@ -1,5 +1,7 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-obsproc_prep release 3.0.0 --> released ??? ?, 2014
+obsproc_prep release 3.0.0 --> released May 5, 2014
+
+Initial population of vertical structure.
 
 files:
  *obsproc_prep/fix/prepobs_cqc_statbge
@@ -81,8 +83,7 @@ files:
       where NETWORK is, e.g., global, nam, rap, rtma, urma, and X.Y.Z is
       version number being used, usually the latest).  This replaces
       /nw${envir}.
-    - Removed all references to RUC network (obsolete).
-    - Removed all references to CDC network (obsolete).
+    - Removed all references to RUC and CDC networks (obsolete).
     - Added references to URMA network.
     - Removed option to run on MACHINE=sgi - this is obsolete (as a result
       variables $MACHINE and $HOMEALL are no longer used in this script).
@@ -97,7 +98,7 @@ files:
     - Added references to URMA network.
    prepobs_cqcbufr.sh, prepobs_cqcvad.sh, prepobs_oiqcbufr.sh,
    prepobs_prepacqc.sh, prepobs_profcqc.sh: 
-    - No changes; initial population of vertical structure. 
+    - No changes (other than move to vertical structure).
       
  Source code changes:
    build.sh in sorc directory:
@@ -118,9 +119,7 @@ files:
    setlibs.rc in sorc directory:
     - New. Read by build.sh - contains library version numbers needed by
       makefiles.  (Not read if load_libs.rc is read.)
-   prepobs_cqcbufr, prepobs_cqcvad, prepobs_listheaders, prepobs_monoprepbufr,
-   prepobs_mpcopybufr, prepobs_oiqcbufr, prepobs_prepacpf, prepobs_prepacqc,
-   prepobs_prepdata, prepobs_prevents, prepobs_profcqc, syndat_syndata:
+   All source codes:
     - Makefile modified to use environment variables to point to library
       version numbers and to add sample build script and info in sorc
       directory.  This generalizes the library version information.
@@ -324,7 +323,7 @@ files:
        - Added new dump report type 534 for surface marine Coast Guard tide
          gauge reports.
          BENEFIT: Now Coast Guard tide gauge reports are available to be
-                  encoded into the prepbufr file for all networks that process
+                  encoded into the PREPBUFR file for all networks that process
                   the SFCSHP dump file.
       w3unpkb7:
        - Modified to handle VAD wind reports from Level 2 decoder (subset
@@ -386,7 +385,17 @@ files:
 
  Compute Resource Information:
  -----------------------------
-   No changes.
+   All source codes:
+    - continue to link to version 2.0.6 of w3nco library
+    - continue to link to version 10.2.5 of bufr library
+   Source codes prepobs_cqcbufr, prepobs_prepacpf, prepobs_prepacqc,
+   prepobs_prepdata, prepobs_prevents, syndat_syndata:
+    - now links to version 2.2.0 of w3emc library (previously linked to
+      version 2.0.5)
+   Source codes prepobs_prepdata, prepobs_prevents, syndat_syndata
+    - continue to link to version 2.0.1 of bacio library
+    - continue to link to version 2.0.1 of sp library
+    - continue to link to version 1.0.1 of sigio library
 
 
  Preimplementation Testing Requirements:
@@ -398,8 +407,8 @@ files:
 
  Dissemination:
  --------------
-   See information about dissemination in the release notes for the obsproc
-   networks executing this version of obsproc_prep.
+   See information about dissemination in the release notes for
+   obsproc_<NETWORK> packages which execute this version of obsproc_prep.
 
 
  Special Instructions:
