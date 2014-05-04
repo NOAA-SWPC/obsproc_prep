@@ -1016,7 +1016,7 @@ C 2014-04-25  S. Melchior  --
 C          - Added processing of Coast Guard tide gauge data (read from
 C     SFCSHP dump, dump report type 534). A 12'th word added to
 C     following namelist switches to account for these new reports:
-     FWINDO, JSURFM, JSURFW.
+C     FWINDO, JSURFM, JSURFW.
 C          - Added new namelist switch NPKRPT, if TRUE all of the below
 C     occurs: will process reports that would otherwise be tossed due
 C     to their having a missing pstn; these reports estimate pstn from
