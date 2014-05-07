@@ -1036,7 +1036,7 @@ C     PREPBUFR file under report type 194 (may need to fix this logic
 C     someday); MESONETS will no longer have "x" in character 8 of id,
 C     instead they will get PREPBUFR report types 195/295 rather than
 C     188/288.
-C          - Subroutine GETC06 modified to trap reports whose wind
+C          - Subroutine SFCDTA modified to trap reports whose wind
 C     information exceeds the 32767 limit.  If the limit is exceeded,
 C     the entire report will skip being encoded into the output
 C     PREPBUFR file.
@@ -10365,7 +10365,7 @@ C**********************************************************************
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    GETC06
-C   PRGMMR: KEYSER/MELCHIOR  ORG: NP22       DATE: 2014-04-25
+C   PRGMMR: KEYSER           ORG: NP22        DATE: 2014-04-25
 C
 C ABSTRACT: RETRIEVES SINGLE LEVEL {AIRCRAFT FLIGHT-LEVEL, SATWND (ALL
 C   TYPES), RECCO} REPORTS FROM DATA LEVEL CAT. 6.  RECCOS MAY INCLUDE
@@ -10616,10 +10616,6 @@ C     allows GSI to identify cloud-top vs. deep-layer WV winds and IR
 C     vs. visible winds for METEOSAT and JMA since, unlike NESDIS, both
 C     have same report types (250-JMA & 254-EUMETSAT for WV, 242/252-
 C     JMA & 243/253-EUMETSAT for IR/VIS).
-C 2014-04-25  S. Melchior  -- Modified to trap reports whose wind
-C     information exceeds the 32767 limit.  If the limit is exceeded,
-C     the entire report will skip being encoded into the output
-C     PREPBUFR file.
 C
 C USAGE:    CALL GETC06(NN,CYCLET,*,*)
 C   INPUT ARGUMENT LIST:
@@ -14416,10 +14412,9 @@ C     PREPBUFR file under report type 194 (may need to fix this logic
 C     someday); MESONETS will no longer have "x" in character 8 of id,
 C     instead they will get PREPBUFR report types 195/295 rather than
 C     188/288.
-C          - Subroutine GETC06 modified to trap reports whose wind
-C     information exceeds the 32767 limit.  If the limit is exceeded,
-C     the entire report will skip being encoded into the output
-C     PREPBUFR file.
+C          - Modified to trap reports whose wind information exceeds
+C     the 32767 limit.  If the limit is exceeded, the entire report
+C     will skip being encoded into the output PREPBUFR file.
 C          - Modified to always encode wind speed obs in m/sec ("SOB")
 C     and wind direction obs ("DDO") for all types of surface reports
 C     (even if one or the other are missing but also if both are
@@ -15332,9 +15327,9 @@ C TOSS REPORT IF WIND IS MISSING (CAN THIS EVER HAPPEN?)
      $   ', PREPBUFR TABLE VALUE IMW(=',I2,') .GE. ',I2,'   * * * * *')
          GO TO 1800
       END IF
-C CONVERT WIND DIRECTION & SPEED TO U- AND V-COMPONENTS if both present
-      IF(min(RDATA(L+2),RDATA(L+3)).lt.xmiss)  
-cfix? IF(min(RDATA(L+2),RDATA(L+3)).lt.ymiss)  
+C CONVERT WIND DIRECTION & SPEED TO U- AND V-COMPONENTS if BOTH present
+      IF(max(RDATA(L+2),RDATA(L+3)).lt.xmiss)  
+cfix? IF(max(RDATA(L+2),RDATA(L+3)).lt.ymiss)  
      $ CALL UV(RDATA(L+2),RDATA(L+3)*0.1,UCOMP,VCOMP)
 C-----------------------------------------------------------------------
  1800 CONTINUE
