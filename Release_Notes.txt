@@ -290,6 +290,11 @@ files:
          BENEFIT: PREP job will not longer stop dead in its tracks in this
                   case. EMC's monitoring utilities will quickly detect this
                   issue since it will be reported in the joblog file.
+       - Report type 183 now stores moisture quality mark no lower than 3
+         (suspect) (before type 183 stored observed moisture quality mark read
+         from the ADPSFC dump file).
+         BENEFIT: The pressure used to generate specific humidty has always
+                  been at best suspect.  Now the moisture follows suit.
       iw3unpbf:
        - Added ability to read in and process percent confidence based on
          EUMETSAT Quality Indicator with and without forecast for NESDIS GOES
