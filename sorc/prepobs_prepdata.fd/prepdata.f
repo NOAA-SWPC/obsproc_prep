@@ -1,7 +1,7 @@
 C$$$  MAIN PROGRAM DOCUMENTATION BLOCK
 C
 C MAIN PROGRAM: PREPOBS_PREPDATA
-C   PRGMMR: KEYSER/MELCHIOR/LING  ORG: NP22   DATE: 2014-04-25
+C   PRGMMR: KEYSER                ORG: NP22   DATE: 2014-07-10
 C
 C ABSTRACT: PREPARES DATA FOR USE IN ANALYSES FOR THE NDAS, NAM, GDAS,
 C   GFS, RAP (RAPID REFRESH), RTMA, AND URMA NETWORKS.  ALL ANALYSES
@@ -1074,6 +1074,29 @@ C     processed from 300 to 600.  This allows runs that might include
 C     interpolated levels (e.g., special AFOS graphics, IRNMRK=2) to
 C     still work properly as more and more radiosonde levels become
 C     available in the new RRS.
+C 2014-07-10  D. A. Keyser --
+C          - Added encoding of "DFQ" (wind dir/speed quality mark) for
+C     all types that aleady encode "DDO" (wind dir) and either "FFO"
+C     (wind speed kts) or "SOB" (wind speed m/s) {"DFQ" will now be
+C     encoded with overall wind quality mark in both cases when "UOB"
+C     and "VOB" are encoded (then "DFQ" same as "WQM") and cases when,
+C     for surface reports, "UOB" and "VOB" are not encoded because
+C     either dir or speed is missing}.  Prior to this, "DFQ" was always
+C     missing and the overall wind quality mark was always encoded in
+C     "WQM" even when, for surface reports, "UOB" and "VOB" were
+C     missing but either wind dir or speed was not.  Now, the entire
+C     "W__EVENT" sequence "[UOB VOB WQM WPC WRC]" is skipped for
+C     surface reports when "UOB" and "VOB" are both missing.
+C          - Added encoding of "DFP" (wind dir/speed program code) for
+C     surface reports in both cases when "UOB" and "VOB" are encoded
+C     (then "DFP" same as "WPC") and when "UOB" and "VOB" are not
+C     encoded because either dir or speed is missing.  Prior to this,
+C     "DFP" was always missing in this case.
+C          - Added encoding of "DFR" (wind dir/speed reason code), if
+C     it is non-missing, in both cases when "UOB" and "VOB" are encoded
+C     (then "DFR" same as "WRC") and cases when, for surface reports,
+C     "UOB" and "VOB" are not encoded because either dir or speed is
+C     missing.  Prior to this, "DFR" was always missing in either case.
 C
 C USAGE:
 C   INPUT FILES:
@@ -2400,8 +2423,8 @@ C     MXWRD = 5 --> MASS: VIRTUAL TEMP (OBS. UNITS: DEGREES C * 100);
 C                   WIND: DIRECTION (OBS. UNITS: DEGREES)
 C     MXWRD = 6 --> MASS: DEWPOINT TEMP (OBS. UNITS: DEGREES C * 100);
 C                   WIND: SPEED (OBS. UNITS: KNOTS FOR ALL TYPES
-C                         EXCEPT SURFACE LAND, OTHERWISE FOR SURFACE
-C                         LAND M/SEC * 10)
+C                         EXCEPT SURFACE, OTHERWISE FOR SURFACE (ALL
+C                         TYPES) M/SEC * 10)
 
 
 C         C O N T E N T S   O F   T H E   A R R A Y   I P M S L
@@ -2787,7 +2810,7 @@ C  IN INTERFACE WITH SUBROUTINE IW3UNPBF
      $ FLACMS,IACFTH,SUBSKP,JPGPSD,GWINDO,RASS,TWINDO,JPWDSD,IWWNDO,
      $ FLDMFR,WRMISS,SKGP45,JPASCD,IAWNDO,npkrpt
       NAMELIST/PARM/IUNIT
-      CALL W3TAGB('PREPOBS_PREPDATA',2014,0115,0061,'NP22')
+      CALL W3TAGB('PREPOBS_PREPDATA',2014,0191,0061,'NP22')
 C DETERMINE MACHINE WORD LENGTH (BYTES) FOR BOTH INTEGERS AND REALS
       CALL WORDLENGTH(LWI,LWR)
       PRINT 2213, LWI,LWR
@@ -2830,7 +2853,7 @@ C    CARDS FILE, JUST AFTER NAMELIST TASK, BY THE MAKE_PREPBUFR SCRIPT)
          PRINT 321, NET(1)
       END IF
   321 FORMAT(/37X,'WELCOME TO THE UNIVERSAL ',A14,' DATA PREPROCESSOR'/
-     $ 48X,'WCOSS VERSION CREATED 25 APR 2014'/)
+     $ 48X,'WCOSS VERSION CREATED 10 JUL 2014'/)
       PRINT 322, (IUNIT(I),I=1,8),IUNIT(16),IUNIT(17)
   322 FORMAT(//53X,'TABLE OF UNIT NUMBERS'/31X,
      $ 'INPUTS IN UNIT NUMBERS 11-50 - OUTPUTS IN UNIT NUMBERS 51-90'//
@@ -16714,7 +16737,7 @@ C BRIEFLY SUMMARIZE
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    W3FIZZ
-C   PRGMMR: KEYSER/MELCHIOR  ORG: NP22       DATE: 2014-04-25
+C   PRGMMR: KEYSER           ORG: NP22       DATE: 2014-07-10
 C
 C ABSTRACT: INTERFACES BETWEEN A PREPROCESSED REPORT (IN "HHDR/MOBS
 C   IPMSL/PWAT/xRAD/REQV/CLTOP" ARRAYS) AND THE GENERALIZED BUFR
@@ -16919,6 +16942,18 @@ C     reports with an observed mean sea-level pressure encoded in
 C     "PMO".  "PMIN" will be encoded with a value of 1 in w3emc routine
 C     GBLEVENTS for cases where a mean sea-level pressure is derived
 C     (see docblock in GBLEVENTS for more information).
+C 2014-07-10  D. A. Keyser -- Added encoding of "DFQ" (wind dir/speed
+C     quality mark) for all types that aleady encode "DDO" (wind dir)
+C     and either "FFO" (wind speed kts) or "SOB" (wind speed m/s)
+C     {"DFQ" will now be encoded with overall wind quality mark in both
+C     cases when "UOB" and "VOB" are encoded (then "DFQ" same as "WQM")
+C     and cases when, for surface reports, "UOB" and "VOB" are not
+C     encoded because either dir or speed is missing}.  Prior to this,
+C     "DFQ" was always missing and the overall wind quality mark was
+C     always encoded in "WQM" even when, for surface reports, "UOB" and
+C     "VOB" were missing but either wind dir or speed was not.  Now,
+C     the entire "W__EVENT" sequence "[UOB VOB WQM WPC WRC]" is skipped
+C     for surface reports when "UOB" and "VOB" are both missing.
 C
 C USAGE:    CALL W3FIZZ(IER)
 C   OUTPUT ARGUMENT LIST:
@@ -17090,43 +17125,43 @@ C  MNEMONICS PASSED INTO SUBROUTINE "UFBINT".
 
       DATA  QMSSTR/
        ! PROFLR vvvvv
-     $             'PQM WQM  NUL NUL ZQM NUL  NUL   NUL   NUL   ',
+     $             'PQM WQM  NUL NUL ZQM NUL  NUL   DFQ   NUL   ',
        ! VADWND vvvvv
-     $             'PQM WQM  NUL NUL ZQM NUL  NUL   NUL   NUL   ',
+     $             'PQM WQM  NUL NUL ZQM NUL  NUL   DFQ   NUL   ',
        ! ADPUPA vvvvv
-     $             'PQM WQM  TQM QQM ZQM NUL  NUL   NUL   NUL   ',
+     $             'PQM WQM  TQM QQM ZQM NUL  NUL   DFQ   NUL   ',
        ! AIRCAR vvvvv
-     $             'PQM WQM  TQM QQM ZQM NUL  NUL   NUL   NUL   ',
+     $             'PQM WQM  TQM QQM ZQM NUL  NUL   DFQ   NUL   ',
        ! AIRCFT vvvvv
-     $             'PQM WQM  TQM QQM ZQM NUL  NUL   NUL   NUL   ',
+     $             'PQM WQM  TQM QQM ZQM NUL  NUL   DFQ   NUL   ',
        ! SATWND vvvvv
-     $             'PQM WQM  TQM NUL ZQM NUL  NUL   NUL   NUL   ',
+     $             'PQM WQM  TQM NUL ZQM NUL  NUL   DFQ   NUL   ',
        ! SATEMP vvvvv
      $             'PQM NUL  TQM QQM ZQM NUL  NUL   NUL   NUL   ',
        ! SPSSMI vvvvv
-     $             'PQM WQM  NUL NUL NUL PWQ  RRTQM NUL   NUL   ',
+     $             'PQM WQM  NUL NUL NUL PWQ  RRTQM DFQ   NUL   ',
        ! ADPSFC vvvvv
-     $             'PQM WQM  TQM QQM ZQM NUL  PMQ   NUL   NUL   ',
+     $             'PQM WQM  TQM QQM ZQM NUL  PMQ   DFQ   NUL   ',
        ! SFCSHP vvvvv
-     $             'PQM WQM  TQM QQM ZQM NUL  PMQ   NUL   NUL   ',
+     $             'PQM WQM  TQM QQM ZQM NUL  PMQ   DFQ   NUL   ',
        ! SFCBOG vvvvv
      $             'PQM NUL  NUL NUL ZQM NUL  NUL   NUL   NUL   ',
        ! ERS1DA vvvvv
-     $             'PQM WQM  NUL NUL NUL NUL  NUL   NUL   NUL   ',
+     $             'PQM WQM  NUL NUL NUL NUL  NUL   DFQ   NUL   ',
        ! GOESND vvvvv
      $             'PQM PW1Q TQM QQM ZQM PW2Q PW3Q  PW4Q  CTPQM ',
        ! QKSWND vvvvv
-     $             'PQM WQM  NUL NUL NUL NUL  NUL   NUL   NUL   ',
+     $             'PQM WQM  NUL NUL NUL NUL  NUL   DFQ   NUL   ',
        ! MSONET vvvvv
-     $             'PQM WQM  TQM QQM ZQM NUL  NUL   NUL   NUL   ',
+     $             'PQM WQM  TQM QQM ZQM NUL  NUL   DFQ   NUL   ',
        ! GPSIPW vvvvv
      $             'NUL NUL  NUL NUL NUL PWQ  NUL   NUL   NUL   ',
        ! RASSDA vvvvv
      $             'PQM NUL  TQM NUL ZQM NUL  NUL   NUL   NUL   ',
        ! WDSATR vvvvv
-     $             'PQM WQM  NUL NUL NUL NUL  NUL   NUL   NUL   ',
+     $             'PQM WQM  NUL NUL NUL NUL  NUL   DFQ   NUL   ',
        ! ASCATW vvvvv
-     $             'PQM WQM  NUL NUL NUL NUL  NUL   NUL   NUL   '/
+     $             'PQM WQM  NUL NUL NUL NUL  NUL   DFQ   NUL   '/
 
       DATA  PGMSTR/
        ! PROFLR vvvvv
@@ -17721,7 +17756,7 @@ C NOTE THAT THIS REPORT (SUBSET) NOT PROCESSED DUE TO NO. LEVELS = 0
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    FIZZ01
-C   PRGMMR: MELCHIOR         ORG: NP22       DATE: 2014-04-25
+C   PRGMMR: KEYSER           ORG: NP22       DATE: 2014-07-10
 C
 C ABSTRACT: PARSES THE "HHDR/MOBS/IPMSL/PWAT/xRAD/REQV/CLTOP" ARRAYS
 C   (HOLDING ONE PREPROCESSED REPORT) INTO THE APPROPRIATE ARRAYS
@@ -17910,6 +17945,29 @@ C     (see docblock in GBLEVENTS for more information).
 C          - Report type 183 now stores moisture quality mark no lower
 C     than 3 (suspect) (before type 183 stored observed moisture
 C     quality mark read from the ADPSFC dump file).
+C 2014-07-10  D. A. Keyser -- 
+C          - Added encoding of "DFQ" (wind dir/speed quality mark) for
+C     all types that aleady encode "DDO" (wind dir) and either "FFO"
+C     (wind speed kts) or "SOB" (wind speed m/s) {"DFQ" will now be
+C     encoded with overall wind quality mark in both cases when "UOB"
+C     and "VOB" are encoded (then "DFQ" same as "WQM") and cases when,
+C     for surface reports, "UOB" and "VOB" are not encoded because
+C     either dir or speed is missing}.  Prior to this, "DFQ" was always
+C     missing and the overall wind quality mark was always encoded in
+C     "WQM" even when, for surface reports, "UOB" and "VOB" were
+C     missing but either wind dir or speed was not.  Now, the entire
+C     "W__EVENT" sequence "[UOB VOB WQM WPC WRC]" is skipped for
+C     surface reports when "UOB" and "VOB" are both missing.
+C          - Added encoding of "DFP" (wind dir/speed program code) for
+C     surface reports in both cases when "UOB" and "VOB" are encoded
+C     (then "DFP" same as "WPC") and when "UOB" and "VOB" are not
+C     encoded because either dir or speed is missing.  Prior to this,
+C     "DFP" was always missing in this case.
+C          - Added encoding of "DFR" (wind dir/speed reason code), if
+C     it is non-missing, in both cases when "UOB" and "VOB" are encoded
+C     (then "DFR" same as "WRC") and cases when, for surface reports,
+C     "UOB" and "VOB" are not encoded because either dir or speed is
+C     missing.  Prior to this, "DFR" was always missing in either case.
 C
 C USAGE:    CALL FIZZ01(KI,NI,JI,SUBSET,SINGLE)
 C   INPUT ARGUMENT LIST:
@@ -18269,6 +18327,11 @@ C  MOISTURE QUALITY (CODE TABLE)
 C-----------------------------------------------------------------------
 C                    WIND PROCESSING COMES HERE
 C-----------------------------------------------------------------------
+                  IF(RSN3.NE.RSN4)  THEN
+      PRINT'(" ~~ R.C. FOR U- AND V- WIND DO NOT AGREE FOR THIS STN -",
+     $ " USE LOWER OF 2 R.C. FOR WIND R.C. IN PREPBUFR FILE")'
+                     RSN4 = MIN(RSN3,RSN4)
+                  END IF
                   IF(MAX(OBS3,OBS4).LT.YMISS) THEN
 C STORE U- & V-COMP OBS; WIND TABLE VALUE, PROGRAM CODE AND REASON CODE
                      OBS(2,NLV) = OBS3 * .01
@@ -18280,11 +18343,6 @@ C STORE U- & V-COMP OBS; WIND TABLE VALUE, PROGRAM CODE AND REASON CODE
                      END IF
                      QMS(2,NLV) = QMS4
                      PGM(3,NLV) = PCODE
-                     IF(RSN3.NE.RSN4)  THEN
-      PRINT'(" ~~ R.C. FOR U- AND V- WIND DO NOT AGREE FOR THIS STN -",
-     $ " USE LOWER OF 2 R.C. FOR WIND R.C. IN PREPBUFR FILE")'
-                        RSN4 = MIN(RSN3,RSN4)
-                     END IF
                      IF(RSN4.LT.YMISS)  RSN(3,NLV) = RSN4
 C.......................................................................
                      if(subset.ne.'ADPSFC'.and.subset.ne.'SFCSHP'.and.
@@ -18296,7 +18354,9 @@ C  (note: this can only happen if u-comp and v-comp wind obs are also
 C         BOTH present)
                            OBS(10,NLV) = OBS5
                            OBS(11,NLV) = OBS6
+                           qms(8,nlv)  = qms4
                            PGM(4,NLV)  = PCODE
+                           if(rsn4.lt.ymiss)  rsn(4,nlv) = rsn4
                         END IF
                      end if
 C.......................................................................
@@ -18330,7 +18390,9 @@ C  can happen even if u-comp wind, v-comp wind and/or wind speed obs
 C  are missing) - also store wind table value in case not stored above
 C.......................................................................
                         obs(10,nlv) = obs5
-                        qms(2,nlv) = qms4
+                        qms(8,nlv)  = qms4
+                        pgm(4,nlv)  = pcode
+                        if(rsn4.lt.ymiss)  rsn(4,nlv) = rsn4
                      end if
                      if(obs6.lt.ymiss)  then
 C.......................................................................
@@ -18340,7 +18402,9 @@ C  direction obs are missing) - also store wind table value in case not
 C  stored above
 C.......................................................................
                         obs(11,nlv) = obs6 * 0.1
-                        qms(2,nlv) = qms4
+                        qms(8,nlv)  = qms4
+                        pgm(4,nlv)  = pcode
+                        if(rsn4.lt.ymiss)  rsn(4,nlv) = rsn4
                      end if
                   end if
                ELSE  IF(KI.EQ.1)  THEN

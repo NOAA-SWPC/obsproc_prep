@@ -32,7 +32,7 @@
 * THE FOLLOWING ARE TABLE D ENTRIES FOR SEQUENCES DEFINED IN TABLE A ENTRIES   |
 *                                                                              |
 | HEADR    | 348001 | REPORT HEADER SEQUENCE                                   |
-| PRSLEVEL | 348002 | PRESSURE LEVEL SEQUENCE (ALL TYPES EXCEPT GOESND)        |
+| PRSLEVEL | 348002 | PRESSURE LEVEL SEQUENCE (EXCEPT GOESND, AIRCFT/AIRCAR)   |
 | PMSL_SEQ | 348003 | MEAN SEA LEVEL PRESSURE SEQUENCE                         |
 | BTMPLEVL | 348004 | BRIGHTNESS TEMPERATURE "LEVEL" SEQUENCE                  |
 | ALTIMSEQ | 348005 | ALTIMETER SETTING SEQUENCE                               |
@@ -40,7 +40,6 @@
 | TURB2SEQ | 348007 | TURBULENCE SEQUENCE # 2                                  |
 | ACFT_SEQ | 348008 | AIRCRAFT SUPPLEMENTARY DATA SEQUENCE                     |
 | PCCF_SEQ | 348009 | SATELLITE WIND PERCENT CONFIDENCE SEQUENCE               |
-| WSPD_SEQ | 348010 | WIND SPEED SEQUENCE                                      |
 | PRSLEVLG | 348011 | GOESND PRESSURE LEVEL SEQUENCE                           |
 | TOPC_SEQ | 348012 | TOTAL PRECIPITATION/TOTAL WATER EQUIVALENT SEQUENCE      |
 | PREWXSEQ | 348013 | PRESENT WEATHER SEQUENCE                                 |
@@ -109,7 +108,6 @@
 | T__EVENT | 348173 | TEMPERATURE EVENT SEQUENCE                               |
 | Z__EVENT | 348174 | HEIGHT EVENT SEQUENCE                                    |
 | W__EVENT | 348175 | WIND EVENT SEQUENCE                                      |
-| DF_EVENT | 348176 | WIND (DIRECTION/SPEED) EVENT SEQUENCE                    |
 | PWTEVENT | 348177 | TOTAL PRECIPITABLE WATER EVENT SEQUENCE                  |
 | PW1EVENT | 348178 | 1.0 TO 0.9 PRECIPITABLE WATER EVENT SEQUENCE             |
 | PW2EVENT | 348179 | 0.9 TO 0.7 PRECIPITABLE WATER EVENT SEQUENCE             |
@@ -118,6 +116,8 @@
 | RRTEVENT | 348182 | RATE RATE EVENT SEQUENCE                                 |
 | CTPEVENT | 348183 | CLOUD TOP PRESSURE EVENT SEQUENCE                        |
 | SSTEVENT | 348184 | SEA TEMPERATURE EVENT SEQUENCE                           |
+| W1_EVENT | 348185 | WIND {DIRECTION/SPEED(kts)} EVENT SEQUENCE               |
+| W2_EVENT | 348186 | WIND {DIRECTION/SPEED(m/s)} EVENT SEQUENCE               |
 *                                                                              |
 *                                                                              |
 *      THE FOLLOWING ARE TABLE D ENTRIES FOR DATA "BACKGROUND" SEQUENCES       |
@@ -182,42 +182,42 @@
 *  THE LAST THREE DIGITS OF THE DESCRIPTOR NUMBER BECOMES THE "PROGRAM CODE"   |
 *                                                                              |
 | PREPRO   | 363001 | INITIAL PREPBUFR PROCESSING STEP                         |
-*          |        |  (PREPDATA PROGRAM, PRIOR TO PREVENTS PROGRAM OR VTPEVN  |
-*                       SUBR. IN SUBR. GBLEVENTS)                              |
+*          |        |  (PREPDATA program, prior to PREVENTS program or VTPEVN  |
+*                       subr. in subr. GBLEVENTS)                              |
 | SYNDATA  | 363002 | SYNTHETIC TROPICAL CYCLONE BOGUS PROCESSING STEP         |
-*          |        |  (SYNDATA PROGRAM, PRIOR TO PREVENTS PROGRAM OR VTPEVN   |
-*                       SUBR. IN SUBR. GBLEVENTS)                              |
+*          |        |  (SYNDATA program, prior to PREVENTS program or VTPEVN   |
+*                       subr. in subr. GBLEVENTS)                              |
 | CLIMO    | 363003 | CLIMOTOLOGICAL PROCESSING STEP                           |
-*                      (NOT YET AVAILABLE)                                     |
+*                      (not yet available)                                     |
 | PREVENT  | 363004 | PRE-EVENTS BACKGROUND/OBSERVATION ERROR PROCESSING STEP  |
-*          |        |  (PREVENTS PROGRAM OR GBLEVENTS SUBROUTINE IN PREPDATA   |
-*                       OR SYNDATA PROGRAM)                                    |
+*          |        |  (PREVENTS program or GBLEVENTS subroutine in PREPDATA   |
+*                       or SYNDATA program)                                    |
 | CQCHT    | 363005 | RAWINSONDE HEIGHT/TEMP COMPLEX QUALITY CONTROL STEP      |
-*          |        |  (CQCBUFR PROGRAM)                                       |
+*          |        |  (CQCBUFR program)                                       |
 | RADCOR   | 363006 | RAWINSONDE HEIGHT/TEMP INTERSONDE(RADIATION) CORR. STEP  |
-*          |        |  (RADEVN SUBROUTINE IN CQCBUFR PROGRAM)                  |
+*          |        |  (RADEVN subroutine in CQCBUFR program)                  |
 | PREPACQC | 363007 | AIRCRAFT QUALITY CONTROL STEP (NOT INCL. MDCRS ACARS)    |
-*          |        |  (PREPACQC PROGRAM)                                      |
+*          |        |  (PREPACQC program)                                      |
 | VIRTMP   | 363008 | VIRTUAL TEMPERATURE/SPECIFIC HUMIDITY PROCESSING STEP    |
-*          |        |  (PREVENTS PROGRAM OR VTPEVN SUBR. IN SUBR. GBLEVENTS IN |
-*                       PREPDATA PROGRAM FOR ALL OBS. TYPES EXCEPT RAOBS/DROPS;|
-*                       VTPEVN SUBR. IN CQCBUFR PROGRAM FOR RAOBS/DROPS)       |
+*          |        |  (PREVENTS program or VTPEVN subr. in subr. GBLEVENTS in |
+*                       PREPDATA program for all obs. types except RAOBS/DROPS;|
+*                       VTPEVN subr. in CQCBUFR program for RAOBS/DROPS)       |
 | CQCPROF  | 363009 | WIND PROFILER QUALITY CONTROL STEP                       |
-*          |        |  (PROFCQC PROGRAM)                                       |
+*          |        |  (PROFCQC program)                                       |
 | OIQC     | 363010 | OI-QUALITY MULTI-PLATFROM CONTROL STEP                   |
-*          |        |  (OIQCBUFR PROGRAM)                                      |
+*          |        |  (OIQCBUFR program)                                      |
 | SSI      | 363011 | SSI GLOBAL ANALYSIS STEP                                 |
-*          |        |  (SSIANL PROGRAM)                                        |
+*          |        |  (SSIANL program)                                        |
 | CQCVAD   | 363012 | VAD WIND QUALITY CONTROL STEP                            |
-*          |        |  (CQCVAD PROGRAM)                                        |
+*          |        |  (CQCVAD program)                                        |
 | R3DVAR   | 363013 | 3DVAR REGIONAL ANALYSIS STEP                             |
-*          |        |  (R3DVAR PROGRAM)                                        |
+*          |        |  (R3DVAR program)                                        |
 | ACARSQC  | 363014 | MDCRS ACARS AIRCRAFT QUALITY CONTROL STEP                |
-*          |        |  (ACARSQC PROGRAM)                                       |
+*          |        |  (ACARSQC program)                                       |
 | NRLACQC  | 363015 | NRL AIRCRAFT QUALITY CONTROL STEP                        |
-*          |        |  (NRLACQC PROGRAM)                                       |
+*          |        |  (NRLACQC program)                                       |
 | GSI      | 363016 | GSI ANALYSIS STEP                                        |
-*          |        |  (GLOBAL_GSI AND NAM_GSI PROGRAMS)                       |
+*          |        |  (various GSI programs)                                  |
 | DEFAULT  | 363099 | NON-DEFINED STEP (DEFAULT)                               |
 *                                                                              |
 *                                                                              |
@@ -328,10 +328,12 @@
 | ZCS      | 010253 | STANDARD DEVIATION OF CLIMATOLOGICAL HEIGHT VALUE        |
 |          |        |                                                          |
 | DDO      | 011001 | WIND DIRECTION OBSERVATION (NOT ASSIMILATED)             |
-*          |        |  (AFTER "PREPACQC" STEP ONLY - SUBSEQUENT CODES DO NOT   |
-*          |        |   PROCESS)                                               |
-| SOB      | 011002 | WIND SPEED OBSERVATION (NOT ASSIMILATED)                 |
-*          |        |  (STORED ONLY FOR SURFACE REPORTS )                      |
+*          |        |  (stored for all reports, currently used only by         |
+*          |        |   "PREPACQC" step for aircraft reports, but will some    |
+*          |        |   day be used by analysis for surface reports)           |
+| SOB      | 011002 | WIND SPEED OBSERVATION (m/s) (NOT ASSIMILATED)           |
+*          |        |  (stored only for surface reports, will some day be      |
+*          |        |   used by analysis)                                      |
 | UOB      | 011003 | U-COMPONENT WIND OBSERVATION                             |
 | VOB      | 011004 | V-COMPONENT WIND OBSERVATION                             |
 | DGOT     | 011031 | DEGREE OF TURBULENCE                                     |
@@ -345,9 +347,9 @@
 | WSPD1    | 011201 | SURFACE WIND SPEED                                       |
 | PKWDDR   | 011202 | PEAK WIND DIRECTION                                      |
 | PKWDSP   | 011203 | PEAK WIND SPEED                                          |
-| DFQ      | 011218 | WIND DIRECTION/SPEED (DDO/FFO) (QUALITY) MARKER          |
-| DFP      | 011219 | WIND DIRECTION/SPEED (DDO/FFO) EVENT PROGRAM CODE        |
-| DFR      | 011220 | WIND DIRECTION/SPEED (DDO/FFO) EVENT REASON CODE         |
+| DFQ      | 011218 | WIND DIRECTION(DDO)/SPEED(FFO or SOB) (QUALITY) MARKER   |
+| DFP      | 011219 | WIND DIRECTION(DDO)/SPEED(FFO or SOB) EVENT PGM CODE     |
+| DFR      | 011220 | WIND DIRECTION(DDO)/SPEED(FFO or SOB) EVENT REASON CODE  |
 | XS10     | 011223 | 10 METER EXTRAPOLATED WIND SPEED                         |
 | XS20     | 011224 | 20 METER EXTRAPOLATED WIND SPEED                         |
 | RF10M    | 011225 | 10 METER WIND REDUCTION FACTOR                           |
@@ -361,17 +363,16 @@
 | WRC      | 011242 | U-, V-COMPONENT WIND (UOB/VOB) EVENT REASON CODE         |
 | UFC      | 011243 | FORECAST (BACKGROUND) U-COMPONENT WIND VALUE             |
 | VFC      | 011244 | FORECAST (BACKGROUND) V-COMPONENT WIND VALUE             |
-| WOE      | 011245 | WIND OBSERVATION ERROR                                   |
+| WOE      | 011245 | U-, V-COMPONENT WIND (UOB/VOB) OBSERVATION ERROR         |
 | UAN      | 011246 | ANALYZED U-COMPONENT WIND VALUE                          |
 | VAN      | 011247 | ANALYZED V-COMPONENT WIND VALUE                          |
 | UCL      | 011248 | CLIMATOLOGICAL U-COMPONENT WIND VALUE                    |
 | VCL      | 011249 | CLIMATOLOGICAL V-COMPONENT WIND VALUE                    |
 | UCS      | 011250 | STANDARD DEVIATION OF CLIMATOLOGICAL U-COMP WIND VALUE   |
 | VCS      | 011251 | STANDARD DEVIATION OF CLIMATOLOGICAL V-COMP WIND VALUE   |
-| FFO      | 011252 | WIND SPEED OBSERVATION (NOT ASSIMILATED)                 |
-*          |        |  (STORED ONLY FOR NON-SURFACE REPORTS )                  |
-*          |        |  (AFTER "PREPACQC" STEP ONLY - SUBSEQUENT CODES DO NOT   |
-*          |        |   PROCESS)                                               |
+| FFO      | 011252 | WIND SPEED OBSERVATION (kts) (NOT ASSIMILATED)           |
+*          |        |  (stored only for all non-surface reports, currently     |
+*          |        |   used only by "PREPACQC" step for aircraft reports)     |
 | WOETU    | 011253 | ANALYSIS-TUNED WIND OBSERVATION ERROR                    |
 |          |        |                                                          |
 | MXTM     | 012111 | MAXIMUM TEMPERATURE                                      |
@@ -380,18 +381,15 @@
 | TMBR     | 012163 | BRIGHTNESS TEMPERATURE                                   |
 | GCDTT    | 012210 | GOES CLOUD TOP TEMPERATURE OBSERVATION                   |
 | TVO      | 012243 | NON-Q. CONTROLLED VIRTUAL TEMP OBS (NOT ASSIMILATED)     |
-*          |        |  (AFTER "PREPRO" STEP ONLY - SUBSEQUENT CODES DO NOT     |
-*          |        |   PROCESS)                                               |
+*          |        |  (currently not used by any steps beyond "PREPRO")       |
 | TDO      | 012244 | DEWPOINT TEMPERATURE OBSERVATION (NOT ASSIMILATED)       |
-*          |        |  (AFTER "VIRTMP" STEP ONLY - SUBSEQUENT CODES DO NOT     |
-*          |        |   PROCESS)                                               |
+*          |        |  (used only by "VIRTMP" step)                            |
 | TOB      | 012245 | TEMPERATURE OBSERVATION                                  |
-*          |        | {AFTER "PREPRO" STEP - REPORTED TEMP, EITHER SENSIBLE    |
-*          |        |  OR VIRTUAL DEPENDING UPON DATA TYPE;                    |
-*          |        |  AFTER "VIRTMP" STEP - VIRTUAL TEMPERATURE IF MOISTURE   |
-*          |        |  AVAILABLE AND TEMPERATURE AFTER "PREPRO" STEP IS        |
-*          |        |  SENSIBLE (EXCEPT FOR AIRCRAFT), OTHERWISE AS DEFINED    |
-*          |        |  AFTER "PREPRO" STEP}                                    |
+*          |        | {after "PREPRO" step: reported T, either Ts or Tv        |
+*          |        |  depending upon data type; after "VIRTMP" step: Tv if    |
+*          |        |  moisture available and T after "PREPRO" step is Ts      |
+*          |        |  (except for aircraft), otherwise as defined after       |
+*          |        |  "PREPRO" step}                                          |
 | TQM      | 012246 | TEMPERATURE (QUALITY) MARKER                             |
 | TPC      | 012247 | TEMPERATURE EVENT PROGRAM CODE                           |
 | TRC      | 012248 | TEMPERATURE EVENT REASON CODE                            |
@@ -418,8 +416,7 @@
 | PW2O     | 013203 | 0.9 TO 0.7 SIGMA LAYER PRECIPITABLE WATER OBSERVATION    |
 | PW3O     | 013204 | 0.7 TO 0.3 SIGMA LAYER PRECIPITABLE WATER OBSERVATION    |
 | QOB      | 013245 | SPECIFIC HUMIDITY OBSERVATION                            |
-*          |        | (AFTER "VIRTMP" STEP - ALWAYS RECALCULATED FROM QUALITY  |
-*          |        |  CONTROLLED VIRTUAL TEMPERATURE DATA)                    |
+*          |        | (after "VIRTMP" step: always recalculated from QC'd Tv)  |
 | ESBAK    | 013242 | FORECAST(BACKGROUND) SATURATION SPECIFIC HUMIDITY VALUE  |
 | QQM      | 013246 | SPECIFIC HUMIDITY (QUALITY) MARKER                       |
 | QPC      | 013247 | SPECIFIC HUMIDITY EVENT PROGRAM CODE                     |
@@ -584,17 +581,19 @@
 |          |                                                                   |
 | GOESND   | HEADR  SAID  ACAV  {PRSLEVLG}  <BTMPINFO>  {BTMPLEVL}             |
 |          |                                                                   |
-| ADPSFC   | HEADR   PRSLEVEL   <PMSL_SEQ>  <ALTIMSEQ>  <WSPD_SEQ>  <SST_INFO> |
+| ADPSFC   | HEADR    CAT       <P___INFO>  <Q___INFO>  <T___INFO>  <Z___INFO> |
+| ADPSFC   |        <W___INFO>  [W2_EVENT]  <PMSL_SEQ>  <ALTIMSEQ>  <SST_INFO> |
 | ADPSFC   |        <TOPC_SEQ>  {PREWXSEQ}  {CLOUDSEQ}  {TMXMNSEQ}  {SWELLSEQ} |
 | ADPSFC   |        <VISB1SEQ>  <PSTWXSEQ>  <PKWNDSEQ>  <GUST1SEQ>  <TPRECSEQ> |
 | ADPSFC   |        <SUNSHSEQ>  <CLOU2SEQ>  <SNOW_SEQ>  <WAVE_SEQ>  <PTENDSEQ> |
 |          |                                                                   |
-| SFCSHP   | HEADR   PRSLEVEL   <PMSL_SEQ>  <WSPD_SEQ>  <SST_INFO>  <PREWXSEQ> |
+| SFCSHP   | HEADR   CAT        <P___INFO>  <Q___INFO>  <T___INFO>  <Z___INFO> |
+| SFCSHP   |        <W___INFO>  [W2_EVENT]  <PMSL_SEQ>  <SST_INFO>  <PREWXSEQ> |
 | SFCSHP   |        {CLOUDSEQ}  {SWELLSEQ}  <VISB2SEQ>  <PSTWXSEQ>  <PKWNDSEQ> |
 | SFCSHP   |        <GUST1SEQ>  <CLOU2SEQ>  <XWSPDSEQ>  <WAVE_SEQ>  <SHIP_SEQ> |
 | SFCSHP   |        <PTENDSEQ>                                                 |
 |          |                                                                   |
-| SFCBOG   | HEADR   PRSLEVEL                                                  |
+| SFCBOG   | HEADR    CAT       <P___INFO>  <Z___INFO>                         |
 |          |                                                                   |
 | SPSSMI   | HEADR   CAT  SAID  <P___INFO>  <W___INFO>  <PW__INFO>  <RRT_INFO> |
 | SPSSMI   |        {BTMPLEVL}                                                 |
@@ -605,8 +604,9 @@
 |          |                                                                   |
 | QKSWND   | HEADR   CAT  SAID   CTCN ATRN   SPRR       <P___INFO>  <W___INFO> |
 |          |                                                                   |
-| MSONET   | HEADR   PRVSTG      SPRVSTG     PRSLEVEL   <PMSL_SEQ>  <ALTIMSEQ> |
-| MSONET   |        <WSPD_SEQ>   {TOPC_SEQ}   <GUST2SEQ>                       |
+| MSONET   | HEADR   PRVSTG      SPRVSTG     CAT        <P___INFO>  <Q___INFO> |
+| MSONET   |        <T___INFO>  <Z___INFO>  <W___INFO>  [W2_EVENT]  <PMSL_SEQ> |
+| MSONET   |        <ALTIMSEQ>  {TOPC_SEQ}  <GUST2SEQ>                         |
 |          |                                                                   |
 | GPSIPW   | HEADR   CAT         PW__INFO                                      |
 |          |                                                                   |
@@ -622,14 +622,14 @@
 | HEADR    | PROCN   RPT   TCOR <RSRD_SEQ>                                     |
 |          |                                                                   |
 | PRSLEVEL | CAT    <P___INFO>  <Q___INFO>  <T___INFO>  <Z___INFO>  <W___INFO> |
-| PRSLEVEL |        <DRFTINFO>                                                 |
+| PRSLEVEL |        <DRFTINFO>  [W1_EVENT]                                     |
 |          |                                                                   |
 | PRSLEVLG | CAT    <P___INFO>  <Q___INFO>  <T___INFO>  <Z___INFO>  <PW__INFO> |
 | PRSLEVLG |        <CTP_INFO>                                                 |
 |          |                                                                   |
 | PRSLEVLA | RCT     ROLF        MSTQ        IALR                              |
 | PRSLEVLA | CAT    <P___INFO>  <Q___INFO>  <T___INFO>  <Z___INFO>  <W___INFO> |
-| PRSLEVLA |        <DRFTINFO>  <ACFT_SEQ>  <TURB1SEQ>  <TURB2SEQ>             |
+| PRSLEVLA |        <DRFTINFO>  [W1_EVENT]  <ACFT_SEQ>  <TURB1SEQ>  <TURB2SEQ> |
 | PRSLEVLA |        {TURB3SEQ}  {PREWXSEQ}  {CLOUDSEQ}  {AFIC_SEQ}   NRLQMS    |
 |          |                                                                   |
 | BTMPLEVL | CHNM    TMBR                                                      |
@@ -638,7 +638,7 @@
 | Q___INFO | [Q__EVENT]    TDO         <Q__BACKG>  <Q__POSTP>                  |
 | T___INFO | [T__EVENT]    TVO         <T__BACKG>  <T__POSTP>                  |
 | Z___INFO | [Z__EVENT]                <Z__BACKG>  <Z__POSTP>                  |
-| W___INFO | [W__EVENT]   [DF_EVENT]   <W__BACKG>  <W__POSTP>                  |
+| W___INFO | [W__EVENT]                <W__BACKG>  <W__POSTP>                  |
 | PW__INFO | <PWT_INFO>   <PWL_INFO>   PRSS                                    |
 | PWT_INFO | [PWTEVENT]                <PWTBACKG>  <PWTPOSTP>                  |
 | PWL_INFO | <PW1_INFO>   <PW2_INFO>   <PW3_INFO>  <PW4_INFO>                  |
@@ -660,7 +660,6 @@
 | RSRD_SEQ | RSRD       EXPRSRD                                                |
 | PMSL_SEQ | PMO        PMQ     PMIN                                           |
 | ALTIMSEQ | ALSE                                                              |
-| WSPD_SEQ | SOB                                                               |
 | TOPC_SEQ | .DTHTOPC   TOPC                                                   |
 | PREWXSEQ | PRWE                                                              |
 | CLOUDSEQ | VSSO       CLAM    CLTP     HOCB    <HOCT_SEQ>                    |
@@ -697,7 +696,8 @@
 | T__EVENT |               TOB                 TQM    TPC    TRC               |
 | Z__EVENT |               ZOB                 ZQM    ZPC    ZRC               |
 | W__EVENT |               UOB  VOB            WQM    WPC    WRC               |
-| DF_EVENT |               DDO  FFO            DFQ    DFP    DFR               |
+| W1_EVENT |               DDO  FFO            DFQ    DFP    DFR               |
+| W2_EVENT |               DDO  SOB            DFQ    DFP    DFR               |
 | PWTEVENT |               PWO                 PWQ    PWP    PWR               |
 | PW1EVENT |               PW1O                PW1Q   PW1P   PW1R              |
 | PW2EVENT |               PW2O                PW2Q   PW2P   PW2R              |
@@ -772,11 +772,11 @@
 | ATRN     |    0 |           0 |  11 | NUMERIC                  |-------------|
 |          |      |             |     |                          |-------------|
 | CTCN     |    0 |           0 |   7 | NUMERIC                  |-------------|
-* IMPORTANT: XOB IS A LOCAL DESCRIPTOR HERE EVEN THOUGH IT HAS THE SAME        *
-*            ATTRIBUTES AS CLON (0-06-002) - THIS IS BECAUSE IT IS CODED HERE  *
-*            WITH THE RANGE 0 TO 360 DEGREES EAST UNLIKE CLON WHICH HAS THE    *
-*            RANGE -180 TO +180 DEGREES, WHERE EAST IS + AND WEST IS -         *
-*            (IT CAN STILL BE HELD HERE IN 16 BITS)                            *
+* IMPORTANT: XOB is a local descriptor here even though it has the same        *
+*            attributes as CLON (0-06-002) - this is because it is coded here  *
+*            with the range 0 to 360 degrees east unlike CLON which has the    *
+*            range -180 to +180 degrees, where east is + and west is -         *
+*            (it can still be held here in 16 bits)                            *
 | XOB      |    2 |      -18000 |  16 | DEG E                    |-------------|
 |          |      |             |     |                          |-------------|
 | VSSO     |    0 |           0 |   6 | CODE TABLE               |-------------|
@@ -929,8 +929,8 @@
 | TOPC     |    1 |          -1 |  14 | KG/M**2                  |-------------|
 | DOFS     |    2 |          -2 |  12 | METER                    |-------------|
 | TOSD     |    2 |          -2 |  16 | METER                    |-------------|
-*  REQV STORED AT A HIGHER PRECISION THAN STANDARD VIA OPERATIOR DESCRIPTORS   *
-*   FOR MESSAGE TYPE SPSSMI (SCALE=6, BIT WIDTH=18)                            *
+*  REQV stored at a higher precision than standard via operatior descriptors   *
+*   for message type SPSSMI (scale=6, bit width=18)                            *
 | REQV     |    4 |           0 |  12 | KG/((METER**2)*SECOND)   |-------------|
 | TP01     |    1 |          -1 |  14 | KG/M**2                  |-------------|
 | TP03     |    1 |          -1 |  14 | KG/M**2                  |-------------|
