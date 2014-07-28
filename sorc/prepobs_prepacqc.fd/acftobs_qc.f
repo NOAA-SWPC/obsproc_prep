@@ -4,6 +4,45 @@ c                           where previously unformatted print was > 80 characte
 c                           standard call "date_and_time" instead of calls to "date" and
 c                           "time" to obtain system date and time to avoid ifort compiler
 c                           warning
+c 2014-07-18  D. Keyser  -- 
+c                    - Keep track of maximum value for number of flights calculated at some
+c                      point during the processing of subroutine acftobs_qc.  If, at the end
+c                      of acftobs_qc, this value is at least 90% of the allowed limit
+c                      ("maxflt", set in the main program), post a diagnostic warning message
+c                      to the production joblog file prior to exiting from acftobs_qc. 
+c                    - In subr. do_flt and do_reg, return (abnormally) immediately if
+c                      "maxflt" is exceeded rather than waiting to test for this at end of
+c                      do_flt and do_reg and then return (abnormally).  Prior to return
+c                      subtract 1 from number of flights so it will remain at "maxflt". The
+c                      immediate return avoids clobbering of memory in these cases.
+c                    - In subr. reorder, where any new flight exceeding "maxflt" replaces the
+c                      previous flight at index "maxflt" in the arrays to avoid an array
+c                      overflow (done in two places original NRL version), post a diagnostic
+c                      warning message to the production joblog file (found a third instance
+c                      where this needs to be done in subr, reorder - original NRL version
+c                      did not trap it and arrays limited to length "maxflt" would have
+c                      overflowed).
+c                    - If "maxflt" is exceeded in subr. dupchk (1 place possible) or in subr.
+c                      do_flt (2 places possible), the abnormal return back to subr.
+c                      acftobs_qc results in subr. acftobs_qc now continuing on but setting a
+c                      flag for "maxflt_exceeded".  Prior to this, subr. acftobs_qc itself
+c                      immediately performed an abnormal return  back to main program in such
+c                      cases resulting in no more NRL QC processing.  Now NRL QC processing
+c                      will continue on to the end of subr. acftobs_qc where the abnormal
+c                      return  back to the main program will be triggered by the
+c                      "maxflt_exceeded" flag.
+c                    - There is one, apparently rare, condition where "maxflt" could be
+c                      exceeded in subr. acft_obs itself (within logic which generates master
+c                      list of tail numbers and counts).  Since it can't be determined if
+c                      continuing on without processing (QC'ing) any more data would yield
+c                      acceptable results, the program now immediately stops with condition
+c                      code 98 and a diagnostic warning message is posted to the production
+c                      joblog file noting that "maxflt" needs to be increased.  Prior to this
+c                      it returned to the main program where it also immediately stopped with
+c                      condition code 98 (so no real change in what happens here, just where
+c                      it happens).
+c                    - Increased format width from I5 to I6 in all places where aircraft obs
+c                      index is listed out (since there now can be > 99999 reports).
 c
 c   BEST VIEWED WITH 94-CHARACTER WIDTH WINDOW
 ccccc
@@ -210,6 +249,9 @@ c     Arrays for mixed duplicates
 c     ---------------------------
       integer      maxflt              ! maximum number of flights in dataset
                                        !  (initialized by calling routine)
+      integer      maxflt_exceeded     ! flag to indicate that maxflt has been exceeded (=1,
+                                       !  else =0)
+      character*6  cmaxflt             ! character form of maxflt for NCEP print statement
 c      character*9  c_air_id(max_reps)  ! airep flight id for mixed duplicate
 c     x,            c_acr_id(max_reps)  ! acars flight id for mixed duplicate
 c      character*8  c_acr_reg(maxflt)   ! acars tail number for mixed duplicate
@@ -234,6 +276,8 @@ c
 c     Flight statistics
 c     -----------------
       integer      kflight             ! number of flights in dataset
+      integer      kflight_max         ! number of flights in dataset (maximum over course of
+                                       !  processing)
       character*8  creg_flt(maxflt)    ! tail number for each flight
       character*9  cid_flt(maxflt)     ! flight id for each flight
      $,            cid_flt_old(maxflt) ! previous value of cid_flt
@@ -247,6 +291,8 @@ c
 c     Tail number statistics
 c     ----------------------
       integer      kreg                ! actual number of tail numbers in dataset
+      integer      kreg_max            ! actual number of tail numbers in dataset (maximum
+                                       !  over course of processing)
       character*8  creg_reg(maxflt)    ! tail numbers
       integer      nobs_reg(maxflt,5)  ! number of reports per tail number per type
       integer      ntot_reg(maxflt,5)  ! total number of reports rejected per tail number
@@ -256,6 +302,8 @@ c     ----------------------
       integer      nwhol_reg(maxflt,5) ! number of reports w. temp in whole deg
 c
       integer      kreg_tot            ! number of unique tail numbers
+      integer      kreg_tot_max        ! number of unique tail numbers (maximum over course
+                                       !  of processing)
       character*8  creg_reg_tot(maxflt)! master list of tail numbers
       integer      nobs_reg_tot(maxflt,5) ! number of reports per tail number
      $,            nwhol_reg_tot(maxflt,5)! number of temps in whole degs /tail number
@@ -767,6 +815,7 @@ c -----------------
       enddo
 c
       krej = 0
+      maxflt_exceeded = 0
 c
       kreg = 0
       if(l_first_date) then
@@ -904,7 +953,7 @@ c
      x,        ob_q(ii),xiv_q(ii),ichk_q(ii)
      x,        ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,        ob_spd(ii),xiv_s(ii),ichk_s(ii),idp(ii)
- 8001       format(i5,1x,a8,1x,a8,1x,a9,1x
+ 8001       format(i6,1x,a8,1x,a8,1x,a9,1x
      x,        i7,1x,2f9.3,1x,f8.1,1x,f7.0,1x
      x,        f5.2,4(2(1x,f8.2),1x,i5),1x,i4)
             iht_ft = imiss
@@ -993,7 +1042,21 @@ c
      $,     idt,itype,ichk_t,ichk_q,ichk_d,ichk_s,kbadtot 
      $,     kreg,creg_reg,nobs_reg,nrej_reg,ntemp_reg,nwind_reg
      $,     indx,csort,amiss,imiss,io8,io30,l_last,l_operational,l_init
-     $,     l_ncep,*99)
+     $,     l_ncep,*199)
+      go to 198
+ 199  continue
+      print *, '----------------------------------------------------'
+      print *, '~~~> maxflt_exceeded -- coming out of call to dupchk'
+      print *, '----------------------------------------------------'
+      maxflt_exceeded = 1
+ 198  continue
+      kreg_max = kreg
+      kreg_tot_max = kreg_tot
+cppppp
+cc    print *, 'after call to dupchek_qc kreg, kreg_tot: ',
+cc   $ kreg, kreg_tot
+cc    print *, 'kreg_max, kreg_tot_max: ',kreg_max, kreg_tot_max
+cppppp
 c
       if(l_pc) call p_ddtg('Back from dupchek_qc',io8)
 c
@@ -1007,6 +1070,16 @@ c     ----------------------------------------
      $,          kflight,maxflt,cid_flt,creg_flt,nobs_flt,ntot_flt
      $,          nrej_flt,iobs_flt,cid_flt_old,ntot_flt_old,nrej_flt_old
      $,          kreg,creg_reg,nobs_reg,nrej_reg,c_acftreg,l_newflt)
+        kflight_max = kflight
+        kreg_max = max(kreg,kreg_max)
+        kreg_tot_max = max(kreg_tot,kreg_tot_max)
+cppppp
+cc    print *, 'after call 1 to reorder kreg, kflight, kreg_tot: ',
+cc   $ kreg, kflight, kreg_tot
+cc    print *, 'kreg_max, kflight_max, kreg_tot_max: ',
+cc   $ kreg_max, kflight_max, kreg_tot_max
+cppppp
+
 c
       endif
 c
@@ -1046,9 +1119,25 @@ c
         if(.not.l_found) then
           kreg_tot = kreg_tot + 1
           if(kreg_tot.gt.maxflt) then
+c............................................................................................
             write(*,*) 'WARNING: kreg_tot > maxflt--',kreg_tot
-cdak        stop
-            return 1  ! DAK trap this
+
+c There are more flights in input file than "maxflt" -- stop abnormally with c. code 98
+c  (can't be sure continuing on w/o processing any more data would turn out ok)
+c --------------------------------------------------------------------------------------
+            print 53, maxflt
+   53 format(/' #####> WARNING: THERE ARE MORE THAN ',I6,' AIRCRAFT ',
+     + '"FLIGHTS" IN INPUT FILE -- MUST INCREASE SIZE OF PARAMETER ',
+     + 'NMAE "MAXFLT" - STOP 98'/)
+
+            write(cmaxflt,'(i6)') maxflt
+          call system('[ -n "$jlogfile" ] && $DATA/postmsg'//
+     +     ' "$jlogfile" "***WARNING:'//cmaxflt//' AIRCRAFT "FLIGHT" '//
+     +     'LIMIT EXCEEDED IN PREPOBS_PREPACQC, STOP 98"')
+
+            call w3tage('PREPOBS_PREPACQC')
+            call errexit(98)
+c............................................................................................
           endif
           creg_reg_tot(kreg_tot)(1:8) = creg_reg(mm)(1:8)
 c
@@ -1100,6 +1189,15 @@ c
      $           sum_xiv_t,sum_xiv_d,sum_xiv_s,
      $           sumabs_xiv_t,sumabs_xiv_d,sumabs_xiv_s,1,io8
      $,          l_init,l_last)
+        kflight_max = max(kflight,kflight_max)
+        kreg_max = max(kreg,kreg_max)
+        kreg_tot_max = max(kreg_tot,kreg_tot_max)
+cppppp
+cc    print *, 'after call 1 to benford_qc kreg, kflight, kreg_tot: ',
+cc   $ kreg, kflight, kreg_tot
+cc    print *, 'kreg_max, kflight_max, kreg_tot_max: ',
+cc   $ kreg_max, kflight_max, kreg_tot_max
+cppppp
       endif
 c
 c Perform second pass through data--spike check
@@ -1129,6 +1227,15 @@ c     ----------------------------------------
      $,          kflight,maxflt,cid_flt,creg_flt,nobs_flt,ntot_flt
      $,          nrej_flt,iobs_flt,cid_flt_old,ntot_flt_old,nrej_flt_old
      $,          kreg,creg_reg,nobs_reg,nrej_reg,c_acftreg,l_newflt)
+        kflight_max = max(kflight,kflight_max)
+        kreg_max = max(kreg,kreg_max)
+        kreg_tot_max = max(kreg_tot,kreg_tot_max)
+cppppp
+cc    print *, 'after call 2 to reorder kreg, kflight, kreg_tot: ',
+cc   $ kreg, kflight, kreg_tot
+cc    print *, 'kreg_max, kflight_max, kreg_tot_max: ',
+cc   $ kreg_max, kflight_max, kreg_tot_max
+cppppp
 c
         do mm=1,kreg
           do ii=1,kreg_tot
@@ -1258,7 +1365,23 @@ c
       call do_flt(l_first,numreps,max_reps,c_acftid,c_acftreg,idt,
      $           ht_ft,cidmiss,cregmiss,indx,idt_samflt,
      $           kflight,maxflt,cid_flt,creg_flt,nobs_flt,ntot_flt,
-     $           nrej_flt,iobs_flt,csort,l_sort,l_print,amiss,io8,*99)
+     $           nrej_flt,iobs_flt,csort,l_sort,l_print,amiss,io8,*299)
+      go to 298
+ 299  continue
+      print *, '-------------------------------------------------------'
+      print *, '~~~> maxflt_exceeded -- coming out of call #1 to do_flt'
+      print *, '-------------------------------------------------------'
+      maxflt_exceeded = 1
+ 298  continue
+      kflight_max = max(kflight,kflight_max)
+      kreg_max = max(kreg,kreg_max)
+      kreg_tot_max = max(kreg_tot,kreg_tot_max)
+cppppp
+cc    print *, 'after call 1 to do_flt kreg, kflight, kreg_tot: ',
+cc   $ kreg, kflight, kreg_tot
+cc    print *, 'kreg_max, kflight_max, kreg_tot_max: ',
+cc   $ kreg_max, kflight_max, kreg_tot_max
+cppppp
 c
 c     Re-sort if flight number with two tail numbers was found
 c     --------------------------------------------------------
@@ -1282,7 +1405,23 @@ c
         call do_flt(l_first,numreps,max_reps,c_acftid,c_acftreg,idt,
      $           ht_ft,cidmiss,cregmiss,indx,idt_samflt,
      $           kflight,maxflt,cid_flt,creg_flt,nobs_flt,ntot_flt,
-     $           nrej_flt,iobs_flt,csort,l_sort,l_print,amiss,io8,*99)
+     $           nrej_flt,iobs_flt,csort,l_sort,l_print,amiss,io8,*399)
+        go to 398
+ 399    continue
+      print *, '-------------------------------------------------------'
+      print *, '~~~> maxflt_exceeded -- coming out of call #2 to do_flt'
+      print *, '-------------------------------------------------------'
+        maxflt_exceeded = 1
+ 398    continue
+        kflight_max = max(kflight,kflight_max)
+        kreg_max = max(kreg,kreg_max)
+        kreg_tot_max = max(kreg_tot,kreg_tot_max)
+cppppp
+cc    print *, 'after call 2 to do_flt kreg, kflight, kreg_tot: ',
+cc   $ kreg, kflight, kreg_tot
+cc    print *, 'kreg_max, kflight_max, kreg_tot_max: ',
+cc   $ kreg_max, kflight_max, kreg_tot_max
+cppppp
 c
 c       Output reports to log file if desired
 c       -------------------------------------
@@ -1316,6 +1455,15 @@ c
      $,     idt,itype,ichk_t,ichk_q,ichk_d,ichk_s,kbadtot,n_minus9C 
      $,     indx,csort,amiss,imiss,io8,io32,l_operational,l_init
      $,     cdtg_an,l_minus9c)
+      kflight_max = max(kflight,kflight_max)
+      kreg_max = max(kreg,kreg_max)
+      kreg_tot_max = max(kreg_tot,kreg_tot_max)
+cppppp
+cc    print *, 'after call to invalid_qc kreg, kflight, kreg_tot: ',
+cc   $ kreg, kflight, kreg_tot
+cc    print *, 'kreg_max, kflight_max, kreg_tot_max: ',
+cc   $ kreg_max, kflight_max, kreg_tot_max
+cppppp
 c
       if(l_pc) call p_ddtg('Back from invalid_qc',io8)
 c
@@ -1329,6 +1477,15 @@ c     ----------------------------------------
      $,          kflight,maxflt,cid_flt,creg_flt,nobs_flt,ntot_flt
      $,          nrej_flt,iobs_flt,cid_flt_old,ntot_flt_old,nrej_flt_old
      $,          kreg,creg_reg,nobs_reg,nrej_reg,c_acftreg,l_newflt)
+        kflight_max = max(kflight,kflight_max)
+        kreg_max = max(kreg,kreg_max)
+        kreg_tot_max = max(kreg_tot,kreg_tot_max)
+cppppp
+cc    print *, 'after call 3 to reorder kreg, kflight, kreg_tot: ',
+cc   $ kreg, kflight, kreg_tot
+cc    print *, 'kreg_max, kflight_max, kreg_tot_max: ',
+cc   $ kreg_max, kflight_max, kreg_tot_max
+cppppp
 c
         do mm=1,kreg
           do ii=1,kreg_tot
@@ -1389,6 +1546,15 @@ c
      $,          kflight,maxflt,nobs_flt,iobs_flt
      $,          kreg,creg_reg,nwhol_reg,ntemp_reg,nwind_reg
      $,          kbadtot,io8,io33,l_operational,l_init,l_ncep)
+      kflight_max = max(kflight,kflight_max)
+      kreg_max = max(kreg,kreg_max)
+      kreg_tot_max = max(kreg_tot,kreg_tot_max)
+cppppp
+cc    print *, 'after call to stk_val_qc kreg, kflight, kreg_tot: ',
+cc   $ kreg, kflight, kreg_tot
+cc    print *, 'kreg_max, kflight_max, kreg_tot_max: ',
+cc   $ kreg_max, kflight_max, kreg_tot_max
+cppppp
 c
       if(l_pc) call p_ddtg('Back from stk_val_qc',io8)
 c
@@ -1402,6 +1568,15 @@ c     ----------------------------------------
      $,          kflight,maxflt,cid_flt,creg_flt,nobs_flt,ntot_flt
      $,          nrej_flt,iobs_flt,cid_flt_old,ntot_flt_old,nrej_flt_old
      $,          kreg,creg_reg,nobs_reg,nrej_reg,c_acftreg,l_newflt)
+        kflight_max = max(kflight,kflight_max)
+        kreg_max = max(kreg,kreg_max)
+        kreg_tot_max = max(kreg_tot,kreg_tot_max)
+cppppp
+cc    print *, 'after call 4 to reorder kreg, kflight, kreg_tot: ',
+cc   $ kreg, kflight, kreg_tot
+cc    print *, 'kreg_max, kflight_max, kreg_tot_max: ',
+cc   $ kreg_max, kflight_max, kreg_tot_max
+cppppp
 c
         do mm=1,kreg
           do ii=1,kreg_tot
@@ -1465,6 +1640,15 @@ c
      $,          cblkwind,nblkwind,cblktemp,nblktemp,kbadtot,io8,io34
      $,          maxflt,kreg,creg_reg,nwhol_reg,nwind_reg
      $,          ft2m,l_operational,l_init)
+      kflight_max = max(kflight,kflight_max)
+      kreg_max = max(kreg,kreg_max)
+      kreg_tot_max = max(kreg_tot,kreg_tot_max)
+cppppp
+cc    print *, 'after call to grchek_qc kreg, kflight, kreg_tot: ',
+cc   $ kreg, kflight, kreg_tot
+cc    print *, 'kreg_max, kflight_max, kreg_tot_max: ',
+cc   $ kreg_max, kflight_max, kreg_tot_max
+cppppp
 c
       if(l_pc) call p_ddtg('Back from grchek_qc',io8)
 c
@@ -1478,6 +1662,15 @@ c     ----------------------------------------
      $,          kflight,maxflt,cid_flt,creg_flt,nobs_flt,ntot_flt
      $,          nrej_flt,iobs_flt,cid_flt_old,ntot_flt_old,nrej_flt_old
      $,          kreg,creg_reg,nobs_reg,nrej_reg,c_acftreg,l_newflt)
+        kflight_max = max(kflight,kflight_max)
+        kreg_max = max(kreg,kreg_max)
+        kreg_tot_max = max(kreg_tot,kreg_tot_max)
+cppppp
+cc    print *, 'after call 5 to reorder kreg, kflight, kreg_tot: ',
+cc   $ kreg, kflight, kreg_tot
+cc    print *, 'kreg_max, kflight_max, kreg_tot_max: ',
+cc   $ kreg_max, kflight_max, kreg_tot_max
+cppppp
 c
         do mm=1,kreg
           do ii=1,kreg_tot
@@ -1539,6 +1732,15 @@ c
      $,          idt,itype,ichk_t,ichk_q,ichk_d,ichk_s
      $,          kflight,maxflt,nobs_flt,iobs_flt,kbadtot,io8,io35
      $,          l_operational,l_init)
+      kflight_max = max(kflight,kflight_max)
+      kreg_max = max(kreg,kreg_max)
+      kreg_tot_max = max(kreg_tot,kreg_tot_max)
+cppppp
+cc    print *, 'after call to poschek_qc kreg, kflight, kreg_tot: ',
+cc   $ kreg, kflight, kreg_tot
+cc    print *, 'kreg_max, kflight_max, kreg_tot_max: ',
+cc   $ kreg_max, kflight_max, kreg_tot_max
+cppppp
 c
       if(l_pc) call p_ddtg('Back from poschek_qc',io8)
 c
@@ -1552,6 +1754,15 @@ c     ----------------------------------------
      $,          kflight,maxflt,cid_flt,creg_flt,nobs_flt,ntot_flt
      $,          nrej_flt,iobs_flt,cid_flt_old,ntot_flt_old,nrej_flt_old
      $,          kreg,creg_reg,nobs_reg,nrej_reg,c_acftreg,l_newflt)
+        kflight_max = max(kflight,kflight_max)
+        kreg_max = max(kreg,kreg_max)
+        kreg_tot_max = max(kreg_tot,kreg_tot_max)
+cppppp
+cc    print *, 'after call 6 to reorder kreg, kflight, kreg_tot: ',
+cc   $ kreg, kflight, kreg_tot
+cc    print *, 'kreg_max, kflight_max, kreg_tot_max: ',
+cc   $ kreg_max, kflight_max, kreg_tot_max
+cppppp
 c
         do mm=1,kreg
           do ii=1,kreg_tot
@@ -1595,6 +1806,15 @@ c
       call orddup_qc(max_reps,indx,isave,ht_ft,idt,alat,alon
      $,              kflight,maxflt,nobs_flt,iobs_flt
      $,              c_acftreg,c_acftid,cidmiss,idt_near,io8)
+      kflight_max = max(kflight,kflight_max)
+      kreg_max = max(kreg,kreg_max)
+      kreg_tot_max = max(kreg_tot,kreg_tot_max)
+cppppp
+cc    print *, 'after call to orddup_qc kreg, kflight, kreg_tot: ',
+cc   $ kreg, kflight, kreg_tot
+cc    print *, 'kreg_max, kflight_max, kreg_tot_max: ',
+cc   $ kreg_max, kflight_max, kreg_tot_max
+cppppp
 c
       if(l_pc) call p_ddtg('Back from orddup_qc',io8)
 c
@@ -1630,6 +1850,15 @@ c
      $,          kreg,creg_reg,nwind_reg
      $,          kflight,maxflt,nobs_flt,ntot_flt,iobs_flt,kbadtot
      $,          io8,io36,l_operational,l_init)
+      kflight_max = max(kflight,kflight_max)
+      kreg_max = max(kreg,kreg_max)
+      kreg_tot_max = max(kreg_tot,kreg_tot_max)
+cppppp
+cc    print *, 'after call to ordchek_qc kreg, kflight, kreg_tot: ',
+cc   $ kreg, kflight, kreg_tot
+cc    print *, 'kreg_max, kflight_max, kreg_tot_max: ',
+cc   $ kreg_max, kflight_max, kreg_tot_max
+cppppp
 c
       if(l_pc) call p_ddtg('Back from ordchek_qc',io8)
 c
@@ -1643,6 +1872,15 @@ c     ----------------------------------------
      $,          kflight,maxflt,cid_flt,creg_flt,nobs_flt,ntot_flt
      $,          nrej_flt,iobs_flt,cid_flt_old,ntot_flt_old,nrej_flt_old
      $,          kreg,creg_reg,nobs_reg,nrej_reg,c_acftreg,l_newflt)
+        kflight_max = max(kflight,kflight_max)
+        kreg_max = max(kreg,kreg_max)
+        kreg_tot_max = max(kreg_tot,kreg_tot_max)
+cppppp
+cc    print *, 'after call 7 to reorder kreg, kflight, kreg_tot: ',
+cc   $ kreg, kflight, kreg_tot
+cc    print *, 'kreg_max, kflight_max, kreg_tot_max: ',
+cc   $ kreg_max, kflight_max, kreg_tot_max
+cppppp
 c
         do mm=1,kreg
           do ii=1,kreg_tot
@@ -1705,6 +1943,15 @@ c
      $,          maxflt,kflight,creg_flt,nobs_flt,ntot_flt
      $,          nrej_flt,iobs_flt,kreg,creg_reg,nobs_reg,nwind_reg
      $,          ntot_reg,kbadtot,io8,io37,l_operational,l_init)
+      kflight_max = max(kflight,kflight_max)
+      kreg_max = max(kreg,kreg_max)
+      kreg_tot_max = max(kreg_tot,kreg_tot_max)
+cppppp
+cc    print *, 'after call to suspect_qc kreg, kflight, kreg_tot: ',
+cc   $ kreg, kflight, kreg_tot
+cc    print *, 'kreg_max, kflight_max, kreg_tot_max: ',
+cc   $ kreg_max, kflight_max, kreg_tot_max
+cppppp
 c
       if(l_pc) call p_ddtg('Back from suspect_qc',io8)
 c
@@ -1718,6 +1965,15 @@ c     ----------------------------------------
      $,          kflight,maxflt,cid_flt,creg_flt,nobs_flt,ntot_flt
      $,          nrej_flt,iobs_flt,cid_flt_old,ntot_flt_old,nrej_flt_old
      $,          kreg,creg_reg,nobs_reg,nrej_reg,c_acftreg,l_newflt)
+        kflight_max = max(kflight,kflight_max)
+        kreg_max = max(kreg,kreg_max)
+        kreg_tot_max = max(kreg_tot,kreg_tot_max)
+cppppp
+cc    print *, 'after call 8 to reorder kreg, kflight, kreg_tot: ',
+cc   $ kreg, kflight, kreg_tot
+cc    print *, 'kreg_max, kflight_max, kreg_tot_max: ',
+cc   $ kreg_max, kflight_max, kreg_tot_max
+cppppp
 c
         do mm=1,kreg
           do ii=1,kreg_tot
@@ -1778,6 +2034,15 @@ c
      $,          nchk_t,nchk_q,nchk_d,nchk_s
      $,          maxflt,kreg,creg_reg,nwind_reg,ntemp_reg
      $,          kbadtot,io8,io38,l_operational,l_init,l_ncep)
+      kflight_max = max(kflight,kflight_max)
+      kreg_max = max(kreg,kreg_max)
+      kreg_tot_max = max(kreg_tot,kreg_tot_max)
+cppppp
+cc    print *, 'after call to rejlist_qc kreg, kflight, kreg_tot: ',
+cc   $ kreg, kflight, kreg_tot
+cc    print *, 'kreg_max, kflight_max, kreg_tot_max: ',
+cc   $ kreg_max, kflight_max, kreg_tot_max
+cppppp
 c
       if(l_pc) call p_ddtg('Back from rejlist_qc',io8)
 c
@@ -1791,6 +2056,15 @@ c     ----------------------------------------
      $,          kflight,maxflt,cid_flt,creg_flt,nobs_flt,ntot_flt
      $,          nrej_flt,iobs_flt,cid_flt_old,ntot_flt_old,nrej_flt_old
      $,          kreg,creg_reg,nobs_reg,nrej_reg,c_acftreg,l_newflt)
+        kflight_max = max(kflight,kflight_max)
+        kreg_max = max(kreg,kreg_max)
+        kreg_tot_max = max(kreg_tot,kreg_tot_max)
+cppppp
+cc    print *, 'after call 9 to reorder kreg, kflight, kreg_tot: ',
+cc   $ kreg, kflight, kreg_tot
+cc    print *, 'kreg_max, kflight_max, kreg_tot_max: ',
+cc   $ kreg_max, kflight_max, kreg_tot_max
+cppppp
       endif
 c
       if(.not.l_operational) then
@@ -1847,7 +2121,7 @@ c     x,      ob_q(ii),xiv_q(ii),ichk_q(ii)
 c     x,      ob_dir(ii),xiv_d(ii),ichk_d(ii)
 c     x,      ob_spd(ii),xiv_s(ii),ichk_s(ii),idp(ii)
 c     x,      c_qc(ii),csort(ii)
-c 8011     format(i5,1x,i5,1x,a8,1x,a8,1x,a9,1x
+c 8011     format(i5,1x,i6,1x,a8,1x,a8,1x,a9,1x
 c     x,      i7,1x,2f9.3,1x,f8.1,1x,f7.0,1x
 c     x,      f5.2,4(2(1x,f8.2),1x,i5),1x,i4
 c     x,      1x,'!',a11,'!',1x,a25)
@@ -1880,6 +2154,15 @@ c
      $           sum_xiv_t,sum_xiv_d,sum_xiv_s,
      $           sumabs_xiv_t,sumabs_xiv_d,sumabs_xiv_s,2,io8
      $,          l_init,l_last)
+        kflight_max = max(kflight,kflight_max)
+        kreg_max = max(kreg,kreg_max)
+        kreg_tot_max = max(kreg_tot,kreg_tot_max)
+cppppp
+cc    print *, 'after call 2 to benford_qc kreg, kflight, kreg_tot: ',
+cc   $ kreg, kflight, kreg_tot
+cc    print *, 'kreg_max, kflight_max, kreg_tot_max: ',
+cc   $ kreg_max, kflight_max, kreg_tot_max
+cppppp
 c
         if(l_pc) call p_ddtg('Back from benford_qc',io8)
 c
@@ -1998,7 +2281,7 @@ c             -------------------------
      x,            ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,            ob_spd(ii),xiv_s(ii),ichk_s(ii),idp(ii)
      x,            c_qc(ii)
- 3002           format(i5,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x,f8.1,1x
+ 3002           format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x,f8.1,1x
      x,           f7.0,1x,f5.2,4(2(1x,f8.2),1x,i5),1x,i4,1x,'!',a11,'!')
               endif
             endif
@@ -3020,6 +3303,31 @@ c     -----------
         close(io8)
       endif
 
+cppppp
+cc    print *, 'kreg_max, kflight_max, kreg_tot_max: ',
+cc   $ kreg_max, kflight_max, kreg_tot_max
+cppppp
+      kflight_max = max(kreg_max,kflight_max,kreg_tot_max)
+cppppp
+cc    print *, 'overall flight number max:', kflight_max
+cppppp
+      if(kflight_max/.90.gt.maxflt .and. kflight_max.lt.maxflt ) then
+
+c If the maximum number of calculated flights at some point in this processing read in from
+c  PREPBUFR file is at least 90% of the maximum number of flights allowed ("maxflt"), print
+c  diagnostic warning message to production joblog file
+c -----------------------------------------------------------------------------------------
+
+        print 153, kflight_max,maxflt
+  153   format(/' #####> WARNING: THE MAX NUMBER OF CALCULATED ',
+     $   'AIRCRAFT FLIGHTS FROM INPUT FILE (',I6,') ARE > 90% OF UPPER',
+     $   ' LIMIT OF ',I6,' -- INCREASE SIZE OF "MAXFLT" SOON!'/)
+        write(cmaxflt,'(i6)') maxflt
+        call system('[ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" '//
+     +   '"***WARNING: HIT 90% OF '//cmaxflt//' AIRCRAFT FLIGHT LIMIT'//
+     +   ' IN PREPOBS_PREPACQC, INCREASE SIZE OF PARM MAXFLT"')
+      endif
+
 
       write(*,*)
       write(*,*) '********************'
@@ -3028,11 +3336,16 @@ c     -----------
       write(*,*) '********************'
       write(*,*)
 
-      return
+c return 1 if  # flts > maxflt out of subr. do_flt, and subr. do_reg (latter transferred here
+c  via subr. dupchek_qc)
+      if(maxflt_exceeded .gt. 0)  then
+         print *, '--------------------------------------------------'
+         print *, '~~~> maxflt_exceeded -- return 1 out of acftobs_qc'
+         print *, '--------------------------------------------------'
+         return 1
+      endif
 
-   99 return 1  ! DAK: trap # flts > maxflt out of subr. do_flt, and
-                !      subr. do_reg (transferred here via subr.
-                !      dupchek_qc)
+      return
 
       end
 c
@@ -3095,7 +3408,7 @@ c
 c # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 c
       write(io8,8030)
- 8030 format('index type     tail num flight      time hh:mm:ss   lat'
+ 8030 format(' index type     tail num flight      time hh:mm:ss   lat'
      $,'     lon  height  t-pr  temp ichk dir ichk spd ichk humid ichk')
 c
       read(cdtg_an,'(8x,i2)') ihr_an
@@ -6846,7 +7159,7 @@ c     $          c_acftid(ii).ne.c_acftid(iim1))) then
      x,            ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,            ob_spd(ii),xiv_s(ii),ichk_s(ii)
      x,            c_qc(ii)
- 8002         format(i3,1x,i5,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x
+ 8002         format(i3,1x,i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x
      x,            f8.1,1x,f7.0,1x,f5.2,4(2(1x,f8.2),1x,i5),1x
      x,            '!',a11,'!')
             endif
@@ -7101,7 +7414,7 @@ c     ---------------------------
         write(io30,*) 'Encode dups (E or e)'
         write(io30,*) '--------------------'
         write(io30,3001)
- 3001   format('index  type    tail num   flight     time     lat'
+ 3001   format(' index  type    tail num   flight     time     lat'
      x,        '      lon       pres  height '
      x,        't-prcn   temp     innov  ichk'
      x,        ' spec hum    innov  ichk'
@@ -7190,7 +7503,7 @@ c
      x,        ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,        ob_spd(ii),xiv_s(ii),ichk_s(ii)
      x,        c_qc(ii)
- 3002       format(i5,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x,f8.1,1x,f7.0
+ 3002       format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x,f8.1,1x,f7.0
      x,          1x,f5.2,4(2(1x,f8.2),1x,i5),1x,'!',a11,'!')
           endif
 c
@@ -8030,7 +8343,12 @@ c
 c
       return
 
-   99 return 1  ! DAK: trap # flts > maxflt out of subr. do_reg
+   99 continue
+      print *, '--------------------------------------------------'
+      print *, '~~~> SUBR. DUPCHEK_QC (transferred here from subr. ',
+     $ 'do_reg): RETURN 1'
+      print *, '--------------------------------------------------'
+      return 1
 
       end
 c
@@ -8068,6 +8386,7 @@ c     Arrays for mixed duplicates
 c     ---------------------------
       integer      maxflt              ! max number of flights allowed
      $,            kflight             ! number of flights in dataset
+      character*6  cmaxflt             ! character form of maxflt for NCEP print statement
       character*8  creg_flt(maxflt)    ! tail number for each flight
       character*9  cid_flt(maxflt)     ! flight id for each flight
       character*9  cid_flt_old(maxflt) ! old value of flight id for each flight
@@ -8130,6 +8449,9 @@ c
      $,            i_amdar_lvl         ! instrument type for amdar--level flt
      $,            i_amdar_asc         ! instrument type for amdar--ascent
      $,            i_amdar_des         ! instrument type for amdar--descent
+     $,            ifirst1             ! indicator - 1st time in subr. maxflt @ ipt 1 exceeded
+     $,            ifirst2             ! indicator - 1st time in subr. maxflt @ ipt 2 exceeded
+     $,            ifirst3             ! indicator - 1st time in subr. maxflt @ ipt 3 exceeded
 c
       save         i_acars             ! instrument type for acars
      $,            i_acars_lvl         ! instrument type for acars--level flt
@@ -8149,6 +8471,9 @@ c
      $,            i_amdar_lvl         ! instrument type for amdar--level flt
      $,            i_amdar_asc         ! instrument type for amdar--ascent
      $,            i_amdar_des         ! instrument type for amdar--descent
+     $,            ifirst1             ! indicator - 1st time in subr. maxflt @ ipt 1 exceeded
+     $,            ifirst2             ! indicator - 1st time in subr. maxflt @ ipt 2 exceeded
+     $,            ifirst3             ! indicator - 1st time in subr. maxflt @ ipt 3 exceeded
 c
 c     Switches
 c     --------
@@ -8159,7 +8484,7 @@ c     --------
 c
 c     Data statements
 c     ---------------
-      data l_first /.true./
+      data l_first /.true./,ifirst1/0/,ifirst2/0/,ifirst3/0/
 c
 c # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 c
@@ -8279,10 +8604,22 @@ c
                 if(kflight.ne.maxflt) then
                   kflight = kflight + 1
                 else
-! DAK: May need to trap this (?)
-                  write(io8,*)
-                  write(io8,*) 'WARNING: Need to increase maxflt!'
-                  write(*,*) 'WARNING: Need to increase maxflt!'
+c-----------------------------------
+                  if(ifirst1.eq.0) then
+                    ifirst1 = 1
+                    write(io8,*)
+                    write(io8,*) 'WARNING-1: Need to increase maxflt!'
+                    print 53, maxflt,maxflt
+   53 format(/' #####> WARNING: THERE ARE MORE THAN ',I6,' AIRCRAFT ',
+     + '"FLIGHTS" IN INPUT FILE -- MUST INCREASE SIZE OF PARAMETER ',
+     +'NAME "MAXFLT" - WILL CONTINUE ON PROCESSING ONLY ',I6,' FLTS-1'/)
+                    write(cmaxflt,'(i6)') maxflt
+      call system('[ -n "$jlogfile" ] && $DATA/postmsg'//
+     + ' "$jlogfile" "***WARNING:'//cmaxflt//' AIRCRAFT "FLIGHT" '//
+     + 'LIMIT EXCEEDED IN PREPOBS_PREPACQC, ONLY '//
+     + cmaxflt//' FLIGHTS PROCESSED-1"')
+                  endif
+c-----------------------------------
                 endif
                 cid_flt(kflight) = c_acftid(ii)
                 creg_flt(kflight) = c_acftreg(ii)
@@ -8474,7 +8811,26 @@ c
 c         Otherwise, save starting index & start counting reports for next flight
 c         -------------------------------------------------------------------------
           else
-            kk = kk + 1
+            if(kk.ne.maxflt) then
+              kk = kk + 1
+            else
+c-----------------------------------
+              if(ifirst2.eq.0) then
+                write(io8,*)
+                write(io8,*) 'WARNING-2: Need to increase maxflt!'
+                ifirst2 = 1
+                print 753, maxflt,maxflt
+  753 format(/' #####> WARNING: THERE ARE MORE THAN ',I6,' AIRCRAFT ',
+     + '"FLIGHTS" IN INPUT FILE -- MUST INCREASE SIZE OF PARAMETER ',
+     +'NAME "MAXFLT" - WILL CONTINUE ON PROCESSING ONLY ',I6,' FLTS-2'/)
+                write(cmaxflt,'(i6)') maxflt
+      call system('[ -n "$jlogfile" ] && $DATA/postmsg'//
+     + ' "$jlogfile" "***WARNING:'//cmaxflt//' AIRCRAFT "FLIGHT" '//
+     + 'LIMIT EXCEEDED IN PREPOBS_PREPACQC, ONLY '//
+     + cmaxflt//' FLIGHTS PROCESSED-2"')
+              endif
+c-----------------------------------
+            endif
             iobs_flt(kk) = iob
             nobs_flt(kk) = 1
             cid_flt(kk) = c_acftid(ii)
@@ -8494,10 +8850,22 @@ c
                 if(kk.ne.maxflt) then
                   kk = kk + 1
                 else
-! DAK: May need to trap this (?)
-                  write(io8,*)
-                  write(io8,*) 'WARNING: Need to increase maxflt!'
-                  write(*,*) 'WARNING: Need to increase maxflt!'
+c-----------------------------------
+                  if(ifirst3.eq.0) then
+                    write(io8,*)
+                    write(io8,*) 'WARNING-3: Need to increase maxflt!'
+                    ifirst3 = 1
+                    print 853, maxflt,maxflt
+  853 format(/' #####> WARNING: THERE ARE MORE THAN ',I6,' AIRCRAFT ',
+     + '"FLIGHTS" IN INPUT FILE -- MUST INCREASE SIZE OF PARAMETER ',
+     +'NAME "MAXFLT" - WILL CONTINUE ON PROCESSING ONLY ',I6,' FLTS-3'/)
+                    write(cmaxflt,'(i6)') maxflt
+      call system('[ -n "$jlogfile" ] && $DATA/postmsg'//
+     + ' "$jlogfile" "***WARNING:'//cmaxflt//' AIRCRAFT "FLIGHT" '//
+     + 'LIMIT EXCEEDED IN PREPOBS_PREPACQC, ONLY '//
+     + cmaxflt//' FLIGHTS PROCESSED-3"')
+                  endif
+c-----------------------------------
                 endif
                 cid_flt(kk) = c_acftid(ii)
                 creg_flt(kk) = c_acftreg(ii)
@@ -8769,6 +9137,17 @@ c Otherwise, save starting index and start counting reports for next flight
 c -------------------------------------------------------------------------
         else
           kflight = kflight + 1
+c-----------------------------------
+c Check index against maximum
+c ---------------------------
+          if(kflight.gt.maxflt) then
+            kflight = kflight - 1
+            write(io8,*)
+            write(io8,*) 'Subr. DO_FLT, ipoint 1: Max number of ',
+     $                   'flights exceeded--increase maxflt'
+            return 1
+          endif
+c-----------------------------------
           cid_flt(kflight) = c_acftid(ii)
           creg_flt(kflight) = c_acftreg(ii)
           iobs_flt(kflight) = iob
@@ -8998,6 +9377,17 @@ c           Otherwise, save starting index and start counting reports for next f
 c           -------------------------------------------------------------------------
             else
               kflight = kflight + 1
+c-----------------------------------
+c Check index against maximum
+c ---------------------------
+              if(kflight.gt.maxflt) then
+                kflight = kflight - 1
+                write(io8,*)
+                write(io8,*) 'Subr. DO_FLT, ipoint 2: Max number of ',
+     $                       'flights exceeded--increase maxflt'
+                return 1
+              endif
+c-----------------------------------
               cid_flt(kflight) = c_acftid(ii)
               creg_flt(kflight) = c_acftreg(ii)
               iobs_flt(kflight) = iob
@@ -9034,15 +9424,6 @@ c
          write(io8,'(i5,1x,a9,5(1x,i5))') kk,c_acftid(ii),istart,
      $        indx(istart),iend,indx(iend),nobs_flt(kk)
         enddo
-      endif
-c
-c Check index against maximum
-c ---------------------------
-      if(kflight.gt.maxflt) then
-        write(io8,*)
-        write(io8,*) 'Max number of flights exceeded--increase maxflt'
-cdak    stop
-        return 1  ! DAK trap this
       endif
 c
       return
@@ -9270,6 +9651,17 @@ c             ------------------------------------
                 mm = mm + 1
                 if(mm.eq.kreg+1) then
                   kreg = kreg + 1
+c-----------------------------------
+c Check index against maximum
+c ---------------------------
+                  if(kreg.gt.maxflt) then
+                    kreg = kreg - 1
+                    write(io8,*)
+                    write(io8,*) 'Subr. DO_REG: Max number of flights ',
+     $                           'exceeded--increase maxflt'
+                    return 1
+                  endif
+c-----------------------------------
                   creg_reg(kreg) = c_acftreg(ii)
                   l_done = .true.
 c
@@ -9334,15 +9726,6 @@ c
       write(io8,*)
       write(io8,*) numreps,' reports input to do_reg'
       write(io8,*) ktot,' reports categorized by tail number'
-c
-c Check index against maximum
-c ---------------------------
-      if(kreg.gt.maxflt) then
-        write(io8,*)
-        write(io8,*) 'Max number of flights exceeded--increase maxflt'
-cdak    stop
-        return 1  ! DAK trap this
-      endif
 c
       return
       end
@@ -11415,7 +11798,7 @@ c
      x,        ob_dir(iip1),xiv_d(iip1),ichk_d(iip1)
      x,        ob_spd(iip1),xiv_s(iip1),ichk_s(iip1)
      x,        c_qc(iip1)
- 8002     format(i5,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x
+ 8002     format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x
      x,        f8.1,1x,f7.0,1x,f5.2,4(2(1x,f8.2),1x,i5),1x
      x,        '!',a11,'!')
         endif
@@ -11431,7 +11814,7 @@ c ---------------------
         write(io32,*) 'Invalid reports'
         write(io32,*) '---------------'
         write(io32,3001)
- 3001   format('index  type    tail num   flight     time     lat'
+ 3001   format(' index  type    tail num   flight     time     lat'
      x,        '      lon       pres  height '
      x,        't-prcn   temp     innov  ichk'
      x,        ' spec hum    innov  ichk'
@@ -11542,7 +11925,7 @@ c
      x,        ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,        ob_spd(ii),xiv_s(ii),ichk_s(ii)
      x,        c_qc(ii)
- 3002       format(i5,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x,f8.1,1x,f7.0
+ 3002       format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x,f8.1,1x,f7.0
      x,          1x,f5.2,4(2(1x,f8.2),1x,i5),1x,'!',a11,'!')
           endif
         endif
@@ -13566,7 +13949,7 @@ c ---------------------
         write(io33,*) 'Reports with temperatures in whole degrees'
         write(io33,*) '------------------------------------------'
         write(io33,3001)
- 3001   format('index  type    tail num   flight     time     lat'
+ 3001   format(' index  type    tail num   flight     time     lat'
      x,      '      lon       pres  height '
      x,      't-prcn   temp     innov  ichk'
      x,      ' spec hum    innov  ichk'
@@ -13591,7 +13974,7 @@ c
      x,        ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,        ob_spd(ii),xiv_s(ii),ichk_s(ii)
      x,        c_qc(ii)
- 3002       format(i5,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x,f8.1,1x,f7.0
+ 3002       format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x,f8.1,1x,f7.0
      x,          1x,f5.2,4(2(1x,f8.2),1x,i5),1x,'!',a11,'!')
           endif
 c
@@ -15115,7 +15498,7 @@ c
      x,      ob_spd(iip1),xiv_s(iip1),ichk_s(iip1)
      x,      c_qc(iip1),csort(iip1)
 c
- 8001     format(i5,1x,a8,1x,a8,1x,a9,1x
+ 8001     format(i6,1x,a8,1x,a8,1x,a9,1x
      x,      i7,1x,2f9.3,1x,f8.1,1x,f7.0,1x
      x,      f5.2,4(2(1x,f8.2),1x,i5)
      x,      1x,'!',a11,'!',1x,a25)
@@ -15133,7 +15516,7 @@ c ---------------------------------
       write(io34,*) '(rejected reports not included subsequently'
       write(io34,*) '-------------------------------------------'
       write(io34,3001)
- 3001 format('index  type    tail num   flight     time     lat'
+ 3001 format(' index  type    tail num   flight     time     lat'
      x,      '      lon       pres  height '
      x,      't-prcn   temp     innov  ichk'
      x,      ' spec hum    innov  ichk'
@@ -15243,7 +15626,7 @@ c
      x,        ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,        ob_spd(ii),xiv_s(ii),ichk_s(ii)
      x,        c_qc(ii)
- 3002       format(i5,1x,a8,1x,a8,1x,a9,1x
+ 3002       format(i6,1x,a8,1x,a8,1x,a9,1x
      x,      i7,1x,2f9.3,1x,f8.1,1x,f7.0,1x
      x,      f5.2,4(2(1x,f8.2),1x,i5)
      x,      1x,'!',a11,'!')
@@ -15749,7 +16132,7 @@ c         -----------------------------
      x,            ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,            ob_spd(ii),xiv_s(ii),ichk_s(ii)
      x,            c_qc(ii)
- 8002       format(i4,1x,i5,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x
+ 8002       format(i4,1x,i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x
      x,            f8.1,1x,f7.0
      x,            1x,f5.2,4(2(1x,f8.2),1x,i5),1x,'!',a11,'!')
           endif
@@ -16768,7 +17151,7 @@ c ---------------------
         write(io35,*) 'Inconsistent positions'
         write(io35,*) '----------------------'
         write(io35,3001)
- 3001   format('index  type    tail num   flight     time     lat'
+ 3001   format(' index  type    tail num   flight     time     lat'
      x,      '      lon       pres  height '
      x,      't-prcn   temp     innov  ichk'
      x,      ' spec hum    innov  ichk'
@@ -16842,7 +17225,7 @@ c
      x,        ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,        ob_spd(ii),xiv_s(ii),ichk_s(ii)
      x,        c_qc(ii)
- 3002       format(i5,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x,f8.1,1x,f7.0
+ 3002       format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x,f8.1,1x,f7.0
      x,          1x,f5.2,4(2(1x,f8.2),1x,i5),1x,'!',a11,'!')
           endif
 c
@@ -22443,7 +22826,7 @@ c
      x,            c_qc(iip2)
                 endif
 c
- 8002           format(i4,1x,i5,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x
+ 8002           format(i4,1x,i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x
      x,            f8.1,1x,f7.0
      x,            1x,f5.2,4(2(1x,f8.2),1x,i5),1x,'!',a11,'!')
               endif
@@ -26418,7 +26801,7 @@ c     ---------------------
         write(io36,*)'Ordering errors'
         write(io36,*)'---------------'
         write(io36,3001)
- 3001   format('index  type    tail num   flight     time     lat'
+ 3001   format(' index  type    tail num   flight     time     lat'
      x,      '      lon       pres  height '
      x,      't-prcn   temp     innov  ichk'
      x,      ' spec hum    innov  ichk'
@@ -26492,7 +26875,7 @@ c
      x,        ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,        ob_spd(ii),xiv_s(ii),ichk_s(ii)
      x,        c_qc(ii)
- 3002       format(i5,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x,f8.1,1x,f7.0
+ 3002       format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x,f8.1,1x,f7.0
      x,          1x,f5.2,4(2(1x,f8.2),1x,i5),1x,'!',a11,'!')
           endif
 c
@@ -27114,7 +27497,7 @@ c
      x,            ob_spd(iip1),xiv_s(iip1),ichk_s(iip1)
      x,            c_qc(iip1)
               endif
- 8002         format(i4,1x,i5,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x
+ 8002         format(i4,1x,i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x
      x,            f8.1,1x,f7.0
      x,            1x,f5.2,4(2(1x,f8.2),1x,i5),1x,'!',a11,'!')
             endif
@@ -27208,7 +27591,7 @@ c     ---------------------
         write(io37,*) 'Suspect data check'
         write(io37,*) '------------------'
         write(io37,3001)
- 3001   format('index  type    tail num   flight     time     lat'
+ 3001   format(' index  type    tail num   flight     time     lat'
      x,      '      lon       pres  height '
      x,      't-prcn   temp     innov  ichk'
      x,      ' spec hum    innov  ichk'
@@ -27282,7 +27665,7 @@ c
      x,        ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,        ob_spd(ii),xiv_s(ii),ichk_s(ii)
      x,        c_qc(ii)
- 3002       format(i5,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x,f8.1,1x,f7.0
+ 3002       format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x,f8.1,1x,f7.0
      x,          1x,f5.2,4(2(1x,f8.2),1x,i5),1x,'!',a11,'!')
           endif
 c
@@ -27669,7 +28052,7 @@ c
      x,            ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,            ob_spd(ii),xiv_s(ii),ichk_s(ii)
      x,            c_qc(ii)
- 8002         format(i4,1x,i5,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x
+ 8002         format(i4,1x,i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x
      x,            f8.1,1x,f7.0
      x,            1x,f5.2,4(2(1x,f8.2),1x,i5),1x,'!',a11,'!')
             endif
@@ -27783,7 +28166,7 @@ c     ---------------------
         write(io38,*) 'Reject list check'
         write(io38,*) '-----------------'
         write(io38,3001)
- 3001   format('index  type    tail num   flight     time     lat'
+ 3001   format(' index  type    tail num   flight     time     lat'
      x,      '      lon       pres  height '
      x,      't-prcn   temp     innov  ichk'
      x,      ' spec hum    innov  ichk'
@@ -27852,7 +28235,7 @@ c
      x,        ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,        ob_spd(ii),xiv_s(ii),ichk_s(ii)
      x,        c_qc(ii)
- 3002       format(i5,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x,f8.1,1x,f7.0
+ 3002       format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x,f8.1,1x,f7.0
      x,          1x,f5.2,4(2(1x,f8.2),1x,i5),1x,'!',a11,'!')
           endif
 c
@@ -28491,7 +28874,7 @@ c
         write(io31,*) 'Spike reports'
         write(io31,*) '-------------'
         write(io31,3001)
- 3001   format('index  type    tail num   flight     time     lat'
+ 3001   format(' index  type    tail num   flight     time     lat'
      x,        '      lon       pres  height '
      x,        't-prcn   temp     innov  ichk'
      x,        ' spec hum    innov  ichk'
@@ -28680,7 +29063,7 @@ c
      x,               ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,               ob_spd(ii),xiv_s(ii),ichk_s(ii)
      x,               c_qc(ii)
- 3002               format(i5,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x
+ 3002               format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x
      x,               f8.1,1x,f7.0,1x,f5.2,4(2(1x,f8.2),1x,i5),1x
      x,               '!',a11,'!')
                   endif

@@ -2,7 +2,7 @@ c$$$ Main Program Documentation Block
 c   BEST VIEWED WITH 94-CHARACTER WIDTH WINDOW
 c
 c Main Program: PREPOBS_PREPACQC
-c   Programmer: D. Keyser       Org: NP22       Date: 2014-03-06
+c   Programmer: D. Keyser       Org: NP22       Date: 2014-07-18
 c
 c Abstract: Performs the NRL aircraft data quality control on all types of reports (AIREP,
 c   PIREP, AMDAR, TAMDAR, MDCRS).  Replaces the previous routine of the same name originally
@@ -67,6 +67,64 @@ c                           (type AIRCAR) in (rare) cases where absolutely no ai
 c                           reports pass these checks (would cause a BUFRLIB abort due to
 c                           previous message being open when attempting to copy first non-
 c                           aircraft message from input to output PREPBUFR file
+c 2014-07-18  D. Keyser  --
+c                 - Increased maximum number of flights that can be processed "maxflt" from
+c                   5000 to 7500 to account for increase in aircraft reports.
+c                 - Increased maximum number of merged reports that can be processed
+c                   "max_reps" from 185K to 220K to handle future increase in all types of
+c                   aircraft reports.
+c                 - If subroutine acftobs_qc returns abnormally to main program due to the
+c                   maximum value for number of flights calculated at some point during its
+c                   processing exceeding the allowed limit ("maxflt"), no longer stop with
+c                   r.c. 98.  Instead continue on with processing and post a diagnostic
+c                   warning message to the production joblog file.  The assumption is that
+c                   the resultant PREPBUFR file may not contain fully QC'd aircraft data,
+c                   especially if the actual number of flights calculated greatly exceeds
+c                   "maxflt" (since obs in flights above the "maxflt" limit may partially be
+c                   skipped over in the QC process), but the vast majority should be QC'd,
+c                   and all reports originally in the PREPBUFR file will be at least be
+c                   retained. (Note that a gradual increase will trigger a warning in the
+c                   production joblog now when numbers get too close to the limit - see
+c                   change to subroutine acftobs_qc below).
+c                 - Increased format width from I5 to I6 in all places where aircraft obs
+c                   index is listed out (since there now can be > 99999 reports).
+c                 - Subroutine acftobs_qc and its child subroutines:
+c                    - Keep track of maximum value for number of flights calculated at some
+c                      point during the processing of subroutine acftobs_qc.  If, at the end
+c                      of acftobs_qc, this value is at least 90% of the allowed limit
+c                      ("maxflt", set in the main program), post a diagnostic warning message
+c                      to the production joblog file prior to exiting from acftobs_qc.
+c                    - In subr. do_flt and do_reg, return (abnormally) immediately if
+c                      "maxflt" is exceeded rather than waiting to test for this at end of
+c                      do_flt and do_reg and then return (abnormally).  Prior to return
+c                      subtract 1 from number of flights so it will remain at "maxflt". The
+c                      immediate return avoids clobbering of memory in these cases.
+c                    - In subr. reorder, where any new flight exceeding "maxflt" replaces the
+c                      previous flight at index "maxflt" in the arrays to avoid an array
+c                      overflow (done in two places in original NRL version), post diagnostic
+c                      warning message to the production joblog file (found a third instance
+c                      where this needs to be done in subr. reorder - original NRL version
+c                      did not trap it and arrays limited to length "maxflt" would have
+c                      overflowed).
+c                    - If "maxflt" is exceeded in subr. dupchk (1 place possible) or in subr.
+c                      do_flt (2 places possible), the abnormal return back to subr.
+c                      acftobs_qc results in subr. acftobs_qc now continuing on but setting a
+c                      flag for "maxflt_exceeded".  Prior to this, subr.  acftobs_qc itself
+c                      immediately performed an abnormal return back to main program in such
+c                      cases resulting in no more NRL QC processing.  Now NRL QC processing
+c                      will continue on to the end of subr. acftobs_qc where the abnormal
+c                      return back to the main program will be triggered by the
+c                      "maxflt_exceeded" flag.
+c                    - There is one, apparently rare, condition where "maxflt" could be
+c                      exceeded in subr. acft_obs itself (within logic which generates master
+c                      list of tail numbers and counts).  Since it can't be determined if
+c                      continuing on without processing (QC'ing) any more data would yield
+c                      acceptable results, the program now immediately stops with condition
+c                      code 98 and a diagnostic warning message is posted to the production
+c                      joblog file noting that "maxflt" needs to be increased.  Prior to this
+c                      it returned to the main program where it also immediately stopped with
+c                      condition code 98 (so no real change in what happens here, just where
+c                      it happens).
 c
 c Usage:
 c   Input files:
@@ -128,7 +186,8 @@ c                  tranQCflags)
 c             79 - characters on this machine are not ASCII, conversion of quality flag to
 c                  row number in subroutine tranQCflags cannot be made
 c             98 - too many flights in input PREPBUFR file, must increase size of parameter
-c                  "maxflt"
+c                  "maxflt" (in some places code continues but in this case can't be sure
+c                  continuing on w/o processing any more data would turn out ok)
 calloc        99 - unable to allocate one or more array
 c
 c   Remarks:
@@ -211,7 +270,7 @@ c ------------------------------
 
       integer    max_reps             ! maximum number of input merged (mass + wind piece)
                                       !  aircraft-type reports allowed
-      parameter (max_reps = 185000)
+      parameter (max_reps = 220000)
 
 cvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 c replace above with this in event of future switch to dynamic memory allocation
@@ -223,7 +282,7 @@ calloc                                 !  allocation should = nrpts4QC_pre)
 c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
       integer    maxflt               ! maximum number of flights allowed (inside NRL QC)
-      parameter (maxflt = 5000)
+      parameter (maxflt = 7500)
       character*6  cmaxflt            ! character form of maxflt
 
       integer    imiss                ! NRL integer missing value flag
@@ -704,7 +763,7 @@ c -------------
 
       write(*,*)
       write(*,*) '************************************************'
-      write(*,*) 'Welcome to PREPOBS_PREPACQC, version 2014-03-06 '
+      write(*,*) 'Welcome to PREPOBS_PREPACQC, version 2014-07-18 '
       call system('date')
       write(*,*) '************************************************'
       write(*,*)
@@ -1033,6 +1092,23 @@ c-------------------------------------------------------------------------------
      +                sum_xiv_d,sum_xiv_s,sumabs_xiv_t,sumabs_xiv_d,
      +                sumabs_xiv_s,l_minus9c,l_last,l_first_date,
      +                l_operational,l_pc,l_ncep,*99)
+
+      go to 34
+
+c-----------------------------------
+   99 continue  ! return 1 out of subr. acftobs_qc comes here - keep going but post message
+      print 153, maxflt,maxflt
+  153 format(/' #####> WARNING: THERE ARE MORE THAN ',I6,' AIRCRAFT ',
+     + '"FLIGHTS" IN INPUT FILE -- MUST INCREASE SIZE OF PARAMETER ',
+     +'NAME "MAXFLT" - WILL CONTINUE ON PROCESSING ONLY ',I6,' FLTS-0'/)
+      write(cmaxflt,'(i6)') maxflt
+      call system('[ -n "$jlogfile" ] && $DATA/postmsg'//
+     + ' "$jlogfile" "***WARNING:'//cmaxflt//' AIRCRAFT "FLIGHT" '//
+     + 'LIMIT EXCEEDED IN PREPOBS_PREPACQC, ONLY '//
+     + cmaxflt//' FLIGHTS PROCESSED-0"')
+c-----------------------------------
+
+   34 continue
 
       write(*,'(" After running acftobs_qc, there are ",I0," good ",
      +          "reports, ",I0," bad reports (total rpts = ",I0,")")')
@@ -1374,12 +1450,12 @@ c ------------------------------------------------------------------------------
 
         write(51,*)
         write(51,3001)
- 3001   format(173x,'! _PREPBUFR_QMs_!NRLACQC_REASON_CODE'/'index ',
-     +         'flight    tail num itype pof     lat    lon   time  ',
+ 3001   format(173x,'! _PREPBUFR_QMs_!NRLACQC_REASON_CODE'/' index ',
+     +         'flight    tail num itype pof    lat    lon   time  ',
      +         'hght   pres temp/ichk spec_h/ichk  wspd/ichk wdir/ichk',
      +         ' t-prec !__qc_flag__!_______________csort_wbad',
      +         '_______________! Pq Zq Tq Qq Wq!Prc Zrc Trc Qrc Wrc'/
-     +         '----- --------- -------- ----- ---   ----- ------ ',
+     +         '------ --------- -------- ----- ---  ----- ------ ',
      +         '------ ----- ------ --------- ----------- ----------',
      +         ' --------- ------ !-----------!',
      +         '----------------------------------------! -- -- -- ',
@@ -1409,7 +1485,7 @@ c9005       format(' WRC too large = ',i10)
           endif
 	enddo
 
- 8001 format(i5,1x,a9,1x,a8,2x,i4,3x,i1,1x,2f7.2,1x,i6,1x,i5,1x,f6.1,1x,
+ 8001 format(i6,1x,a9,1x,a8,2x,i4,3x,i1,2f7.2,1x,i6,1x,i5,1x,f6.1,1x,
      +       f6.2,i3,1x,f7.2,1x,i3,1x,f6.1,1x,i3,2x,i4,1x,i3,1x,f6.2,1x,
      +       '!',a11,'!',a40,'!',5(1x,i2.2),'!',i3.3,4(1x,i3.3))
 
@@ -1441,23 +1517,5 @@ calloc  print *, '#####PREPOBS_PREPACQC - UNABLE TO ALLOCATE ARRAYS'
 calloc  call w3tage('PREPOBS_PREPACQC')
 calloc  call errexit(99)
 c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-   99 continue  ! return 1 out of subr. acftobs_qc comes here
-C.......................................................................
-C There are more flights in input file than "maxflt" -- stop abnormally with c. code 98
-C --------------------------------------------------------------------------------------
-      print 53, maxflt
-   53 format(/' #####> WARNING: THERE ARE MORE THAN ',I6,' AIRCRAFT ',
-     + '"FLIGHTS" IN INPUT FILE -- MUST INCREASE SIZE OF PARAMETER ',
-     + 'NMAE "MAXFLT" - STOP 98'/)
-
-      write(cmaxflt,'(i6)') maxflt
-      call system('[ -n "$jlogfile" ] && $DATA/postmsg'//
-     + ' "$jlogfile" "***WARNING:'//cmaxflt//' AIRCRAFT "FLIGHT" '//
-     + 'LIMIT EXCEEDED IN PREPOBS_PREPACQC, STOP 98"')
-
-      call w3tage('PREPOBS_PREPACQC')
-      call errexit(98)
-C.......................................................................
 
       end

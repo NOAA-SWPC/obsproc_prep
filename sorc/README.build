@@ -14,6 +14,11 @@ OR:
   build.sh <some_code.fd ...>
 will do all of the above.
 
+(NOTE: If environment variable clobber is exported to this script with value
+       "clobber_no", then the make clobber step is skipped.  This may be useful
+       if one is debugging only one source code for a program with multiple
+       source codes.)
+
 To build all codes:
   build.sh
 

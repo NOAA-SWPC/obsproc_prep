@@ -6,7 +6,7 @@
 # Script name:         prepobs_makeprepbufr.sh
 # Script description:  Prepares & quality controls PREPBUFR file
 #
-# Author:        Keyser/Melchior    Org: NP22         Date: 2014-02-25
+# Author:        Keyser             Org: NP22         Date: 2014-07-23
 #
 # Abstract: This script creates the PREPBUFR file containing observational data
 #   assimilated by all versions of NCEP analyses.  It points to BUFR
@@ -190,6 +190,11 @@
 #      (both were exported from job scripts with same value, $EXECUTIL has now
 #      been removed from all job scripts).  Removed all references to "cdc"
 #      network (this is obsolete).
+# 2014-07-23  D.A. Keyser -- Imported script environment variable DICTPREP now
+#      defaults to new vertical structure directory path location for metar.tbl
+#      dictionary, /nw${envir}/decoders/decod_shared/dictionaries, rather than
+#      old horizontal structure location, /nw${envir}/dictionaries (the latter
+#      will be removed in September 2014).
 #     
 #
 # Usage:  prepobs_makeprepbufr.sh yyyymmddhh
@@ -340,7 +345,7 @@
 #                   Default is "${HOMEobsproc_prep}/fix"
 #     DICTPREP      String indicating directory path for PREPOBS dictionary
 #                   files
-#                   Default is "/nw${envir}/dictionaries"
+#                   Default is "/nw${envir}/decoders/decod_shared/dictionaries"
 #     EXECSYND      String indicating directory path for SYNTHETIC data
 #                   executables
 #                   Default is "${HOMEobsproc_prep}/exec"
@@ -852,7 +857,7 @@ USHOIQC=${USHOIQC:-${HOMEobsproc_prep}/ush}
 EXECPREP=${EXECPREP:-${HOMEobsproc_prep}/exec}
 PARMPREP=${PARMPREP:-${HOMEobsproc_network}/parm}
 FIXPREP=${FIXPREP:-${HOMEobsproc_prep}/fix}
-DICTPREP=${DICTPREP:-/nw${envir}/dictionaries}
+DICTPREP=${DICTPREP:-/nw${envir}/decoders/decod_shared/dictionaries}
 
 EXECSYND=${EXECSYND:-${HOMEobsproc_prep}/exec}
 PARMSYND=${PARMSYND:-${HOMEobsproc_network}/parm}

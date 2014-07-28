@@ -1,4 +1,198 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+obsproc_prep release 3.1.0 --> released July 23, 2014
+
+files:
+  obsproc_prep/fix/prepobs_cqc_statbge
+  obsproc_prep/fix/prepobs_landc
+  obsproc_prep/fix/prepobs_prep.bufrtable
+  obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
+  obsproc_prep/fix/syndat_weight
+  obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
+  obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
+  obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
+  obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
+  obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
+  obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
+  obsproc_prep/sorc/prepobs_listheaders.fd/makefile
+  obsproc_prep/sorc/prepobs_monoprepbufr.fd/makefile
+  obsproc_prep/sorc/prepobs_monoprepbufr.fd/monoprepbufr.f90
+  obsproc_prep/sorc/prepobs_mpcopybufr.fd/makefile
+  obsproc_prep/sorc/prepobs_mpcopybufr.fd/mpcopybufr.f90
+  obsproc_prep/sorc/prepobs_oiqcbufr.fd/makefile
+  obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
+  obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
+  obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
+ *obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
+  obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
+  obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
+  obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
+  obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
+  obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
+ *obsproc_prep/sorc/prepobs_prepacqc.fd/prepacqc.f
+  obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_mer.f
+  obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
+  obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
+  obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/makefile
+  obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/w3tovseds.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/w3tovsmnd.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
+  obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
+  obsproc_prep/sorc/prepobs_prevents.fd/makefile
+  obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
+  obsproc_prep/sorc/prepobs_profcqc.fd/makefile
+  obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
+  obsproc_prep/sorc/syndat_syndata.fd/makefile
+  obsproc_prep/sorc/syndat_syndata.fd/syndata.f
+ *obsproc_prep/sorc/build.sh
+  obsproc_prep/sorc/clean.sh
+  obsproc_prep/sorc/install.sh
+  obsproc_prep/sorc/load_libs.rc
+ *obsproc_prep/sorc/README.build
+  obsproc_prep/sorc/setlibs.rc
+  obsproc_prep/ush/prepobs_cqcbufr.sh
+  obsproc_prep/ush/prepobs_cqcvad.sh
+ *obsproc_prep/ush/prepobs_makeprepbufr.sh
+  obsproc_prep/ush/prepobs_oiqcbufr.sh
+  obsproc_prep/ush/prepobs_prepacqc.sh
+  obsproc_prep/ush/prepobs_prevents.sh
+  obsproc_prep/ush/prepobs_profcqc.sh
+  obsproc_prep/ush/prepobs_syndata.sh
+
+( * - changed)
+
+
+ USH script changes:
+   prepobs_makeprepbufr.sh:
+    - Imported script environment variable DICTPREP now defaults to new
+      vertical structure directory path location for metar.tbl dictionary,
+      /nw${envir}/decoders/decod_shared/dictionaries, rather than old
+      horizontal structure location, /nw${envir}/dictionaries (the latter will
+      be removed in September 2014).
+
+
+ Source code changes:
+   build.sh in sorc directory:
+    - If environment variable $clobber is exported to this script with value
+      "clobber_no", then the "make clobber" step is skipped. If $clobber not
+      imported, "make clobber" will proceed as before.
+      BENEFIT: This may be useful if one is debugging only one source code
+               within a program with multiple source codes.
+   README.build in sorc directory:
+    - Updated to reflect changes in build.sh (see above).
+   prepobs_prepacqc:
+      prepacqc (main program):
+       - Increased maximum number of flights that can be processed "maxflt"
+         from 5000 to 7500.
+         BENEFIT: Accounts for a gradual increase in aircraft reports over
+                  recent months.  A recent production failure occurred when
+                  there were 5002 flights.
+       - Increased maximum number of merged reports that can be processed
+         "max_reps" from 185K to 220K.
+         BENEFIT: The number of merged reports currently processed routinely
+                  exceeds 90% of 185K, so it is getting close to the limit.
+                  More and more reports are expected in the future.
+       - If subroutine acftobs_qc returns abnormally to main program due to the
+         maximum value for number of flights calculated at some point during
+         its processing exceeding "maxflt", program will no longer stop with
+         r.c. 98.  Instead it will continue on with processing and post a
+         diagnostic warning message to the production joblog file.
+         BENEFIT: Program will no longer fail, but notification will be made
+                  that "maxflt" needs to be increased a.s.a.p.  The vast
+                  majority of output aircraft obs will still be QC'd (and maybe
+                  even all will be QC'd if the number of flights barely exceeds
+                  "maxflt").  All reports originally in the PREPBUFR file will
+                  always be retained.  (Note that a gradual increase in the
+                  number of flights will now eventually trigger a warning in
+                  the production joblog when it get too close to "maxflt" - see
+                  change to subroutine acftobs_qc below).
+       - Increased format width from I5 to I6 in all places where aircraft obs
+         index is listed out.
+         BENEFIT: There are now > 99999 reports processed in most runs.  This
+                  change will eliminate format integer overflow.
+      acftobs_qc (subroutine) and its child subroutines:
+       - Keeps track of maximum value for number of flights calculated at some
+         point during processing.  If, at the end of processing, this value is
+         at least 90% of the allowed limit ("maxflt", set in the main program),
+         posts a diagnostic warning message to the production joblog file prior
+         to exiting back to main program.
+         BENEFIT: Provides a warning that "maxflt" is close to being hit and
+                  that it should be increased in value before this happens.
+                  There should be a sufficient time period of warning if the
+                  number of reports is gradually increasing.
+       - In subroutines do_flt and do_reg, return (abnormally) immediately if
+         "maxflt" is exceeded [rather than waiting to test for this at end of
+         do_flt and do_reg, and then returning (abnormally) as before].
+         BENEFIT:  Avoids the potential clobbering of memory in these cases.
+       - In subroutine reorder, where any new flight exceeding "maxflt"
+         replaces the previous flight at index "maxflt" in the arrays to avoid
+         an array overflow (done in two places in original NRL version), now
+         posts a diagnostic warning message to the production joblog file.
+         BENEFIT: Provides a warning that "maxflt" is exceeded here and that
+                  some flights may contain reports not fully QC'd.
+          - Related to above, found a third instance where this needs to be
+            done in subr. reorder.
+            BENEFIT: The original NRL version did not trap it and arrays
+                     limited to length "maxflt" would have overflowed).
+       - If "maxflt" is exceeded in subr. dupchk (1 place possible) or in subr.
+         do_flt (2 places possible), the abnormal return back to
+         subr. acftobs_qc results in subr. acftobs_qc now continuing on but
+         setting a flag for "maxflt_exceeded".  Prior to this, subr.
+         acftobs_qc itself immediately performed an abnormal return back to
+         main program in such cases resulting in no more NRL QC processing.
+         BENEFIT: NRL QC processing will continue on to the end of subr.
+                  acftobs_qc where the abnormal return back to the main program
+                  will be triggered by the "maxflt_exceeded" flag.  This should
+                  allow nearly full QC to still be performed in this situation.
+
+
+ Output changes:
+ ---------------
+   No changes.
+
+
+ Compute Resource Information:
+ -----------------------------
+   All source codes:
+    - continue to link to version 2.0.6 of w3nco library
+    - continue to link to version 10.2.5 of bufr library
+   Source codes prepobs_cqcbufr, prepobs_prepacpf, prepobs_prepacqc,
+   prepobs_prepdata, prepobs_prevents, syndat_syndata:
+    - continue to link to version 2.2.0 of w3emc library
+   Source codes prepobs_prepdata, prepobs_prevents, syndat_syndata
+    - continue to link to version 2.0.1 of bacio library
+    - continue to link to version 2.0.1 of sp library
+    - continue to link to version 1.0.1 of sigio library
+
+
+ Preimplementation Testing Requirements:
+ ---------------------------------------
+   There are no jobs in obsproc_prep.  Jobs executing this version of
+   obsproc_prep will be tested.  This is an accelerated change.
+
+
+ Dissemination:
+ --------------
+   See information about dissemination in the latest release notes for
+   obsproc_<NETWORK> packages which execute this version of obsproc_prep.
+
+
+ Special Instructions:
+ ---------------------
+   This must be implemented simultaneously with the implementations of
+   obsproc_global.v2.0.1, obsproc_nam.v2.0.2, obsproc_rap.v2.0.1,
+   obsproc_rtma.v2.0.1 and obsproc_urma.v2.0.1.
+
+   Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
+   needed.
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 obsproc_prep release 3.0.0 --> released May 5, 2014
 
 Initial population of vertical structure.
@@ -412,7 +606,7 @@ files:
 
  Dissemination:
  --------------
-   See information about dissemination in the release notes for
+   See information about dissemination in the latest release notes for
    obsproc_<NETWORK> packages which execute this version of obsproc_prep.
 
 
