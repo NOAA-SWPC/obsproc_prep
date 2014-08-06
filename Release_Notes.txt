@@ -182,7 +182,7 @@ files:
    needed.
 
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-obsproc_prep release 3.1.0 --> released July 23, 2014
+obsproc_prep release 3.1.0 --> released July 23, 2014, updated August 5, 2014
 
 files:
   obsproc_prep/fix/prepobs_cqc_statbge
@@ -357,7 +357,7 @@ files:
  Preimplementation Testing Requirements:
  ---------------------------------------
    There are no jobs in obsproc_prep.  Jobs executing this version of
-   obsproc_prep will be tested.  This is an accelerated change.
+   obsproc_prep will be tested.
 
 
  Dissemination:
@@ -369,8 +369,9 @@ files:
  Special Instructions:
  ---------------------
    This must be implemented simultaneously with the implementations of
-   obsproc_global.v2.0.1, obsproc_nam.v2.0.2, obsproc_rap.v2.0.1,
-   obsproc_rtma.v2.0.1 and obsproc_urma.v2.0.1.
+   obsproc_global.v2.0.1, obsproc_nam.v2.0.1, obsproc_rap.v2.0.1,
+   obsproc_rtma.v2.0.1 and obsproc_urma.v2.0.1, and simultaneously with the
+   implementation of the FY14Q3 NAM Upgrade bundle (v3.1.0).
 
    Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
    needed.
