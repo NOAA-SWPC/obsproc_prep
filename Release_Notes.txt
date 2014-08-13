@@ -114,6 +114,7 @@ files:
          direction or speed is missing.
          BENEFIT: This changes populates DFR in cases where it was always
                    missing before.
+       - Added logic to reset longitude to 0.0 when it is very close to 360.0.
 
  Fixed file changes:
    prepobs_prep.bufrtable (all related to changes in prepdata above):

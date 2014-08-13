@@ -18075,6 +18075,9 @@ C  TIME, INDICATOR FOR CORRECTED OBSERVATION TIME, SATELLITE ID
 C  (SATELLITE DATA TYPES ONLY), PROCESS NUMBER FOR THIS MPI RUN, {"HDR"
 C  WORDS 2-29 (NOTE: SOME WORDS HERE ARE SKIPPED)}
       HDR(2) = HHDR(2)
+      IF(NINT(HDR(2)*100).EQ.36000) HDR(2) = 0.0 !change this if XOB
+                                                 !precision ever 
+                                                 !changes in BUFR table
       HDR(3) = HHDR(3)
       HDR(4) = HHDR(4)
       IF(SUBSET.EQ.'SATWND  ')  THEN
