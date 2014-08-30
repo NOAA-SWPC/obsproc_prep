@@ -1744,6 +1744,11 @@ C       number of times (NTIMES), and the number of increments (NINC).
 C       Increased NRPT (total number of levels amongst all VAD reports
 C       that can be processed) from 160000 to 500000 to accommodate
 C       VAD wind reports from Level 2 decoder.
+C 2014-08-29  S. Melchior  Extended MSK, UW, and VW array allocations
+C       from 1000 to 3600 (NSTN*NTIMES*NINC) to allow for a complete
+C       set of station statistics to be processed.  On occasion the
+C       1000 limit had been met and exceeded, losing out on station
+C       statistics.
 C
 C USAGE:    CALL INCDIST
 C
@@ -1776,13 +1781,13 @@ C$$$
       COMMON /DATET/  IDATE(4), ITIM(6)
 
       CHARACTER*8 SIDS, STNID
-      COMMON /STATS/  UW(1000),VW(1000),XM(NLEV,2),SD(NLEV,2),XLIM(2)
+      COMMON /STATS/  UW(3600),VW(3600),XM(NLEV,2),SD(NLEV,2),XLIM(2)
       COMMON /DMATYP/ IQC(NLEV,NTIMES,NINC,NSTN)
       REAL        UWS(60,NSTN),VWS(60,NSTN)
       REAL        XMS(NLEV,2,NSTN),SDS(NLEV,2,NSTN)
 
       INTEGER     NMS(NDIV,NLEV,2,NSTN),NCS(NLEV,2,NSTN),ICNTS(NSTN)
-      INTEGER     NM(NDIV,NLEV,2),MSK(1000),NC(NLEV,2),icntmx
+      INTEGER     NM(NDIV,NLEV,2),MSK(3600),NC(NLEV,2),icntmx
       LOGICAL BYSTN
       BYSTN = .TRUE.
       DATA XMSG /99999./
@@ -1802,7 +1807,7 @@ C  ------------------------
         UWS = 0.
         VWS = 0.
         LOOP1n1: DO IS=1,NST !  nst max is nstn
-          DO IT=1,NTIMES
+          DO IT=1,NTIMES ! ntimes max is 6
             IF(NIN(L,IT,IS).GT.0) THEN
               DO N=1,NIN(L,IT,IS) !  nin(L,IT,IS) max is 3
                 IF(IQC(L,IT,N,IS).EQ.0) THEN
@@ -2369,7 +2374,7 @@ C$$$
       COMMON /EVENTS/ SIDEV(nevnt), HTEV(nevnt),LEV(nevnt),
      &                TIMEV(nevnt), UEV(nevnt), VEV(nevnt),
      &                QALEV(nevnt), RCEV(nevnt)
-      COMMON /STATS/  UW(1000),VW(1000),XM(NLEV,2),SD(NLEV,2),XLIM(2)
+      COMMON /STATS/  UW(3600),VW(3600),XM(NLEV,2),SD(NLEV,2),XLIM(2)
       COMMON /STN/    SLAT(NSTN), SLON(NSTN), SIDS(NSTN), STNID(NRPT),
      &                ZSTN(NSTN)
       COMMON /COLECT/ LS(NSTN,NLEV,NINC), JS(NSTN,NLEV,NINC),
@@ -2644,6 +2649,11 @@ C 2014-01-15  S. Melchior Added integer "icntmx" to define the max
 C       value of icnt in the multi-nested do loop that hinges on the
 C       number of levels (NLEV), the number of stations (NST), the
 C       number of times (NTIMES), and the number of increments (NINC).
+C 2014-08-29  S. Melchior  Extended MSK, UW, and VW array allocations
+C       from 1000 to 3600 (NSTN*NTIMES*NINC) to allow for a complete 
+C       set of station statistics to be processed.  On occasion the
+C       1000 limit had been met and exceeded, losing out on station 
+C       statistics.
 C
 C USAGE:    CALL RESDIST
 C
@@ -2675,8 +2685,8 @@ C$$$
       COMMON /HTS/    IZLEV(NLEV), ZLEV(NLEV)
       COMMON /DATET/  IDATE(4), ITIM(6)
       COMMON /DMATYP/ IQC(NLEV,NTIMES,NINC,NSTN)
-      REAL        UW(1000),VW(1000),XM(NLEV,2),SD(NLEV,2),XLIM(2)
-      INTEGER     NM(NDIV,NLEV,2),MSK(1000),NC(NLEV,2),icntmx
+      REAL        UW(3600),VW(3600),XM(NLEV,2),SD(NLEV,2),XLIM(2)
+      INTEGER     NM(NDIV,NLEV,2),MSK(3600),NC(NLEV,2),icntmx
       DATA XLIM /-5.,5./, XMSG /99999./
 
       MSK = 0

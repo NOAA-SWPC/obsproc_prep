@@ -1,5 +1,5 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-obsproc_prep release X.Y.Z --> released xxx xx, xxxx
+obsproc_prep release 3.2.0 --> released Sep xx, 2014
 
 files:
   obsproc_prep/fix/prepobs_cqc_statbge
@@ -10,7 +10,7 @@ files:
   obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
   obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
   obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
-  obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
+ *obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
   obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
   obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
   obsproc_prep/sorc/prepobs_listheaders.fd/makefile
@@ -113,8 +113,14 @@ files:
          when, for surface reports, UOB and VOB are not encoded because either
          direction or speed is missing.
          BENEFIT: This changes populates DFR in cases where it was always
-                   missing before.
+                  missing before.
        - Added logic to reset longitude to 0.0 when it is very close to 360.0.
+   prepobs_cqcvad:
+      cqcvad:
+       - Adjusted size of UW, VW, and MSK arrays from 1000 to 3600 to 
+         accommodate maximum potential size.
+         BENEFIT:  This will eliminate array out of bounds situations
+                   that can cause the program to exit prematurely.
 
  Fixed file changes:
    prepobs_prep.bufrtable (all related to changes in prepdata above):
