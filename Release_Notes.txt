@@ -1,5 +1,5 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-obsproc_prep release 3.2.0 --> released Sep xx, 2014
+obsproc_prep release 3.2.0 --> released xxx xx, xxxx
 
 files:
   obsproc_prep/fix/prepobs_cqc_statbge
@@ -53,9 +53,9 @@ files:
   obsproc_prep/sorc/build.sh
   obsproc_prep/sorc/clean.sh
   obsproc_prep/sorc/install.sh
-  obsproc_prep/sorc/load_libs.rc
+ *obsproc_prep/sorc/load_libs.rc
   obsproc_prep/sorc/README.build
-  obsproc_prep/sorc/setlibs.rc
+ *obsproc_prep/sorc/setlibs.rc
   obsproc_prep/ush/prepobs_cqcbufr.sh
   obsproc_prep/ush/prepobs_cqcvad.sh
   obsproc_prep/ush/prepobs_makeprepbufr.sh
@@ -68,17 +68,14 @@ files:
 ( * - changed)
 
 
- USH script changes:
-?? ????????????????????.sh:
-??  - ...
-      
  Source code changes:
-?? prepobs_prepdata, prepobs_prevents, syndat_syndata:
-??    gblevents (in w3emc library - version X.Y.Z):
-??     - ...
-??       BENEFIT: ...
-??     - In subroutine ..., ...
-??       BENEFIT: ...
+   load_libs.rc and setlibs.rc in sorc directory:
+    - Increment the sp version from v2.0.1 to v2.0.2 to link to the newest
+      operational version of this library.
+   load_libs.rc in sorc directory:
+    - remove "module use -a /nwprod/lib/modulefiles" and
+             "module avail"
+      BENEFIT: No longer needed and can slow down compilation.
    prepobs_prepdata:
       prepdata:
        - Added encoding of wind direction/speed quality mark (DFQ) for all
@@ -115,12 +112,16 @@ files:
          BENEFIT: This changes populates DFR in cases where it was always
                   missing before.
        - Added logic to reset longitude to 0.0 when it is very close to 360.0.
+         BENEFIT:  This ensures that array clobbering will not occur if a
+                   report (with high precision native lat/lon) is right at
+                   Prime Meridian.
    prepobs_cqcvad:
       cqcvad:
-       - Adjusted size of UW, VW, and MSK arrays from 1000 to 3600 to 
+       - Adjusted size of UW, VW, and MSK arrays from 1000 to 3600 to
          accommodate maximum potential size.
          BENEFIT:  This will eliminate array out of bounds situations
                    that can cause the program to exit prematurely.
+
 
  Fixed file changes:
    prepobs_prep.bufrtable (all related to changes in prepdata above):
@@ -157,11 +158,11 @@ files:
     - continue to link to version 10.2.5 of bufr library
    Source codes prepobs_cqcbufr, prepobs_prepacpf, prepobs_prepacqc,
    prepobs_prepdata, prepobs_prevents, syndat_syndata:
-??  - now links to version X.Y.Z of w3emc library (previously linked to
-??    version 2.2.0)
+    - continue to link to version 2.2.0 of w3emc library
    Source codes prepobs_prepdata, prepobs_prevents, syndat_syndata
     - continue to link to version 2.0.1 of bacio library
-    - continue to link to version 2.0.1 of sp library
+    - now links to version 2.0.2 of sp library (previously linked to
+      version 2.0.1)
     - continue to link to version 1.0.1 of sigio library
 
 
@@ -182,14 +183,12 @@ files:
    This must be implemented simultaneously with the implementations of
    ...
 
-?? This must also be implemented simultaneously with or immediately after the
-   w3emc_vX.Y.Z implementation.
-
    Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
    needed.
 
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-obsproc_prep release 3.1.0 --> released July 23, 2014, updated August 5, 2014
+obsproc_prep release 3.1.0 --> released Jul 23, 2014, updated Aug 5, 2014
+                           --> implemented Aug 12, 2014
 
 files:
   obsproc_prep/fix/prepobs_cqc_statbge
@@ -385,6 +384,7 @@ files:
 
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 obsproc_prep release 3.0.0 --> released May 5, 2014
+                           --> implemented Jun 24, 2014
 
 Initial population of vertical structure.
 

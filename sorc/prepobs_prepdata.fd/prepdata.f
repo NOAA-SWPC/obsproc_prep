@@ -1097,6 +1097,10 @@ C     it is non-missing, in both cases when "UOB" and "VOB" are encoded
 C     (then "DFR" same as "WRC") and cases when, for surface reports,
 C     "UOB" and "VOB" are not encoded because either dir or speed is
 C     missing.  Prior to this, "DFR" was always missing in either case.
+C 2014-07-10  S. Melchior  -- Added logic in subr. FIZZ01 to reset
+C     longitude to 0.0 when it is very close to 360.0. This ensures
+C     that array clobbering will not occur if a report (with high
+C     precision native lat/lon) is right at Prime Meridian.
 C
 C USAGE:
 C   INPUT FILES:
@@ -17968,6 +17972,10 @@ C     it is non-missing, in both cases when "UOB" and "VOB" are encoded
 C     (then "DFR" same as "WRC") and cases when, for surface reports,
 C     "UOB" and "VOB" are not encoded because either dir or speed is
 C     missing.  Prior to this, "DFR" was always missing in either case.
+C 2014-07-10  S. Melchior  -- Added logic to reset longitude to 0.0
+C     when it is very close to 360.0. This ensures that array
+C     clobbering will not occur if a report (with high precision
+C     native lat/lon) is right at Prime Meridian.
 C
 C USAGE:    CALL FIZZ01(KI,NI,JI,SUBSET,SINGLE)
 C   INPUT ARGUMENT LIST:
