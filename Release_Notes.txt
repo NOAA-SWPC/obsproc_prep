@@ -24,11 +24,11 @@ files:
   obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
   obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
   obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
+ *obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
   obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
   obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
   obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/prepacqc.f
+ *obsproc_prep/sorc/prepobs_prepacqc.fd/prepacqc.f
   obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_mer.f
   obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
   obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
@@ -60,13 +60,26 @@ files:
   obsproc_prep/ush/prepobs_cqcvad.sh
   obsproc_prep/ush/prepobs_makeprepbufr.sh
   obsproc_prep/ush/prepobs_oiqcbufr.sh
-  obsproc_prep/ush/prepobs_prepacqc.sh
+ *obsproc_prep/ush/prepobs_prepacqc.sh
   obsproc_prep/ush/prepobs_prevents.sh
   obsproc_prep/ush/prepobs_profcqc.sh
   obsproc_prep/ush/prepobs_syndata.sh
 
 ( * - changed)
 
+
+ USH script changes:
+   prepobs_prepacqc.sh
+    - If status code returned from running of prepobs_prepacqc is 4 (meaning no
+      input aircraft reports of any type read in, see below), send a diagnostic
+      message to the joblog file.  Also in this case, retain the original input
+      PREPBUFR file as the working PREPBUFR file coming out of this script
+      (since no changes are made to it).  Also in this case, do not run
+      prepobs_prepacpf regardless of whether or not it was set to run in the
+      upstream job script.
+      BENEFIT: Notification when prepobs_prepacqc program stops because there
+               were no aircraft reports in the input PREPBUFR file.  Overall
+               PREPBUFR processing continues.
 
  Source code changes:
    load_libs.rc and setlibs.rc in sorc directory:
@@ -121,7 +134,23 @@ files:
          accommodate maximum potential size.
          BENEFIT:  This will eliminate array out of bounds situations
                    that can cause the program to exit prematurely.
-
+   prepobs_prepacqc:
+      prepacqc (main program), input_acqc:
+       - If no aircraft reports of any type are read from input PREPBUFR file
+         by subroutine input_acqc, no further processing is performed in this
+         subroutine other than the usual stdout print summary at its end.
+         After its return back to the calling main program (prepacqc), the main
+         program also, in this case, does no further processing.  Instead
+         prepacqc stops with condition code 4 (to alert executing ush script
+         prepobs_prepacqc.sh, see above) after printing a diagnostic message to
+         stdout.
+      BENEFIT: If there are no aircraft reports of any type in the input
+               PREPBUFR file, this program will now stop with a non-fatal
+               condition code 4 after printing diagnostic messages to stdout
+               and to the (production) joblog file.  PREPBUFR processing will
+               continue normally from this point on.  Prior to this, this
+               program stopped with a fatal error resulting the the PREP job
+               failing.
 
  Fixed file changes:
    prepobs_prep.bufrtable (all related to changes in prepdata above):

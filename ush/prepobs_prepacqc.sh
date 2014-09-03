@@ -88,6 +88,7 @@ if [ $PROCESS_ACQC = YES ]; then
    [ -s $DATA/time ] && TIMEIT="$DATA/time -p"
    $TIMEIT $AQCX< $AQCC > outout 2> errfile
    err=$?
+   err_actual=$err
 ######cat errfile
    cat errfile >> outout
    cat outout >> prepacqc.out
@@ -100,6 +101,13 @@ if [ $PROCESS_ACQC = YES ]; then
    echo 'The foreground exit status for PREPOBS_PREPACQC is ' $err
    echo
    set -x
+   if [ $err -eq 4 ]; then
+      msg="PREPBUFR DATA SET CONTAINS NO "AIRCAR" OR "AIRCFT" TABLE A MESSAGES  --> non-fatal"
+set +u
+      [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+set -u
+      err=0
+   fi
    if [ -s $DATA/err_chk ]; then
       $DATA/err_chk
    else
@@ -113,6 +121,8 @@ if [ $PROCESS_ACQC = YES ]; then
 
    if [ "$err" -gt '0' ]; then
       exit 9
+   elif [ "$err_actual" -gt '0' ]; then
+      PROCESS_ACPF=NO
    else
      [ ! -f $PRPI.prepacqc ] && touch $PRPI.prepacqc
       mv $PRPI.prepacqc $PRPI

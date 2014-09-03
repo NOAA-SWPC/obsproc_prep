@@ -2,7 +2,7 @@ c$$$ Main Program Documentation Block
 c   BEST VIEWED WITH 94-CHARACTER WIDTH WINDOW
 c
 c Main Program: PREPOBS_PREPACQC
-c   Programmer: D. Keyser       Org: NP22       Date: 2014-07-18
+c   Programmer: D. Keyser       Org: NP22       Date: 2014-09-03
 c
 c Abstract: Performs the NRL aircraft data quality control on all types of reports (AIREP,
 c   PIREP, AMDAR, TAMDAR, MDCRS).  Replaces the previous routine of the same name originally
@@ -125,6 +125,13 @@ c                      joblog file noting that "maxflt" needs to be increased.  
 c                      it returned to the main program where it also immediately stopped with
 c                      condition code 98 (so no real change in what happens here, just where
 c                      it happens).
+c 2014-09-03  D. Keyser  -- If no aircraft reports of any type are read from input PREPBUFR
+c                      file by subr. input_acqc, no further processing is performed in this
+c                      subr. other than the usual stdout print summary at its end.  After its
+c                      return back to the calling main program, the main program also, in
+c                      this case, does no further processing.  Instead the main program stops
+c                      with condition code 4 (to alert executing script prepobs_prepacqc.sh)
+c                      after printing a diagnostic message to stdout.
 c
 c Usage:
 c   Input files:
@@ -171,6 +178,7 @@ c                - OPENBF     CLOSBF     UFBQCD     SETBMISS   GETBMISS
 c                
 c   Exit states:
 c     Cond =   0 - successful run
+c              4 - no aircraft reports of any type read in
 c             21 - input BUFR file found, but unable to open it mass and wind pieces in
 c                  original PREPBUFR file (subroutine input_acqc)
 calloc        23 - unexpected return code from readns; problems reading BUFR file
@@ -759,11 +767,11 @@ c ******************************************************************************
 
 c Start program
 c -------------
-      call w3tagb('PREPOBS_PREPACQC',2014,065,1927,'NP20')
+      call w3tagb('PREPOBS_PREPACQC',2014,246,1927,'NP20')
 
       write(*,*)
       write(*,*) '************************************************'
-      write(*,*) 'Welcome to PREPOBS_PREPACQC, version 2014-07-18 '
+      write(*,*) 'Welcome to PREPOBS_PREPACQC, version 2014-09-03 '
       call system('date')
       write(*,*) '************************************************'
       write(*,*)
@@ -1057,6 +1065,8 @@ c -------------------------
       write(*,'(" There are ",I0," merged reports for acftobs_qc (NRL ",
      +          "aircraft data QC routine).")') nrpts4QC_pre
       write(*,*)
+
+      if(nrpts4QC_pre.gt.0) then
 
 c Now that we are done reading in data from the input PREPBUFR file, need to call acftobs_qc
 c  (actual NRL aircraft QC code)
@@ -1505,6 +1515,18 @@ c -----------
       write(*,*) '**************************'
       write(*,*)
       call w3tage('PREPOBS_PREPACQC')
+
+      else  ! nrpts4QC_pre.le.0
+
+c Input PREPBUFR file contains NO aircraft data of any kind -- STOP 4
+c -------------------------------------------------------------------
+
+         WRITE(6,108)
+  108 FORMAT(/' INPUT PREPBUFR FILE CONTAINS NO "AIRCAR" OR "AIRCFT" ',
+     $ 'MESSAGES WITH REPORTS - STOP 4'/)
+         CALL ERREXIT(4)
+
+      endif ! nrpts4QC_pre.gt.0
 
       stop
 

@@ -2,7 +2,7 @@ c$$$  Subprogram Documentation Blocko
 c   BEST VIEWED WITH 94-CHARACTER WIDTH WINDOW
 c
 c Subprogram: input_acqc
-c   Programmer: D. Keyser       Org: NP22       Date: 2013-02-07
+c   Programmer: D. Keyser       Org: NP22       Date: 2014-09-03
 c
 c Abstract: Reads aircraft reports (mass and wind pieces) out of the input PREPBUFR file (in
 c   message types 'AIRCAR' and 'AIRCFT') and stores merged (mass and wind) data into memory
@@ -38,6 +38,9 @@ c                           least 90% of maximum allowed, print diagnostic warni
 c                           to production joblog file prior to returning from this subroutine
 c 2013-02-07  D. Keyser  -- Final changes to run on WCOSS: use formatted print statements
 c                           where previously unformatted print was > 80 characters
+c 2014-09-03  D. Keyser  -- If no aircraft reports of any type are read from input PREPBUFR
+c                           file, no further processing is performed other than the usual
+c                           stdout print summary at the end.
 c
 c Usage: call input_acqc(inlun,max_reps,mxnmev,bmiss,imiss,amiss,
 c                        m2ft,mxlv,nrpts4QC,cdtg_an,alat,alon,ht_ft,
@@ -1551,6 +1554,8 @@ c ---------------------------------------------------------------------
       print *, '---> DONE READING FROM THIS FILE!!!'
       print *, '---> nrpts_rd = ', nrpts_rd
 
+      if(nrpts_rd.gt.0) then
+
 c Determine ITYPE, C_DTG, etc.
 c ----------------------------
       do i=1,nrpts4QC
@@ -1844,6 +1849,7 @@ c DAK: this could be coded up more eficiently!
 
         enddo ! over j
       enddo ! over i
+      endif ! nrpts_rd.gt.0
 
 c Output counts
 c -------------
