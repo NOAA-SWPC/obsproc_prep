@@ -49,7 +49,7 @@ files:
   obsproc_prep/sorc/prepobs_profcqc.fd/makefile
   obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
   obsproc_prep/sorc/syndat_syndata.fd/makefile
-  obsproc_prep/sorc/syndat_syndata.fd/syndata.f
+ *obsproc_prep/sorc/syndat_syndata.fd/syndata.f
   obsproc_prep/sorc/build.sh
   obsproc_prep/sorc/clean.sh
   obsproc_prep/sorc/install.sh
@@ -129,11 +129,10 @@ files:
                    report (with high precision native lat/lon) is right at
                    Prime Meridian.
    prepobs_cqcvad:
-      cqcvad:
-       - Adjusted size of UW, VW, and MSK arrays from 1000 to 3600 to
-         accommodate maximum potential size.
-         BENEFIT:  This will eliminate array out of bounds situations
-                   that can cause the program to exit prematurely.
+    - Adjusted size of UW, VW, and MSK arrays from 1000 to 3600 to accommodate
+      maximum potential size.
+      BENEFIT:  This will eliminate array out of bounds situations that can
+                cause the program to exit prematurely.
    prepobs_prepacqc:
       prepacqc (main program), input_acqc:
        - If no aircraft reports of any type are read from input PREPBUFR file
@@ -151,6 +150,17 @@ files:
                continue normally from this point on.  Prior to this, this
                program stopped with a fatal error resulting the the PREP job
                failing.
+   syndat_syndata:
+    - Changes made in entry VWNCOM to prevent array overflow in 2nd element of
+      variable AXIWND when Mathur 2-D Vortex Routine is run.  (Note: This had
+      occurred only when debugging was turned on at run time, which it still is
+      in production.)
+      BENEFIT:  The code now runs to completion and generates bogus winds
+                rather than stopping abnormally with condition code 152. The
+                changes made here are "brute force" and may not be the ultimate
+                best solution but they do yield the same output bogus winds (in
+                one case checked) as when no changes were made but the code is
+                run with debugging turned off.
 
  Fixed file changes:
    prepobs_prep.bufrtable (all related to changes in prepdata above):

@@ -1,7 +1,7 @@
 C$$$  MAIN PROGRAM DOCUMENTATION BLOCK
 C
 C MAIN PROGRAM: SYNDAT_SYNDATA
-C   PRGMMR: KEYSER           ORG: NP22        DATE: 2013-03-26
+C   PRGMMR: KEYSER           ORG: NP22        DATE: 2014-09-05
 C
 C ABSTRACT: PERFORMS FOUR DISTINCT FUNCTIONS.  THE FIRST IS TO
 C   GENERATE TYPE 110/210 TROPICAL CYCLONE BOGUS REPORTS IN THE
@@ -130,16 +130,24 @@ C        NOT (BEFORE NEITHER WOULD BE GENERATED IF DO_BOGUS=NO); FIXED
 C        STDOUT PRINT ERROR IN SUBR. EDTPRP FOR LIMITING RADIUS
 C        OVERWHICH DROPSONDE REPORTS WILL HAVE WIND QM'S FLAGGED
 C 2012-11-20  J. WOOLLEN   - INITIAL PORT TO WCOSS - FIXED A NUMBER OF
-c        PROBLEMS IDENTIFIED BY THE INTEL COMPILER MAINLY TO DO WITH
+C        PROBLEMS IDENTIFIED BY THE INTEL COMPILER MAINLY TO DO WITH
 C        LOCAL VARIABLE USE WITHIN SUBROUTINE ENTRY POINTS
 C 2013-03-26  D. A. KEYSER - FINAL CHANGES TO RUN ON WCOSS: ADDED CALL
 C        TO BUFRLIB ROUTINE SETBMISS(10E08_8) TO RESET BMISS TO A VALUE
 C        (10E08_8) WHICH WILL NOT CAUSE INTEGER OVERFLOW WHICH CAN BE
 C        UNPREDICTABLE (PRIOR BMISS VALUE WAS 10E10_8); REPLACED GETENV
 C        WITH MORE STANDARD GET_ENVIRONMENT_VARIABLE; USE FORMATTED
-c        PRINT STATEMENTS WHERE PREVIOUSLY UNFORMATTED PRINT WAS > 80
+C        PRINT STATEMENTS WHERE PREVIOUSLY UNFORMATTED PRINT WAS > 80
 C        CHARACTERS; REPLACED FORMATTED ARRAY SUBROUTINE ARGUMENTS WITH
 C        VARIABLES
+C 2014-09-05  D. A. KEYSER - CHANGES MADE IN ENTRY VWNCOM TO PREVENT
+C        ARRAY OVERFLOW IN 2ND ELEMENT OF AXIWND WHEN ENTRY IS CALLED
+C        OUT OF SUBROUTINE MM2DVO WHERE NCMPVO IS PASSED IN WITH VALUE
+C        OF 1 AND DEBUGGING IS TURNED ON AT RUN TIME (NOTE: MAY NOT BE
+C        CORRECT SOLUTION BUT YIELDS SAME OUTPUT BOGUS WINDS AS WHEN
+C        THIS CHANGE IS NOT MADE AND CODE RUNS W/O DEBUGGING TURNED ON
+C        AT RUN TIME  --> THIS FIX ALLOWS CODE TO RUN TO COMPLETION
+C        WHEN DEBUGGING IS TURNED ON AT RUN TIME)
 C
 C USAGE:
 C   INPUT FILES:
@@ -484,7 +492,7 @@ C                    WIND ARE CREATED)
 
 C  PRESET AND UPDATE SOME OPTIONS AND READ IN DATE/TIME
 
-      CALL W3TAGB('SYNDAT_SYNDATA',2013,0085,0061,'NP22')
+      CALL W3TAGB('SYNDAT_SYNDATA',2014,0262,0061,'NP22')
 
       MWAVEZ   = MWAVE
       PTOPAZ   = PTOPAL
@@ -519,7 +527,7 @@ C  PRESET AND UPDATE SOME OPTIONS AND READ IN DATE/TIME
      6         20X,'****   MNIBOG=',L1,' RUNID=',A,9X,  '****'/
      7         20X,'*****************************************'/
      8         20X,'*****************************************'//
-     9         ' ===> VERSION -- 26 Mar 2013'//)
+     9         ' ===> VERSION -- 05 Sep 2014'//)
 
 C  On WCOSS should always set BUFRLIB missing (BMISS) to 10E8 to avoid
 C   overflow when either an INTEGER*4 variable is set to BMISS or a
@@ -9756,12 +9764,34 @@ C
       DO 350 NRADV=2,NRADVO
          NCOM=NRDSTR(NRADV)
          AZIAVW(NCOM,1,NLB,2)=AZIAVW(NCOM,1,NLB,2)+AXIWND(NRADV,1)
-         AZIAVW(NCOM,2,NLB,2)=AZIAVW(NCOM,2,NLB,2)+AXIWND(NRADV,2)
-         AZIAVW(NCOM,3,NLB,2)=AZIAVW(NCOM,3,NLB,2)+
-     1                       SQRT(AXIWND(NRADV,1)**2+AXIWND(NRADV,2)**2)
+cdak  fix 9/5/14 vvvvvvvvvv
+c---------------------------------------------------------------------
+c changes here to prevent array overflow in 2nd element of AXIWND when
+c  this entry is called out of subroutine MM2DVO where NCMPVO is passed
+c  in with value of 1 and debugging is turned on at run time
+c (Note: may not be correct solution but yields same output bogus winds
+c        as when this change is not made and code runs w/o debugging
+c        turned on at run time  --> this fix allows code to run to
+c        completion when debugging is turned on at run time)
+c---------------------------------------------------------------------
+cccccc   AZIAVW(NCOM,2,NLB,2)=AZIAVW(NCOM,2,NLB,2)+AXIWND(NRADV,2)
+cccccc   AZIAVW(NCOM,3,NLB,2)=AZIAVW(NCOM,3,NLB,2)+
+ccccc1                       SQRT(AXIWND(NRADV,1)**2+AXIWND(NRADV,2)**2)
+         if(NCMPVO.gt.1) then
+            AZIAVW(NCOM,2,NLB,2)=AZIAVW(NCOM,2,NLB,2)+AXIWND(NRADV,2)
+            AZIAVW(NCOM,3,NLB,2)=AZIAVW(NCOM,3,NLB,2)+
+     1                      SQRT(AXIWND(NRADV,1)**2+AXIWND(NRADV,2)**2)
+         endif
          NAZIAV(NCOM,NLB,2)=NAZIAV(NCOM,NLB,2)+1
-         IF(IPRT .GT. 0)  WRITE(6,349) NRADV,NCOM,AXIWND(NRADV,1),
-     1                                 AXIWND(NRADV,2)
+         IF(IPRT .GT. 0)  THEN
+ccccc       WRITE(6,349) NRADV,NCOM,AXIWND(NRADV,1),AXIWND(NRADV,2)
+            if(NCMPVO.gt.1) then
+               WRITE(6,349) NRADV,NCOM,AXIWND(NRADV,1),AXIWND(NRADV,2)
+            else
+               WRITE(6,349) NRADV,NCOM,AXIWND(NRADV,1)
+            endif
+cdak  fix 9/5/14 ^^^^^^^^^^
+         ENDIF
   349 FORMAT('...COMPOSITING AXISYMMETRIC WIND, NRADV,NCOM,AXIWND=',
      1       2I5,2F10.2)
   350 CONTINUE
