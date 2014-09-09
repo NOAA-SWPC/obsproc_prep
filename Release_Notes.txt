@@ -95,8 +95,8 @@ files:
          types that aleady encode wind direction (DDO) and either wind speed in
          knots (FFO) or wind speed in m/sec (SOB). DFQ will now be encoded with
          overall wind quality mark in both cases when u-comp wind obs (UOB) and
-         v-comp wind obs (VOB) are encoded {in which case DFQ will be the same
-         as u-/v- comp quality mark (WQM)} and in cases when, for surface
+         v-comp wind obs (VOB) are encoded [in which case DFQ will be the same
+         as u-/v- comp quality mark (WQM)] and in cases when, for surface
          reports UOB and VOB are not encoded because either direction or speed
          is missing.
          BENEFIT: This change links WQM to only UOB and VOB.  Prior to this,
@@ -111,15 +111,15 @@ files:
                   VOB are both missing.  Prior to this, it had to be expanded
                   out since WQM was present in such stuations.
        - Added encoding of wind direction/speed program code (DFP) for surface
-         reports in both cases when UOB and VOB are encoded {in which case DFP
-         will be the same as u-/v- comp program code (WPC)} and in cases when
+         reports in both cases when UOB and VOB are encoded [in which case DFP
+         will be the same as u-/v- comp program code (WPC)] and in cases when
          UOB and VOB are not encoded because either direction or speed is
          missing.
          BENEFIT: This changes populates DFP in cases where it was always
                   missing before.
        - Added encoding of wind direction/speed reason code (DFR), if it is
-         non-missing, in both cases when UOB and VOB are encoded {in which case
-         DFR will be the same as u-/v- comp reason code (WRC)} and in cases
+         non-missing, in both cases when UOB and VOB are encoded [in which case
+         DFR will be the same as u-/v- comp reason code (WRC)] and in cases
          when, for surface reports, UOB and VOB are not encoded because either
          direction or speed is missing.
          BENEFIT: This changes populates DFR in cases where it was always
@@ -155,12 +155,23 @@ files:
       variable AXIWND when Mathur 2-D Vortex Routine is run.  (Note: This had
       occurred only when debugging was turned on at run time, which it still is
       in production.)
-      BENEFIT:  The code now runs to completion and generates bogus winds
-                rather than stopping abnormally with condition code 152. The
-                changes made here are "brute force" and may not be the ultimate
-                best solution but they do yield the same output bogus winds (in
-                one case checked) as when no changes were made but the code is
-                run with debugging turned off.
+      BENEFIT: The code now runs to completion and generates bogus winds rather
+               than stopping abnormally with condition code 152. The changes
+               made here are "brute force" and may not be the ultimate best
+               solution but they do yield the same output bogus winds (in one
+               case checked) as when no changes were made but the code is run
+               with debugging turned off.
+    - Changes made in subroutine SURPRP to skip reading in wind obs from report
+      levels in the vicinity of tropical systems if either UOB or VOB (or both)
+      are missing.  (UOB and VOB are used to construct the bogus wind reports
+      coming out of this program.)
+      BENEFIT: UOB and/or VOB can now be missing for surface wind reports [as
+               of an implementation on 24 June 2014 which introduces reports
+               with only wind speed or only wind direction into the PREPBUFR
+               files (encoded in SOB and DDO, resp.)].  Prior to this fix,
+               missing values for UOB and VOB were generating nonsensical bogus
+               winds or causing the program to stop abnormally with codition
+               code 64.
 
  Fixed file changes:
    prepobs_prep.bufrtable (all related to changes in prepdata above):
@@ -663,9 +674,9 @@ files:
          situation for surface reports). Also removed encoding of "SQM" (wind
          speed quality mark) for these types of METAR reports.  All surface
          reports now encode wind qm as "WQM" regardless of whether or not it
-         also encodes direction, speed, u-comp or v-comp {note this change does
+         also encodes direction, speed, u-comp or v-comp [note this change does
          not affect non-surface reports which can still encode speed in knots
-         ("FFO") and direction ("DDO") when "UOB" and "VOB" are also encoded.
+         ("FFO") and direction ("DDO") when "UOB" and "VOB" are also encoded.]
          (See changes #3 & 7 to fix file prepobs_prep.bufrtable below.)
          BENEFIT: Surface data wind reports that have incomplete wind direction
                   or speed information will now be retained so that at least
