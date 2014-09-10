@@ -172,6 +172,18 @@ files:
                missing values for UOB and VOB were generating nonsensical bogus
                winds or causing the program to stop abnormally with codition
                code 64.
+    - Parameters LDXDIM and NDATMX (storage limit for number of observations in
+      storm vicinity) increased from 500 to 1000 in subroutine CMPSIT.
+      BENEFIT: There can be > 500 obs in the storm vicinity.  This change
+               ensures that all obs are processed.
+    - A trap remains set for arrays exceeding LDXDIM in entry ANLCOM and for
+      arrays exceeding NDATMX in entry OWNCOM.  However, the trap for LDXDIM
+      had to be fixed as it was previously invoked only when the limit was
+      exceeded by 1.
+      BENEFIT: Prevents array overflow (and program termination when debugging
+               is turned on at run time). (These traps should not be hit since
+               the limits LDXDIM and NDATMX have been now been increased, see
+               change above).
 
  Fixed file changes:
    prepobs_prep.bufrtable (all related to changes in prepdata above):
