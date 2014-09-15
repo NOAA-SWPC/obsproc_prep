@@ -1,5 +1,5 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-obsproc_prep release 3.2.0 --> released xxx xx, xxxx
+obsproc_prep release 3.2.0 --> released Sep 14, 2014
 
 files:
   obsproc_prep/fix/prepobs_cqc_statbge
@@ -92,13 +92,13 @@ files:
    prepobs_prepdata:
       prepdata:
        - Added encoding of wind direction/speed quality mark (DFQ) for all
-         types that aleady encode wind direction (DDO) and either wind speed in
-         knots (FFO) or wind speed in m/sec (SOB). DFQ will now be encoded with
-         overall wind quality mark in both cases when u-comp wind obs (UOB) and
-         v-comp wind obs (VOB) are encoded [in which case DFQ will be the same
-         as u-/v- comp quality mark (WQM)] and in cases when, for surface
-         reports UOB and VOB are not encoded because either direction or speed
-         is missing.
+         types that already encode wind direction (DDO) and either wind speed
+         in knots (FFO) or wind speed in m/sec (SOB). DFQ will now be encoded
+         with overall wind quality mark in both cases when u-comp wind obs
+         (UOB) and v-comp wind obs (VOB) are encoded [in which case DFQ will be
+         the same as u-/v- comp quality mark (WQM)] and in cases when, for
+         surface reports UOB and VOB are not encoded because either direction
+         or speed is missing.
          BENEFIT: This change links WQM to only UOB and VOB.  Prior to this,
                   WQM could be filled for surface reports when UOB and VOB were
                   missing but either DDO or SOB were present. This led to
@@ -170,7 +170,7 @@ files:
                with only wind speed or only wind direction into the PREPBUFR
                files (encoded in SOB and DDO, resp.)].  Prior to this fix,
                missing values for UOB and VOB were generating nonsensical bogus
-               winds or causing the program to stop abnormally with codition
+               winds or causing the program to stop abnormally with condition
                code 64.
     - Parameters LDXDIM and NDATMX (storage limit for number of observations in
       storm vicinity) increased from 500 to 1000 in subroutine CMPSIT.
@@ -207,8 +207,6 @@ files:
 
  Output changes:
  ---------------
-   All jobs executing this version of obsproc_prep:
-    - ...
   (For specific network changes see " Output changes" in Release Notes for that
    network.)
 
@@ -231,7 +229,8 @@ files:
  Preimplementation Testing Requirements:
  ---------------------------------------
    There are no jobs in obsproc_prep.  All jobs executing this version of
-   obsproc_prep will be part of the parallel-production test of ...
+   obsproc_prep will be part of the  parallel-production test of the OBSPROC
+   FY14Q4 bundle.
 
 
  Dissemination:
@@ -243,7 +242,11 @@ files:
  Special Instructions:
  ---------------------
    This must be implemented simultaneously with the implementations of
-   ...
+   obsproc_dump_monitor.v1.2.1, obsproc_nam.v2.0.2, obsproc_rap.v2.0.2,
+   obsproc_rtma.v2.0.2, obsproc_urma.v2.0.2, obsproc_satingest.v2.3.0,
+   obsproc_dump.v3.2.0, obsproc_prep_post.v2.0.1, obsproc_dump_alert.v1.0.0,
+   obsproc_shared/bufr_avgdata.v1.0.1, radar_reflectivity_mosaic.v1.0.0 and
+   radar_reflectivity_ref2grb.v1.0.0.
 
    Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
    needed.
@@ -822,15 +825,6 @@ files:
 
  Output changes:
  ---------------
-   All jobs executing this version of obsproc_prep:
-    - Surface marine reports will now encode pmsl ob and qc (PMO and PMQ) in
-      PREPBUFR file if pmsl is reported.
-    - SFCSHP reports with calm winds and non-missing background u- or v-
-      component wind .ge. 5 m/sec are flagged with Q.M. 8 in PREPBUFR file.
-    - Surface reports with incomplete wind information will now be retained
-      and encoded into the PREPBUFR file.
-    - Satellite zenith angle (degrees) encoded into PREPBUFR file (mnemonic
-      "SAZA") for all satwnd types.
   (For specific network changes see " Output changes" in Release Notes for that
    network.)
 
