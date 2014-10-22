@@ -1,4 +1,63 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+obsproc_prep release 3.3.0 --> released Oct 22, 2014
+
+files:
+ *obsproc_prep/fix/prepobs_prepanow.bufrtable
+ *obsproc_prep/sorc/prepobs_prepanow.fd/makefile
+ *obsproc_prep/sorc/prepobs_prepanow.fd/prepanow.f
+
+( * - changed)
+
+
+ fix file changes:
+   prepobs_prepanow.bufrtable:
+     Added support for Particulate Matter (PM) reports:  Table A entry
+     (ANOWPM), PM sequence (APMSEQ), PM event sequence (APMEVN) and PM 
+     mnemonic (COPOPM).
+
+
+ Source code changes:
+   prepobs_prepanow:
+     makefile:
+       Updated to work w/ general build, install, clean scripts that apply 
+       to all source codes in the obsproc_prep group; inluded parameterized 
+       values for libraries (exported by build.sh script)
+      prepanow.f (main program):
+       Added logic to handle particulate matter processing.
+
+
+ Output changes:
+ ---------------
+   Code will now generate an additional, separate prepbufr file containing 
+   particulate matter reports.
+
+
+ Compute Resource Information:
+ -----------------------------
+   All source codes:
+    - link to version 2.0.6 of w3nco library
+    - link to version 10.2.5 of bufr library
+
+
+ Preimplementation Testing Requirements:
+ ---------------------------------------
+   There are no jobs in obsproc_prep.  Jobs executing this version of
+   obsproc_prep will be tested.
+
+
+ Dissemination:
+ --------------
+   See information about dissemination in the latest release notes for
+   obsproc_<NETWORK> packages which execute this version of obsproc_prep.
+
+
+ Special Instructions:
+ ---------------------
+   This must be implemented simultaneously with the implementation of the 
+CMAC model verification package released in Fall 2014.
+
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 obsproc_prep release 3.2.0 --> released Sep 14, 2014
 
 files:
