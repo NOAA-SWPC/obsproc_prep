@@ -1,5 +1,162 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+obsproc_prep release 3.4.0 --> released Dec 4, 2014
+                           --> implemented ??? ??, 201?
+
+files:
+  obsproc_prep/fix/prepobs_cqc_statbge
+  obsproc_prep/fix/prepobs_landc
+  obsproc_prep/fix/prepobs_prep.bufrtable
+  obsproc_prep/fix/prepobs_prepanow.bufrtable
+  obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
+  obsproc_prep/fix/syndat_weight
+  obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
+  obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
+  obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
+  obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
+  obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
+  obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
+  obsproc_prep/sorc/prepobs_listheaders.fd/makefile
+  obsproc_prep/sorc/prepobs_monoprepbufr.fd/makefile
+  obsproc_prep/sorc/prepobs_monoprepbufr.fd/monoprepbufr.f90
+  obsproc_prep/sorc/prepobs_mpcopybufr.fd/makefile
+  obsproc_prep/sorc/prepobs_mpcopybufr.fd/mpcopybufr.f90
+  obsproc_prep/sorc/prepobs_oiqcbufr.fd/makefile
+  obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
+  obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
+  obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
+  obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
+  obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
+  obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
+  obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
+  obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
+  obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
+  obsproc_prep/sorc/prepobs_prepacqc.fd/prepacqc.f
+  obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_mer.f
+  obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
+  obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
+  obsproc_prep/sorc/prepobs_prepanow.fd/makefile
+  obsproc_prep/sorc/prepobs_prepanow.fd/prepanow.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
+  obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/makefile
+ *obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
+ *obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
+ *obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
+  obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
+  obsproc_prep/sorc/prepobs_prevents.fd/makefile
+  obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
+  obsproc_prep/sorc/prepobs_profcqc.fd/makefile
+  obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
+  obsproc_prep/sorc/syndat_syndata.fd/makefile
+  obsproc_prep/sorc/syndat_syndata.fd/syndata.f
+  obsproc_prep/sorc/build.sh
+  obsproc_prep/sorc/clean.sh
+  obsproc_prep/sorc/install.sh
+  obsproc_prep/sorc/load_libs.rc
+  obsproc_prep/sorc/README.build
+  obsproc_prep/sorc/setlibs.rc
+  obsproc_prep/ush/prepobs_cqcbufr.sh
+  obsproc_prep/ush/prepobs_cqcvad.sh
+  obsproc_prep/ush/prepobs_makeprepbufr.sh
+  obsproc_prep/ush/prepobs_oiqcbufr.sh
+  obsproc_prep/ush/prepobs_prepacqc.sh
+  obsproc_prep/ush/prepobs_prevents.sh
+  obsproc_prep/ush/prepobs_profcqc.sh
+  obsproc_prep/ush/prepobs_syndata.sh
+
+( * - changed)
+
+
+ Source code changes:
+   prepobs_prepdata:
+      prepdata (main program):
+       - Removed input argument "IDATE" (central date) from call to subroutine
+         W3CNVXTOVS since year {IDATE(1)} is no longer needed to obtain BUFR
+         satellite ID (see changes to subroutine W3CNVXTOVS below).
+      w3xtovseds (subroutine):
+       - Handles new satellites METOP-1 (BUFR satellite ID 3, converted to
+         local satellite ID 10), NOAA-19 (BUFR satellite ID 223, converted to
+         local satellite ID 9) and NPP (BUFR satellite ID 224, converted to
+         local satellite ID 11).
+         BENEFIT: The primary POES constellation NOAA-19 (PM) and METOP-1(B)
+                  (AM) are now ingested and dumped in place of previous POES
+                  constellation NOAA-18 (PM) and METOP-2(A) (AM) in the CDAS
+                  and GDAS networks. These are now recogized by the CDAS
+                  PREPBUFR steps which still process ATOVS soundings.  NPP is
+                  now the "official" PM POES constellation satellite, thus
+                  the CDAS PREPBUFR steps will now also recognize it if its
+                  sounding data products are ever dumped in place of NOAA-19
+                  (NCEP/EMC does not yet have access to these data for
+                  testing).
+       - Now encodes BUFR satellite ID value (Code Table 0-01-007) into word 2
+         of output array IBUFTN (previously a spare set to missing).
+         BENEFIT: Allows subroutine W3CNVXTOVS to obtain this value directly
+                  rather than calculating it back from local/NESDIS satellite
+                  ID value in word 1 of IBUFTN (see below).
+      w3cnvxtovs (subroutine):
+       - Now obtains the BUFR satellite ID (for storing into output array
+         IDATA) directly from value now stored in word 2 of input array IBUFTN
+         (via change to subroutine W3XTOVSEDS, see above) rather than
+         calculating it from the local/NESDIS satellite ID stored in word 1 of
+         IBUFTN.
+         BENEFIT: Removes convoluted logic in previous calculation of BUFR
+                  satellite ID which was based on central date year since,
+                  unlike the BUFR satellite ID, the local/NESDIS satellite ID
+                  is not unique for each satellite. Also this subroutine will
+                  never again have to be updated to account for new satellites.
+       -  Removed input argument IDATE (central date) since year {IDATE(1)} is
+          no longer needed to obtain BUFR satellite ID.
+
+
+ Output changes:
+ ---------------
+  (For specific network changes see " Output changes" in Release Notes for that
+   network.)
+
+
+ Shared Software:
+ ----------------
+    - All source codes:
+         link to version 2.0.6 of w3nco library
+         link to version 10.2.5 of bufr library
+    - Source codes prepobs_cqcbufr, prepobs_prepacpf, prepobs_prepacqc,
+      prepobs_prepdata, prepobs_prevents, syndat_syndata:
+         link to version 2.2.0 of w3emc library
+    - Source codes prepobs_prepdata, prepobs_prevents, syndat_syndata
+         link to version 2.0.1 of bacio library
+         link to version 2.0.2 of sp library
+         link to version 1.0.1 of sigio library
+
+
+ Preimplementation Testing Requirements:
+ ---------------------------------------
+   There are no jobs in obsproc_prep.  Jobs executing this version of
+   obsproc_prep will be tested.
+
+
+ Dissemination:
+ --------------
+   See information about dissemination in the latest release notes for
+   obsproc_<NETWORK> packages which execute this version of obsproc_prep.
+
+
+ Special Instructions:
+ ---------------------
+   This must be implemented simultaneously with the implementations of:
+      v2.0.3 of obsproc_cdas,
+      v2.4.0 of obsproc_satingest.
+
+   Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
+   needed.
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 obsproc_prep release 3.3.0 --> released Oct 23, 2014
+                           --> implemented Nov 4, 2014
 
 files:
   obsproc_prep/fix/prepobs_cqc_statbge
@@ -43,8 +200,8 @@ files:
   obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
   obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
   obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3tovseds.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3tovsmnd.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
   obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
   obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
   obsproc_prep/sorc/prepobs_prevents.fd/makefile
@@ -71,34 +228,40 @@ files:
 ( * - changed/new)
 
 
- fix file changes:
-   prepobs_prepanow.bufrtable:
-     Added support for Particulate Matter (PM) reports:  Table A entry
-     (ANOWPM), PM sequence (APMSEQ), PM event sequence (APMEVN) and PM 
-     mnemonic (COPOPM).
-
-
  Source code changes:
    prepobs_prepanow:
-     makefile:
-       Updated to work w/ general build, install, clean scripts that apply 
-       to all source codes in the obsproc_prep group; inluded parameterized 
-       values for libraries (exported by build.sh script)
-      prepanow.f (main program):
-       Added logic to handle particulate matter processing.
+      makefile:
+       - Updated to work w/ general build, install, clean scripts that apply to
+         all source codes in the obsproc_prep group; inluded parameterized
+         values for libraries (exported by build.sh script)
+      prepanow (main program):
+       - Added logic to handle particulate matter processing.
+
+ Fixed file changes:
+   prepobs_prepanow.bufrtable:
+    - Added support for Particulate Matter (PM) reports:  Table A entry
+      (ANOWPM), PM sequence (APMSEQ), PM event sequence (APMEVN) and PM
+      mnemonic (COPOPM).
 
 
  Output changes:
  ---------------
-   Code will now generate an additional, separate prepbufr file containing 
-   particulate matter reports.
+  (For specific network changes see " Output changes" in Release Notes for that
+   network.)
 
 
- Compute Resource Information:
- -----------------------------
-   All source codes:
-    - link to version 2.0.6 of w3nco library
-    - link to version 10.2.5 of bufr library
+ Shared Software:
+ ----------------
+    - All source codes:
+         link to version 2.0.6 of w3nco library
+         link to version 10.2.5 of bufr library
+    - Source codes prepobs_cqcbufr, prepobs_prepacpf, prepobs_prepacqc,
+      prepobs_prepdata, prepobs_prevents, syndat_syndata:
+         link to version 2.2.0 of w3emc library
+    - Source codes prepobs_prepdata, prepobs_prevents, syndat_syndata
+         link to version 2.0.1 of bacio library
+         link to version 2.0.2 of sp library
+         link to version 1.0.1 of sigio library
 
 
  Preimplementation Testing Requirements:
@@ -116,11 +279,14 @@ files:
  Special Instructions:
  ---------------------
    This must be implemented simultaneously with the implementation of the 
-CMAC model verification package released in Fall 2014.
+   CMAC model verification package released in Fall 2014.
 
+   Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
+   needed.
 
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 obsproc_prep release 3.2.0 --> released Sep 14, 2014
+                           --> implemented Nov 4, 2014
 
 files:
   obsproc_prep/fix/prepobs_cqc_statbge
@@ -161,8 +327,8 @@ files:
   obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
   obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
   obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3tovseds.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3tovsmnd.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
   obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
   obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
   obsproc_prep/sorc/prepobs_prevents.fd/makefile
@@ -211,7 +377,7 @@ files:
              "module avail"
       BENEFIT: No longer needed and can slow down compilation.
    prepobs_prepdata:
-      prepdata:
+      prepdata (main program):
        - Added encoding of wind direction/speed quality mark (DFQ) for all
          types that already encode wind direction (DDO) and either wind speed
          in knots (FFO) or wind speed in m/sec (SOB). DFQ will now be encoded
@@ -418,8 +584,8 @@ files:
   obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
   obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
   obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3tovseds.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3tovsmnd.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
   obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
   obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
   obsproc_prep/sorc/prepobs_prevents.fd/makefile
@@ -616,8 +782,8 @@ files:
  *obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
  *obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
  *obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
- *obsproc_prep/sorc/prepobs_prepdata.fd/w3tovseds.f
- *obsproc_prep/sorc/prepobs_prepdata.fd/w3tovsmnd.f
+ *obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
+ *obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
  *obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
  *obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
  *obsproc_prep/sorc/prepobs_prevents.fd/makefile
@@ -755,7 +921,7 @@ files:
                reduced due to a fiber cut and no reports survived the time-
                window check.
    prepobs_prepdata:
-      prepdata:
+      prepdata (main program):
        - Added processing of Coast Guard tide gauge data (read from SFCSHP
          dump, dump report type 534). A 12'th word added to following namelist
          switches to account for these new reports: FWINDO, JSURFM, JSURFW.
@@ -869,7 +1035,7 @@ files:
          from the ADPSFC dump file).
          BENEFIT: The pressure used to generate specific humidty has always
                   been at best suspect.  Now the moisture follows suit.
-      iw3unpbf:
+      iw3unpbf (subroutine):
        - Added ability to read in and process percent confidence based on
          EUMETSAT Quality Indicator with and without forecast for NESDIS GOES
          winds pulled from NESDIS server (which originally stored them in dump
@@ -904,7 +1070,7 @@ files:
          BENEFIT: Now Coast Guard tide gauge reports are available to be
                   encoded into the PREPBUFR file for all networks that process
                   the SFCSHP dump file.
-      w3unpkb7:
+      w3unpkb7 (subroutine):
        - Modified to handle VAD wind reports from Level 2 decoder (subset
          "NC002017") in addition to those from Radar Coded Message (subset
          "NC002008")}.
@@ -912,7 +1078,7 @@ files:
          calculated parameter "IDMAX" (size of output "RDATA" array) based on
          these.  All of these are now placed in new include file
          'inc_w3unpkb7.inc'.
-      inc_w3unpkb7.inc:
+      inc_w3unpkb7.inc (include file):
        - Maximum number of cat. 04 winds-by-height levels (excluding first,
          surface, level) increased from 64 to 254 to account for more levels in
          new VAD wind reports from Level 2 decoder.

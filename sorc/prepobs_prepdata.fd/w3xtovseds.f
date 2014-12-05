@@ -1,7 +1,7 @@
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    W3XTOVSEDS
-C   PRGMMR: KEYSER           ORG: NP22       DATE: 2013-02-14
+C   PRGMMR: KEYSER           ORG: NP22       DATE: 2014-11-25
 C
 C ABSTRACT: READS AND UNPACKS ONE REPORT FROM INPUT RTOVS OR ATOVS
 C   RETRIEVAL BUFR (DUMP) FILE INTO SPECIFIED FORMAT. RETURNS
@@ -58,6 +58,13 @@ C      BUFR FILE IS MISSING (I.E. RETURNED AS BMISS); ADDED BMISS AS
 C      INPUT ARGUMENT TO SUBROUTINE XTOVSEDS02; USE FORMATTED PRINT
 C      STATEMENTS WHERE PREVIOUSLY UNFORMATTED PRINT WAS USED (WCOSS
 C      SPLITS UNFORMATTED PRINT AT 80 CHARACTERS)
+C 2014-11-25  D. A. KEYSER -- HANDLES NEW SATELLITES METOP-1 (BUFR
+C      SATELLITE ID 3, CONVERTED TO LOCAL SATELLITE ID 10), NOAA-19
+C      (BUFR SATELLITE ID 223, CONVERTED TO LOCAL SATELLITE ID 9), AND
+C      NPP (BUFR SATELLITE ID 224, CONVERTED TO LOCAL SATELLITE ID 11);
+C      NOW ENCODES BUFR SATELLITE ID VALUE (CODE TABLE 0-01-007) INTO
+C      IBUFTN(2) (PREVIOUSLY A SPARE SET TO MISSING) FOR DIRECT USE BY
+C      SUBROUTINE W3CNVXTOVS
 C
 C USAGE :   CALL W3XTOVSEDS(IUNIT,IBDATE,IBUFTN,ISATOB,PBOT,DSNAME,
 C                           IDSDAT,IDSDMP_8,IERR)
@@ -131,10 +138,36 @@ C     CONTENTS OF OUTPUT ARGUMENT IBUFTN {140 INTEGER WORDS - IN NMCEDS
 C       FORMAT EXCEPT WHERE NOTED -- ONLY THE WORDS NOTED BELOW
 C       ARE FILLED WITH DATA (THAT NEEDED BY THE PREPDATA PROGRAM) -
 C       ALL OTHER WORDS ARE SET TO MISSING - 7777)}:
-C        WORD 1 - Satellite ID  (NOAA-08 - 6; NOAA-09 - 7; NOAA-10 - 8;
-C                   NOAA-11 - 1; NOAA-12 - 2; NOAA-14 - 3; NOAA-15 - 4;
-C                   NOAA-16 - 5; NOAA-17 - 6; NOAA-18 - 7; METOP-2  -8;
-C                   etc.)
+C        WORD 1 - "Local" or "NESDIS" Satellite ID:
+C                   NOAA-08 -----  6
+C                   NOAA-09 -----  7
+C                   NOAA-10 -----  8
+C                   NOAA-11 -----  1
+C                   NOAA-12 -----  2
+C                   NOAA-14 -----  3
+C                   NOAA-15 -----  4
+C                   NOAA-16 -----  5
+C                   NOAA-17 -----  6
+C                   NOAA-18 -----  7
+C                   NOAA-19 -----  9
+C                   METOP-1(B) -- 10
+C                   METOP-2(A) --  8
+C                   NPP --------- 11
+C        * -  2 - BUFR Satellite ID (from Code Table 0-01-007):
+C                   NOAA-08 ---- 200
+C                   NOAA-09 ---- 201
+C                   NOAA-10 ---- 202
+C                   NOAA-11 ---- 203
+C                   NOAA-12 ---- 204
+C                   NOAA-14 ---- 205
+C                   NOAA-15 ---- 206
+C                   NOAA-16 ---- 207
+C                   NOAA-17 ---- 208
+C                   NOAA-18 ---- 209
+C                   NOAA-19 ---- 223
+C                   METOP-1(B) -   3
+C                   METOP-2(A) -   4
+C                   NPP -------- 224
 C             3 - Day of month * 256 plus hour of day (UTC)
 C             4 - Minute * 256 plus second (UTC)
 C             5 - Latitude (degrees * 100, N+, S-)
@@ -249,7 +282,7 @@ C  FIRST TIME IN FOR A NEW INPUT FILE, GET CENTER AND DUMP TIME FOR
 C   FILE AND TEST FOR CENTER FILE DATE PRIOR TO 07/01/1998
 C  -----------------------------------------------------------------
 
-         PRINT'("  ==> W3XTOVSEDS -- WCOSS VERSION 02-14-2013")'
+         PRINT'("  ==> W3XTOVSEDS -- WCOSS VERSION 11-25-2014")'
          JFIRST = 1
          IUNITL = IUNIT
          CALL DUMPBF(IUNIT,JDATE,JDUMP)
@@ -465,28 +498,39 @@ C  --------------------------------------
          GO TO 1000
       ENDIF
 
-C  SATELLITE IDENTIFIER
-C  --------------------
+C  BUFR SATELLITE IDENTIFIER (CODE TABLE 0-01-007) - IBUFTN(2)
+C  -----------------------------------------------------------
+C  LOCAL OR NESDIS SATELLITE IDENTIFIER -- IBUFTN(1)
+C  -------------------------------------------------
 
       IF(IBFMS(XIDENT_8(2)).EQ.0)  THEN
+         IBUFTN(2) = XIDENT_8(2)
          IF(NINT(XIDENT_8(2)).EQ.4)  THEN
-            IBUFTN(1) = 8
-         ELSE IF(NINT(XIDENT_8(2)).LT.203)  THEN
+            IBUFTN(1) =  8  ! METOP-A(2)
+         ELSE IF(NINT(XIDENT_8(2)).EQ.223) THEN
+            IBUFTN(1) =  9  ! NOAA-19
+         ELSE IF(NINT(XIDENT_8(2)).EQ.3)  THEN
+            IBUFTN(1) = 10  ! METOP-B(1)
+         ELSE IF(NINT(XIDENT_8(2)).EQ.224)  THEN
+            IBUFTN(1) = 11  ! NPP
+         ELSE IF(NINT(XIDENT_8(2)).GT.199.AND.
+     $           NINT(XIDENT_8(2)).LT.203)  THEN
             IBUFTN(1) = NINT(XIDENT_8(2)) - 194
-         ELSE IF(NINT(XIDENT_8(2)).LT.210) THEN
+                            ! NOAA-08 to 10
+         ELSE IF(NINT(XIDENT_8(2)).GT.202.AND.
+     $           NINT(XIDENT_8(2)).LT.210) THEN
+                            ! NOAA-11 to 18
             IBUFTN(1) = NINT(XIDENT_8(2)) - 202
-         END IF
-         IF(NINT(XIDENT_8(2)).NE.4.AND.
-     $     (NINT(XIDENT_8(2)).LT.200.OR.NINT(XIDENT_8(2)).GT.209)) THEN
-            WRITE(6,2071) KOUNTR,IBUFTN(1)
+         ELSE
+            WRITE(6,2071) KOUNTR,IBUFTN(2)
  2071 FORMAT(/'##W3XTOVSEDS WARNING: A DECODED RETRIEVAL (#',I7,') HAS',
-     $ ' AN UNRECOGNIZED SATELLITE ID (=',I5,') - SKIP IT')
+     $ ' AN UNRECOGNIZED BUFR SATELLITE ID (=',I7,') - SKIP IT')
             GO TO 1000
          ENDIF
       ELSE
          WRITE(6,2072) KOUNTR
  2072 FORMAT(/'##W3XTOVSEDS WARNING: A DECODED RETRIEVAL (#',I7,') HAS',
-     $ ' A MISSING SATELLITE ID - SKIP IT')
+     $ ' A MISSING BUFR SATELLITE ID - SKIP IT')
          GO TO 1000
       ENDIF
 
