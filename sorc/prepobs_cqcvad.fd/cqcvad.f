@@ -1749,6 +1749,11 @@ C       from 1000 to 3600 (NSTN*NTIMES*NINC) to allow for a complete
 C       set of station statistics to be processed.  On occasion the
 C       1000 limit had been met and exceeded, losing out on station
 C       statistics.
+C 2014-09-04  S. Melchior  Redefined MSK, UW, and VW arrays to
+C       utilize parameters NSTN, NTIMES, and NINC rather than 
+C       explicitly setting the array size at 3600. "icntmx" is no 
+C       longer necessary but will be retained because it may prove
+C       useful for future debugging.
 C
 C USAGE:    CALL INCDIST
 C
@@ -1781,13 +1786,15 @@ C$$$
       COMMON /DATET/  IDATE(4), ITIM(6)
 
       CHARACTER*8 SIDS, STNID
-      COMMON /STATS/  UW(3600),VW(3600),XM(NLEV,2),SD(NLEV,2),XLIM(2)
+      COMMON /STATS/  UW(nstn*ntimes*ninc),VW(nstn*ntimes*ninc),
+     &                XM(NLEV,2),SD(NLEV,2),XLIM(2)
       COMMON /DMATYP/ IQC(NLEV,NTIMES,NINC,NSTN)
       REAL        UWS(60,NSTN),VWS(60,NSTN)
       REAL        XMS(NLEV,2,NSTN),SDS(NLEV,2,NSTN)
 
       INTEGER     NMS(NDIV,NLEV,2,NSTN),NCS(NLEV,2,NSTN),ICNTS(NSTN)
-      INTEGER     NM(NDIV,NLEV,2),MSK(3600),NC(NLEV,2),icntmx
+      INTEGER     NM(NDIV,NLEV,2),MSK(nstn*ntimes*ninc),NC(NLEV,2),
+     &            icntmx
       LOGICAL BYSTN
       BYSTN = .TRUE.
       DATA XMSG /99999./
@@ -1812,11 +1819,6 @@ C  ------------------------
               DO N=1,NIN(L,IT,IS) !  nin(L,IT,IS) max is 3
                 IF(IQC(L,IT,N,IS).EQ.0) THEN
                   ICNT = ICNT + 1
-                  if(icnt.gt.icntmx) then
-                    print *, 'WARNING: ICNT>',icntmx,' EXIT LOOP'
-                    icnt = icnt - 1
-                    exit LOOP1n1
-                  endif
                   UW(ICNT) = UIN(L,IT,N,IS)
                   VW(ICNT) = VIN(L,IT,N,IS)
                 ENDIF
@@ -2374,7 +2376,8 @@ C$$$
       COMMON /EVENTS/ SIDEV(nevnt), HTEV(nevnt),LEV(nevnt),
      &                TIMEV(nevnt), UEV(nevnt), VEV(nevnt),
      &                QALEV(nevnt), RCEV(nevnt)
-      COMMON /STATS/  UW(3600),VW(3600),XM(NLEV,2),SD(NLEV,2),XLIM(2)
+      COMMON /STATS/  UW(nstn*ntimes*ninc),VW(nstn*ntimes*ninc),
+     &                XM(NLEV,2),SD(NLEV,2),XLIM(2)
       COMMON /STN/    SLAT(NSTN), SLON(NSTN), SIDS(NSTN), STNID(NRPT),
      &                ZSTN(NSTN)
       COMMON /COLECT/ LS(NSTN,NLEV,NINC), JS(NSTN,NLEV,NINC),
@@ -2654,6 +2657,11 @@ C       from 1000 to 3600 (NSTN*NTIMES*NINC) to allow for a complete
 C       set of station statistics to be processed.  On occasion the
 C       1000 limit had been met and exceeded, losing out on station 
 C       statistics.
+C 2014-09-04  S. Melchior  Redefined MSK, UW, and VW arrays to
+C       utilize parameters NSTN, NTIMES, and NINC rather than 
+C       explicitly setting the array size at 3600. "icntmx" is no 
+C       longer necessary but will be retained because it may prove
+C       useful for future debugging.
 C
 C USAGE:    CALL RESDIST
 C
@@ -2685,8 +2693,10 @@ C$$$
       COMMON /HTS/    IZLEV(NLEV), ZLEV(NLEV)
       COMMON /DATET/  IDATE(4), ITIM(6)
       COMMON /DMATYP/ IQC(NLEV,NTIMES,NINC,NSTN)
-      REAL        UW(3600),VW(3600),XM(NLEV,2),SD(NLEV,2),XLIM(2)
-      INTEGER     NM(NDIV,NLEV,2),MSK(3600),NC(NLEV,2),icntmx
+      REAL        UW(nstn*ntimes*ninc),VW(nstn*ntimes*ninc),
+     &            XM(NLEV,2),SD(NLEV,2),XLIM(2)
+      INTEGER     NM(NDIV,NLEV,2),MSK(nstn*ntimes*ninc),NC(NLEV,2),
+     &            icntmx
       DATA XLIM /-5.,5./, XMSG /99999./
 
       MSK = 0
@@ -2706,11 +2716,6 @@ C  ------------------------
               DO N=1,NIN(L,IT,IS) !  nin(L,IT,IS) max is 3
                 IF(IQC(L,IT,N,IS).EQ.0) THEN
                   ICNT = ICNT + 1
-                  if(icnt.gt.icntmx) then
-                    print *, 'WARNING: ICNT >',icntmx,' EXIT LOOP'
-                    icnt = icnt - 1
-                    exit LOOP1
-                  endif
                   UW(ICNT) = RGU(L,IT,N,IS)
                   VW(ICNT) = RGV(L,IT,N,IS)
                 ENDIF
