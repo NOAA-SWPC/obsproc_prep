@@ -2,15 +2,15 @@ c$$$  Subprogram Documentation Block
 c   BEST VIEWED WITH 94-CHARACTER WIDTH WINDOW
 c
 c Subprogram: sub2mem_mer
-c   Programmer: D. Keyser       Org: NP22       Date: 2013-02-07
+c   Programmer: D. Keyser       Org: NP22       Date: 2014-12-12
 c
 c Abstract: Takes a merged (mass and wind) aircraft data profile, containing NRLACQC events,
 c   (read from input arrays *_accum), adds mandatory levels (via interpolation from spanning
 c   levels) and stores it in BUFRLIB internal memory.  The calling routine will then call
 c   WRITSB in order to write the profile as a single report (subset) into the output
 c   PREPBUFR-like file containing merged (mass and wind) aircraft reports. Single(flight)-
-c   level reports will also be processed here if namelist switch l_prof1lvl=T.  A maximum of
-c   255 level can be included in a profile report here.
+c   level reports that are not part of any profile will also be processed here if namelist
+c   switch l_prof1lvl=T.  A maximum of 255 level can be included in a profile report here.
 c
 c Program History Log:
 c 2010-11-15  S. Bender  -- Original Author
@@ -18,6 +18,21 @@ c 2012-05-08  D. Keyser  -- Prepared for operational implementation
 c 2012-11-20  J. Woollen -- Initial port to WCOSS
 c 2013-02-07  D. Keyser  -- Final changes to run on WCOSS: use formatted print statements
 c                           where previously unformatted print was > 80 characters
+c 2014-12-09  Y. Zhu     -- Modified the calculation of vertical velocity rate (stored in
+c                           rate_accum) still using a finite-difference method, but now
+c                           calculated for both ascents and descents using the nearest
+c                           neighboring pair which are at least one minute apart (before,
+c                           only only be calculated for descents)
+c 2014-12-09  Y. Zhu    --  Add new namelist switch "l_mandlvl" which, when F, will skip
+c                           interpolation to mandatory levels
+c 2014-12-09  J. Purser/Y. Zhu -- Add new namelist switch "tsplines" which, when T, will
+c                           calculate vertical velocity rate (stored in rate_accum) using
+c                           Jim Purser's tension-spline interpolation utility to get
+c                           continuous gradient results in a profile and mitigate missing
+c                           time information
+c 2014-12-12  D. Keyser  -- Printout from vertical velocity rate calculation information for
+c                           QC'd merged aircraft reports written to profiles PREPBUFR-like
+c                           file is written to unit 41 rather than stdout.
 c
 c Usage: call sub2mem_mer(proflun,bmiss,mxlv,mxnmev,maxmandlvls,
 c                         mandlvls,mesgtype,hdr2wrt,
@@ -32,12 +47,13 @@ c                         zevn_accum,zbg_accum,zpp_accum,
 c                         wuvevn_accum,wuvbg_accum,wuvpp_accum,
 c                         wdsevn_accum,mxe4prof,c_qc_accum,
 c                         num_events_prof,lvlsinprof,nlvinprof,
-c                         nrlacqc_pc,l_operational,lwr)
+c                         nrlacqc_pc,l_mandlvl,tsplines,l_operational,lwr)
 c
 c   Input argument list:
 c     proflun      - Unit number for the output post-PREPACQC PREPBUFR-like file containing
-c                    merged profile reports (always) and single(flight)-level reports (when
-c                    l_prof1lvl=T) with added NRLACQC events (aircraft data only)
+c                    merged profile reports (always) and single(flight)-level reports not
+c                    part of any profile (when l_prof1lvl=T) with added NRLACQC events
+c                    (aircraft data only)
 c     bmiss        - BUFRLIB missing value (set in main program)
 c     mxlv         - Maximum number of levels allowed in a report profile
 c     mxnmev       - Maximum number of events allowed, per variable type
@@ -100,6 +116,9 @@ c     lvlsinprof   - Array containing a list of pressure levels that are present
 c                    current profile
 c     nlvinprof    - Number of levels in profile
 c     nrlacqc_pc   - PREPBUFR program code for the NRLACQC step
+c     l_mandlvl    - Logical whether to interpolate to mandatory levels in profile generation
+c     tsplines     - Logical whether to use tension-splines for aircraft vertical velocity
+c                    calculation
 c     l_operational- Run program in operational mode if true
 c     lwr          - Machine word length in bytes (either 4 or 8)
 c
@@ -114,8 +133,8 @@ c                    current profile (now possibly also contains mandatory level
 c
 c   Output files:
 c     Unit proflun - PREPBUFR-like file containing merged (mass and wind) profile reports
-c                    (always) and single(flight)-level reports (when l_prof1lvl=T) with
-c                    NRLACQC events
+c                    (always) and single(flight)-level reports not part of any profile (when
+c                    l_prof1lvl=T) with NRLACQC events
 c     Unit 06      - Standard output print
 c     Unit 52      - Text file containing listing of all QC'd merged aircraft reports written
 c                    to profiles PREPBUFR-like file
@@ -132,6 +151,12 @@ c   Exit States:
 c     Cond =  0 - successful run
 c            59 - nlvinprof is zero coming into this subroutine (should never happen!)
 c            61 - index "j is .le. 1 meaning "iord" array underflow (should never happen!)
+c            62 - error generating vertical velocity rate, coming from subroutine convertd
+c                 in tension-spline interpolation utility pspl
+c            63 - error generating vertical velocity rate, coming from subroutine
+c                 best_slalom in tension-spline interpolation utility pspl
+c            64 - error generating vertical velocity rate, coming from subroutine bnewton
+c                 in tension-spline interpolation utility pspl
 c
 c Remarks: Called by subroutine output_acqc_prof.
 c
@@ -153,8 +178,12 @@ c$$$
      +                       wuvevn_accum,wuvbg_accum,wuvpp_accum,
      +                       wdsevn_accum,mxe4prof,c_qc_accum,
      +                       num_events_prof,lvlsinprof,nlvinprof,
-     +                       nrlacqc_pc,l_operational,lwr)
+     +                       nrlacqc_pc,l_mandlvl,tsplines,
+     +                       l_operational,lwr)
 
+      use pkind, only: dp
+      use pspl, only: bnewton,best_slalom,count_gates,convertd,
+     +                convertd_back
       implicit none
 
 c ------------------------------
@@ -162,8 +191,9 @@ c Parameter statements/constants
 c ------------------------------
       integer      proflun             ! output unit number for post-PREPACQC PREPBUFR-like
                                        !  file containing merged profile reports (always) and
-                                       !  single(flight)-level reports (when l_prof1lvl=T)
-                                       !  with added NRLACQC events
+                                       !  single(flight)-level reports not part of any
+                                       !  profile (when l_prof1lvl=T) with added NRLACQC
+                                       !  events
 
       real*8       bmiss               ! BUFRLIB missing value (set in main program)
 
@@ -258,6 +288,14 @@ c -------------------------------------------------------------------------
 
 c Logicals controlling processing (not read in from namelist in main program)
 c ---------------------------------------------------------------------------
+      logical l_mandlvl                ! T=interpolate to mandatory levels in profile
+                                       !   generation
+                                       ! F=do not interpolate to mandatory levels in profile
+                                       !   generation
+      logical tsplines                 ! T=use tension-splines for aircraft vertical velocity
+                                       !   calculation
+                                       ! F=use finite-differencing for aircraft vertical
+                                       !   velocity calculation
       logical l_operational            ! Run program  in operational mode if true
 
 c Summary counters
@@ -367,10 +405,19 @@ c ------------
      +,        jj                      ! sorted (pressure low->high) index pointing to lvl j
      +,        jjp1                    ! sorted index pointing to next level below jj
      +,        jjm1                    ! sorted index pointing to previous level above jj
+     +,        jjp2                    ! sorted index pointing to next level below jjp1
+     +,        jjm2                    ! sorted index pointing to previous level above jjm1
      +,        jjmaxp                  ! sorted index pointing to level jj with max pressure
      +,        jjminp                  ! sorted index pointing to level jj with min pressure
      +,        jjpnmnbtw               ! sorted index pointing to next level below jj that is
                                        !  not a mandatory pressure level
+     +,        jk                      ! index,
+     +,        c1_jk                   ! index,
+     +,        c2_jk                   ! index,
+     +,        jkp                     ! index,
+     +,        jkm                     ! index, 
+     +,        jjp                     ! index,
+     +,        jjm                     ! index,
      +,        kk                      ! sorted (pressure low->high) index pointing to lvl k
      +,        jjpk                    ! sorted index pointing to level jj plus k
 
@@ -461,6 +508,7 @@ c ------------
      +,        dt                      ! delta time (sec) between two levels, used to
                                        !  calculate instantaneous altitude (ascent/descent)
                                        !  rate
+     +,        dt_new                  ! delta time
      +,        rate_accum(mxlv)        ! array of instantaneous altitude (ascent/descent)
                                        !  rates on all levels of profile
 
@@ -498,6 +546,22 @@ c -----
 
       integer     lwr                  ! machine word length in bytes (either 4 or 8)
 
+c Variables related to tspline
+      integer, parameter:: nit=30
+!     real(dp),parameter:: bigT=120.0,halfgate=30.0,heps=.01
+      real(dp),parameter:: bigT=120.0,heps=.01
+      integer nh,nh2,m,mh,maxita,maxitb,maxit,maxrts,doru
+      real(dp) enbest,timemin
+      real(dp) halfgate
+      integer, allocatable :: idx(:)
+      integer, allocatable :: modebest(:)
+      integer, allocatable :: pof(:)
+      real, allocatable :: tdata(:),hdata(:),wdata(:)
+      real(dp), allocatable :: ts(:),hs(:),te(:),dhdt(:)
+      real(dp), allocatable :: tp(:),hp(:)
+      real(dp), allocatable :: qbest(:),habest(:)
+      logical descending,FF,nearsec
+
 c ----------------------------------------------------
 
 c Start program
@@ -529,10 +593,12 @@ c  500, 400, 300, 200, 150 and 100 mb in the acceptable mandatory levels for air
 c  profiles (not many aircraft flying above 100 mb!)
 c ---------------------------------------------------------------------------------------
       nmandlvls = 0
-      if(nlvinprof.gt.1) then         ! do interpolation only for profiles with more than one
-                                      !  report!
+      nlv2wrt_tot = nlvinprof
+
+      if(l_mandlvl .and. nlvinprof.gt.1) then ! do interpolation only for profiles with
+                                              !  more than one report!
         loop1: do i = 1,maxmandlvls   ! maxmandlvls=9 - number of mandatory levels to check
-          do j = 1,nlvinprof          ! levels will appear in increasing order via index
+          do j = 1,nlvinprof          !  levels will appear in increasing order via index
                                       !  jj... first level might be 247 mb, second might be
                                       !  427 mb, etc.
             jj = iord(j)
@@ -758,61 +824,247 @@ c Re-sort pressures (now with mandatory levels inclded) from lowest to highest
 c ----------------------------------------------------------------------------
         call orders(1,iwork,lvlsinprof,iord,nlv2wrt_tot,1,lwr,2)
 
+      end if ! l_mandlvl .and. nlvinprof.gt.1
+
+c -----------------------------------------
+c Calculate vertical velocity rate_accum
+c add ascent/descent rate here
+c -----------------------------------------
+      write(41,*) 'nlv2wrt_tot=', nlv2wrt_tot,'c_acftreg=',c_acftreg1
+      if ((nlv2wrt_tot.gt.1) .and. (.not.tsplines)) then
+        do j = 1,nlv2wrt_tot
+          jj = iord(j)
+          write(41,*) 'j,ord,z,t,pof=', j, jj,zevn_accum(1,jj,1),
+     +    drinfo_accum(3,jj),acft_seq_accum(1,jj),acft_seq_accum(2,jj)
+        end do
+
+        do j = 1,nlv2wrt_tot
+          jj = iord(j)
+
+          jkp = 0
+          jkm = 0
+          jjp1 = 0
+          jjm1 = 0
+          if (j .eq. nlv2wrt_tot) then
+             if (ibfms(drinfo_accum(3,jj)).eq.0) then
+                jjp1 = jj
+                jkp = j
+             end if
+          else
+             do jk = j+1,nlv2wrt_tot
+                jjp = iord(jk)
+                if (jjp > nlvinprof) cycle
+                if (ibfms(drinfo_accum(3,jjp)).eq.0) then
+                   jjp1 = jjp
+                   jkp = jk
+                   exit
+                end if
+             end do
+          end if
+
+          if (j .eq. 1 ) then
+             if (ibfms(drinfo_accum(3,jj)).eq.0) then
+                jjm1 = jj
+                jkm = j
+             end if
+          else
+             do jk = j-1,1,-1
+                jjm = iord(jk)
+                if (jjm > nlvinprof) cycle  ! use real obs only
+                if (ibfms(drinfo_accum(3,jjm)).eq.0) then
+                   jjm1 = jjm
+                   jkm = jk
+                   exit
+                end if
+             end do
+          end if
+
+          if ((jjp1 .ne. 0) .and. (jjm1 .ne. 0)) then
+             dt = (drinfo_accum(3,jjp1) - drinfo_accum(3,jjm1))*3600. !  seconds 
+
+             c1_jk = 0
+             c2_jk = 0
+             do while ((abs(dt)<60.) .and. ((jkp+c1_jk<=nlv2wrt_tot)
+     +                 .or. (jkm-c2_jk>=1)))
+                jjp2 = 0
+                jjm2 = 0
+                c1_jk = c1_jk+1
+                c2_jk = c2_jk+1
+                dt_new = dt
+
+                do while (jkp+c1_jk<=nlv2wrt_tot
+     +                .and. iord(jkp+c1_jk)>nlvinprof)
+                   c1_jk = c1_jk+1   ! skip mandatory level
+                end do
+                if (jkp+c1_jk<=nlv2wrt_tot
+     +                .and. iord(jkp+c1_jk)<=nlvinprof) then
+                   jjp = iord(jkp+c1_jk)
+                   if (ibfms(drinfo_accum(3,jjp)).eq.0) then
+                      jjp2 = jjp
+                      dt_new = (drinfo_accum(3,jjp2)
+     +                       - drinfo_accum(3,jjm1))*3600.
+                   end if
+                end if
+                if (abs(dt_new) >= 60.) then
+                   if (jjp2 .ne. 0) jjp1 = jjp2
+                   exit
+                end if
+
+                do while (jkm-c2_jk>=1 .and. iord(jkm-c2_jk)>nlvinprof)
+                   c2_jk = c2_jk+1   ! skip mandatory level
+                end do
+                if (jkm-c2_jk>=1 .and. iord(jkm-c2_jk)<=nlvinprof) then
+                   jjm = iord(jkm-c2_jk)
+                   if (ibfms(drinfo_accum(3,jjm)).eq.0) then
+                      jjm2 = jjm
+                      dt_new = (drinfo_accum(3,jjp1)
+     +                       - drinfo_accum(3,jjm2))*3600.
+                   end if
+                end if
+                if (abs(dt_new) >= 60.) then
+                   if (jjm2 .ne. 0) jjm1 = jjm2
+                   exit
+                end if
+
+                if ((jjp2 .ne. 0) .and. (jjm2 .ne. 0)) then
+                   dt_new = (drinfo_accum(3,jjp2)
+     +                    - drinfo_accum(3,jjm2))*3600.
+                   if (abs(dt_new) >= 60.) then
+                      if (jjp2 .ne. 0) jjp1 = jjp2
+                      if (jjm2 .ne. 0) jjm1 = jjm2
+                      exit
+                   end if
+                end if
+             end do
+             dt = (drinfo_accum(3,jjp1) - drinfo_accum(3,jjm1))*3600.
+
+c            write(41,*)' fj,ord1,z1,t1 = ',j,jjp1,zevn_accum(1,jjp1,1),
+c    +                               drinfo_accum(3,jjp1)
+c            write(41,*)' fj,ord2,z2,t2 = ',j,jjm1,zevn_accum(1,jjm1,1),
+c    +                                  drinfo_accum(3,jjm1)
+             zul = zevn_accum(1,jjp1,1)   ! meters
+             zll = zevn_accum(1,jjm1,1) ! meters
+
+c Need gross checks on ascent/descent rate here?
+             if(abs(dt) .gt. 0.)  ! added to avoid divide by zero
+     +          rate_accum(jj) = (zul - zll)/dt  ! m/s
+                                            ! will be encoded into
+                                            ! PREPBUFR-like file as IALR
+
+             write(41,*) ' fj,dt,rate_accum=',j,dt,rate_accum(jj)
+             write(41,*) ''
+          end if
+        end do
+      end if ! (nlv2wrt_tot.gt.1) .and. (.not.tsplines)
+
+      if ((nlv2wrt_tot.gt.1) .and. tsplines) then
+         nh = 0
+         do j = 1,nlv2wrt_tot
+            jj = iord(j)
+            if (ibfms(drinfo_accum(3,jj)).eq.0) then
+               nh = nh + 1
+c              write(41,*) 'j,ord,z,t=', j, jj,zevn_accum(1,jj,1),
+c    +                 drinfo_accum(3,jj)
+            end if
+         end do
+         nh2 = nh * 2
+
+         halfgate=30.0
+         nearsec=.false.
+         do j = 1,nlv2wrt_tot
+            jj = iord(j)
+            if (ibfms(drinfo_accum(3,jj)).eq.0) then
+               timemin=drinfo_accum(3,jj)*60.0
+               timemin=abs(timemin-nint(timemin))
+               if (timemin>=0.01 .and. timemin<=0.99) nearsec=.true.
+            end if
+         end do
+         if (nearsec) halfgate=10.0
+         write(41,*) 'halfgate=', halfgate
+
+         allocate(idx(nh),pof(nh))
+         allocate(tdata(nh),hdata(nh),wdata(nh))
+         allocate(ts(nh),hs(nh),te(nh),dhdt(nh))
+         maxita = 0
+         maxitb = 0
+         maxrts = 0
+         maxit  = 0
+
+         nh = 0
+         do j = 1,nlv2wrt_tot
+            jj = iord(j)
+            if (ibfms(drinfo_accum(3,jj)).eq.0) then
+               nh = nh + 1
+               tdata(nh) = drinfo_accum(3,jj) ! hours
+               hdata(nh) = zevn_accum(1,jj,1) ! meters
+               pof(nh)   = nint(acft_seq_accum(2,jj))
+               write(41,*) 'tdata,hdata,pof=',nh,tdata(nh),hdata(nh),
+     +          pof(nh)
+            end if
+         end do
+
+c        arrange data with time increase
+         call convertd(nh,halfgate,hdata,tdata,pof,
+     +        doru,idx,hs,ts,descending,FF)
+         if (FF) call errexit(62)
+         if (descending)then
+            write(41,'('' set descending'')')
+         else
+            write(41,'('' set ascending'')')
+         endif
+
+         call count_gates(nh,ts(1:nh),halfgate,mh)
+         m = mh*2
+         allocate(tp(m),hp(m),qbest(m),habest(m),modebest(mh))
+         call best_slalom(nh,mh,doru,ts,hs,halfgate,bigT,tp,hp,
+     +     qbest,habest,enbest,modebest,maxita,maxitb,maxit,maxrts,FF)
+          write(41,*) 'maxita,maxitb,maxit,maxrts=',maxita,maxitb,maxit,
+     +     maxrts
+         if (FF) call errexit(63)
+
+c        Use bounded Newton iterations to estimate the vertical velocity
+         call bnewton(nh,m,bigT,halfgate,ts,hs,tp,habest,
+     +        qbest,te(1:nh),dhdt(1:nh),FF)
+         if (FF) call errexit(64)
+
+c        convert back data with time decrease for ascending
+         call convertd_back(nh,wdata,tdata,dhdt,te,idx,descending)
+         do j = 1, nh
+            write(41,*) 'te,hs,dhdt,wdata=', j,te(j),hs(j),dhdt(j),
+     +       wdata(j)
+         end do
+
+c        Encode dhdt into PREPBUFR-like file as IALR
+         nh = 0
+         do j = 1,nlv2wrt_tot
+            jj = iord(j)
+            if (ibfms(drinfo_accum(3,jj)).eq.0) then
+               nh = nh + 1
+               rate_accum(jj) = wdata(nh)
+               write(41,*) 'j,z,rate=',j,zevn_accum(1,jj,1),
+     +          rate_accum(jj)
+            end if
+         end do
+
+         deallocate(idx,pof)
+         deallocate(tdata,hdata,wdata)
+         deallocate(ts,hs,te,dhdt)
+         deallocate(tp,hp)
+         deallocate(qbest,habest,modebest)
+      end if ! nlv2wrt_tot.gt.1 .and. tsplines
+
+
 c Interpolate position and time to mandatory level (will be stored in XDR YDR HRDR) (need to
 c   have mandatory levels inserted into the profile before this step)
 c ------------------------------------------------------------------------------------------
-        nmNbtw = 0
+      if (l_mandlvl .and. nlvinprof.gt.1) then
+
 ccccccc print *, ' nlv2wrt_tot = ',nlv2wrt_tot
         do j = 1,nlv2wrt_tot
           jj = iord(j)
 ccccccc   print *, ' j,jj = ',j,jj
 
-          if(j.gt.1) then
-ccccccc     print *, ' j .gt.1 - j,jj = ',j,jj
-
-c Also add ascent/descent rate here
-c ---------------------------------
-            if(j.le.1) then
-c DAK: Make sure j is > 1 here !!  (not sure it can ever happen)
-              print *
-              print *, '### PROBLEM - j .le. 1 (= ',j,') in subr. ',
-     +                 'sub2mem_mer, iord array underflow'
-              print *, '              this should never happen!!'
-              print *
-              call w3tage('PREPOBS_PREPACQC')
-              call errexit(61)
-            endif
-            jjm1 = iord(j-1)
-ccccccc     print *, ' jjm1 = ',jjm1
-            if(ibfms(drinfo_accum(3,jj)).eq.0 .and. 
-     +         ibfms(drinfo_accum(3,jjm1)).eq.0) then
-
-              zul = zevn_accum(1,jj,1)   ! meters
-              zll = zevn_accum(1,jjm1,1) ! meters 
-
-              dt = (drinfo_accum(3,jj  ) - 
-     +              drinfo_accum(3,jjm1))*3600. ! seconds
-
-c Need gross checks on ascent/descent rate here?
-              if(dt.gt.0.)  ! added to avoid divide by zero
-     +          rate_accum(jj) = (zul - zll)/dt  ! m/s
-                                            ! will be encoded into PREPBUFR-like file as IALR
-
-            endif ! drift time missing?
-          endif ! if(j.gt.1)
-
-cvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvcheck!! why is this needed? DAK
-c Cycle past "in-between mandatory levels"
-c ----------------------------------------
-          if(nmNbtw.gt.0) then
-          do l = 1,nmNbtw-1
-              cycle
-            enddo
-          endif
-c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^check!! why is this needed? DAK`
-
           nmNbtw = 0 ! reset 'number of mandatory levels in-between' counter
-
 c------------------------------------------------------------------------------------------
 c------------------------------------------------------------------------------------------
 ! (DAK: verified that logic below gives the correct answer - good news!)
@@ -974,9 +1226,7 @@ cc   +            drinfo_accum(3,jjpnmNbtw) ! give pml the same time as pul and 
 c------------------------------------------------------------------------------------------
 c------------------------------------------------------------------------------------------
         enddo ! j = 1,nlv2wrt_tot
-      else
-        nlv2wrt_tot = nlvinprof ! nlvinprof should be 1 here !
-      endif ! nlvinprof.gt.1
+      endif ! l_mandlvl .and. nlvinprof.gt.1
 
 c Set TYP to reflect whether or not report is part of a profile, ascending or descending
 c --------------------------------------------------------------------------------------

@@ -82,6 +82,7 @@ if [ $PROCESS_ACQC = YES ]; then
    fi
 
    export FORT11=$PRPI
+   export FORT41=vvel_info.acft_profiles.txt
    export FORT61=$PRPI.prepacqc
    export FORT62=prepbufr.acft_profiles
    TIMEIT=${TIMEIT:-""}

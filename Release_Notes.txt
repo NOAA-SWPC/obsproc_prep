@@ -1,4 +1,181 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+obsproc_prep release 3.5.0 --> released ??? ??, 201?
+                           --> implemented ??? ??, 201?
+
+files:
+  obsproc_prep/fix/prepobs_cqc_statbge
+  obsproc_prep/fix/prepobs_landc
+  obsproc_prep/fix/prepobs_prep.bufrtable
+  obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
+  obsproc_prep/fix/syndat_weight
+  obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
+  obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
+  obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
+  obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
+  obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
+  obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
+  obsproc_prep/sorc/prepobs_listheaders.fd/makefile
+  obsproc_prep/sorc/prepobs_monoprepbufr.fd/makefile
+  obsproc_prep/sorc/prepobs_monoprepbufr.fd/monoprepbufr.f90
+  obsproc_prep/sorc/prepobs_mpcopybufr.fd/makefile
+  obsproc_prep/sorc/prepobs_mpcopybufr.fd/mpcopybufr.f90
+  obsproc_prep/sorc/prepobs_oiqcbufr.fd/makefile
+  obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
+  obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
+  obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
+  obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
+  obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
+ *obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
+ *obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
+  obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
+ *obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
+ *obsproc_prep/sorc/prepobs_prepacqc.fd/pietc.f90
+ *obsproc_prep/sorc/prepobs_prepacqc.fd/pkind.f90
+ *obsproc_prep/sorc/prepobs_prepacqc.fd/pmat.f90
+ *obsproc_prep/sorc/prepobs_prepacqc.fd/pmat2.f90
+ *obsproc_prep/sorc/prepobs_prepacqc.fd/pmat3.f90
+ *obsproc_prep/sorc/prepobs_prepacqc.fd/prepacqc.f
+ *obsproc_prep/sorc/prepobs_prepacqc.fd/pspl.f90
+ *obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_mer.f
+  obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
+  obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
+  obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/makefile
+  obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/w3tovseds.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/w3tovsmnd.f
+  obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
+  obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
+  obsproc_prep/sorc/prepobs_prevents.fd/makefile
+  obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
+  obsproc_prep/sorc/prepobs_profcqc.fd/makefile
+  obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
+  obsproc_prep/sorc/syndat_syndata.fd/makefile
+  obsproc_prep/sorc/syndat_syndata.fd/syndata.f
+  obsproc_prep/sorc/build.sh
+  obsproc_prep/sorc/clean.sh
+  obsproc_prep/sorc/install.sh
+  obsproc_prep/sorc/load_libs.rc
+  obsproc_prep/sorc/README.build
+  obsproc_prep/sorc/setlibs.rc
+  obsproc_prep/ush/prepobs_cqcbufr.sh
+  obsproc_prep/ush/prepobs_cqcvad.sh
+  obsproc_prep/ush/prepobs_makeprepbufr.sh
+  obsproc_prep/ush/prepobs_oiqcbufr.sh
+ *obsproc_prep/ush/prepobs_prepacqc.sh
+  obsproc_prep/ush/prepobs_prevents.sh
+  obsproc_prep/ush/prepobs_profcqc.sh
+  obsproc_prep/ush/prepobs_syndata.sh
+
+( * - changed/new)
+
+
+ USH script changes:
+   prepobs_prepacqc.sh
+    - Export FORT41 (Fortran unit number 41) as vvel_info.acft_profiles.txt;
+      file will hold printout from vertical velocity rate calculation
+      information for QC'd merged aircraft reports written to profiles.
+      BENEFIT: Isolates it from stdout and keeps amount of stdout manageable.
+
+ Source code changes:
+   prepobs_prepacqc:
+      prepacqc (main program):
+       - Added new namelist switches "l_mandlvl" and "tsplines" (used by
+         subroutine sub2mem_mer, see below).
+       - Minor corrections in Docblock, comments.
+      sub2mem_mer (subroutine):
+       - Modified the calculation of vertical velocity rate in profiles (if
+         they are processed). Previously, could only be done via finite-
+         difference method calculated for descents. Now can be done via
+         either:
+            1)  finite-difference method calculated for both ascents and
+                descents using the nearest neighboring pair which are at least
+                one minute apart (when new namelist switch tsplines=F), or
+            2)  use of Jim Purser's tension-spline interpolation utility to get
+                continuous gradient results in a profile (when new namelist
+                switch tsplines=T, the default).
+       - New namelist switch "l_mandlvl" allows the interpolation of obs data
+         to mandatory levels in the profile calculation to now be skipped
+         (l_mandlvl=F).  Prior to this, code was hardwired to always
+         interpolate obs data to mandatory levels (now represented by
+         l_mandlvl=T, the default).
+       - Minor corrections in Docblock, comments.
+      output_acqc_prof (subroutine):
+       - Pass "l_mandlvl" and "tspline" into subroutine sub2mem_mer.
+       - Minor corrections in Docblock, comments.
+      input_acqc (subroutine):
+       - Minor corrections in Docblock.
+      pietc, pkind, pmat, pmat2, pmat3, pspl (f90 subroutines):
+       - New. Jim Purser's package of regular and and tensioned splines.
+         [These will eventually be placed in a library since these can be
+          applied in many applications. For more information about this
+          package, please refer to R.J. Purser, Y. Zhu, and B.A. Ballish,
+          2014: Recovery of aircraft vertical motion profiles from incomplete
+          data -- an application of the method of splines. NOAA/NCEP Office
+          Note (In preparation). 35 pages.]
+      makefile:
+       - Added the six new f90 subroutines (see above).
+       - Removed "-fixed" ifort compiler option since it is a default for
+         *.f routines and cannot be used for *.f90 routines (allows *.f and
+         *.f90 to use same compiler options).
+       - Added default compiling rules for *.f vs. *.f90 subroutines.
+       - Includes dependencies for generating certain object files in this
+         program.
+      BENEFIT: The splines obtain more continuously smooth aircraft vertical
+               velocity and mitigate the missing time information. The aircraft
+               vertical motion profiles are recovered from incompletely known
+               temporal reference data by exploiting the inherent smoothing
+               property of spline functions.  
+
+
+ Output changes:
+ ---------------
+  (For specific network changes see " Output changes" in Release Notes for that
+   network, if that network executes this version of obsproc_prep.)
+
+
+ Shared Software:
+ ----------------
+    - All source codes:
+         link to version 2.0.6 of w3nco library
+         link to version 10.2.5 of bufr library
+    - Source codes prepobs_cqcbufr, prepobs_prepacpf, prepobs_prepacqc,
+      prepobs_prepdata, prepobs_prevents, syndat_syndata:
+         link to version 2.2.0 of w3emc library
+    - Source codes prepobs_prepdata, prepobs_prevents, syndat_syndata
+         link to version 2.0.1 of bacio library
+         link to version 2.0.2 of sp library
+         link to version 1.0.1 of sigio library
+
+
+ Preimplementation Testing Requirements:
+ ---------------------------------------
+   There are no jobs in obsproc_prep.  Jobs executing this version of
+   obsproc_prep will be tested.
+
+
+ Dissemination:
+ --------------
+   See information about dissemination in the release notes for
+   obsproc_<NETWORK> packages which execute this version of obsproc_prep.
+
+
+ Special Instructions:
+ ---------------------
+   This must be implemented simultaneously with the implementation of
+   v2.1.1 of obsproc_global.
+
+   Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
+   needed.
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
 obsproc_prep release ?.?.? --> released ??? ??, 2015
                            --> implemented ??? ??, 2015
 
@@ -233,7 +410,7 @@ files:
  Output changes:
  ---------------
   (For specific network changes see " Output changes" in Release Notes for that
-   network.)
+   network, if that network executes this version of obsproc_prep.)
 
 
  Shared Software:
@@ -364,7 +541,7 @@ files:
  Output changes:
  ---------------
   (For specific network changes see " Output changes" in Release Notes for that
-   network.)
+   network, if that network executes this version of obsproc_prep.)
 
 
  Shared Software:
@@ -612,7 +789,7 @@ files:
  Output changes:
  ---------------
   (For specific network changes see " Output changes" in Release Notes for that
-   network.)
+   network, if that network executes this version of obsproc_prep.)
 
 
  Shared Software:
@@ -736,7 +913,6 @@ files:
       /nw${envir}/decoders/decod_shared/dictionaries, rather than old
       horizontal structure location, /nw${envir}/dictionaries (the latter will
       be removed in September 2014).
-
 
  Source code changes:
    build.sh in sorc directory:
@@ -1233,7 +1409,7 @@ files:
  Output changes:
  ---------------
   (For specific network changes see " Output changes" in Release Notes for that
-   network.)
+   network, if that network executes this version of obsproc_prep.)
 
 
  Compute Resource Information:

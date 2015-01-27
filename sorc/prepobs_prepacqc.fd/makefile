@@ -26,9 +26,9 @@ SHELL=/bin/sh
 # parameter.  The new modules are not limited to Fortran, but may be C, YACC,
 # LEX, or CAL.  An explicit rule will need to be added for PASCAL modules.
 
-SRCS = 	prepacqc.f acftobs_qc.f tranQCflags.f output_acqc_prof.f output_acqc_noprof.f input_acqc.f indexc40.f sub2mem_mer.f sub2mem_um.f
+SRCS = 	prepacqc.f acftobs_qc.f tranQCflags.f output_acqc_prof.f output_acqc_noprof.f input_acqc.f indexc40.f sub2mem_mer.f sub2mem_um.f pmat.f90 pmat2.f90 pmat3.f90 pietc.f90 pspl.f90 pkind.f90
 
-OBJS =   prepacqc.o acftobs_qc.o tranQCflags.o output_acqc_prof.o output_acqc_noprof.o input_acqc.o indexc40.o sub2mem_mer.o sub2mem_um.o
+OBJS =   prepacqc.o acftobs_qc.o tranQCflags.o output_acqc_prof.o output_acqc_noprof.o input_acqc.o indexc40.o sub2mem_mer.o sub2mem_um.o pmat.o pmat2.o pmat3.o pietc.o pspl.o pkind.o
 
 
 # Tunable parameters
@@ -49,7 +49,7 @@ CMD = prepobs_prepacqc
 
 DEBUG =                -g -traceback
 #DEBUG2 =        -ftrapuv -check all -check nooutput_conversion -fp-stack-check -fstack-protector
-FFLAGS = -O2 -convert big_endian -list -assume noold_ldout_format -fixed $(DEBUG) $(DEBUG2)
+FFLAGS = -O2 -convert big_endian -list -assume noold_ldout_format $(DEBUG) $(DEBUG2)
 
 
 # Lines from here on down should not need to be changed.  They are the actual
@@ -60,6 +60,28 @@ all:		$(CMD)
 $(CMD):		$(OBJS)
 	$(FC) $(LDFLAGS) -o $(@) $(OBJS) $(LIBS)
 
+.SUFFIXES : .o .f .f90
+
+.f90.o:
+	@echo
+	@echo '---> Compiling $<'
+	$(FC) $(FFLAGS) -c $<
+
+.f.o:
+	@echo
+	@echo '---> Compiling $<'
+	$(FC) $(FFLAGS) -c $<
+
+# ------------
+# Dependencies
+# ------------
+pkind.o : pkind.f90
+pietc.o : pietc.f90 pkind.o
+pmat.o  : pmat.f90 pkind.o pietc.o
+pmat2.o : pmat2.f90 pkind.o pmat.o
+pmat3.o : pmat3.f90 pkind.o pietc.o pmat.o pmat2.o
+pspl.o: pspl.f90 pkind.o pietc.o pmat2.o pmat3.o
+sub2mem_mer.o : sub2mem_mer.f pkind.o pspl.o
 
 .PHONY: clean clobber void install
 clean:

@@ -7,10 +7,10 @@ c
 c Abstract: Reads in sorted NRLACQC quality controlled single-level aircraft reports and
 c   constructs profiles from ascending or descending flights.  Encodes these profiles as
 c   merged (mass and wind) reports (subsets) along with (when l_prof1lvl=T) merged
-c   single(flight)-level aircraft reports into a PREPBUFR-like file containing only these
-c   data.  Single-level reports get PREPBUFR report type 3xx (where xx is original type in
-c   1xx mass and 2xx wind reports), ascending profile reports get PREPBUFR report type 4xx,
-c   and descending profile reports get PREPBUFR report type 4xx.
+c   single(flight)-level aircraft reports not part of any profile into a PREPBUFR-like file
+c   containing only these data.  Single-level reports get PREPBUFR report type 3xx (where xx
+c   is original type in 1xx mass and 2xx wind reports), ascending profile reports get
+c   PREPBUFR report type 4xx, and descending profile reports get PREPBUFR report type 4xx.
 c
 c Program History Log:
 c 2010-11-15  S. Bender  -- Original Author
@@ -31,12 +31,13 @@ c                              qob_ev,qqm_ev,qpc_ev,qrc_ev,qbg,qpp,
 c                              uob_ev,vob_ev,wqm_ev,wpc_ev,wrc_ev,
 c                              wbg,wpp,ddo_ev,ffo_ev,dfq_ev,dfp_ev,
 c                              dfr_ev,nrlacqc_pc,l_allev_pf,
-c                              l_prof1lvl,l_operational,lwr)
+c                              l_prof1lvl,l_mandlvl,tsplines,l_operational,lwr)
 c
 c   Input argument list:
 c     proflun      - Unit number for the output post-PREPACQC PREPBUFR-like file containing
-c                    merged profile reports (always) and single(flight)-level reports (when
-c                    l_prof1lvl=T) with added NRLACQC events (aircraft data only)
+c                    merged profile reports (always) and single(flight)-level reports not
+c                    part of any profile (when l_prof1lvl=T) with added NRLACQC events
+c                    (aircraft data only)
 c     nrpts4QC_pre - Number of reports in the "merged" single-level aircraft report arrays
 c     max_reps     - Maximum number of reports accepted by acftobs_qc
 c     mxnmev       - Maximum number of events allowed, per variable type
@@ -117,15 +118,19 @@ c     l_allev_pf   - Logical whether to process latest (likely NRLACQC) event pl
 c                    events (TRUE) or only latest event (FALSE) into profiles PREPBUFR-like
 c                    file
 c     l_prof1lvl   - Logical whether to encode merged single(flight)-level aircraft reports
-c                    with NRLACQC events into PREPBUFR-like file (along with, always, merged
-c                    profiles from aircraft ascents and descents)
+c                    with NRLACQC events that are not part of any profile into PREPBUFR-like
+c                    file (along with, always, merged profiles from aircraft ascents and
+c                    descents)
+c     l_mandlvl    - Logical whether to interpolate to mandatory levels in profile generation
+c     tsplines     - Logical whether to use tension-splines for aircraft vertical velocity
+c                    calculation
 c     l_operational- Run program in operational mode if true
 c     lwr          - Machine word length in bytes (either 4 or 8)
 c
 c   Output files:
 c     Unit proflun - PREPBUFR-like file containing merged (mass and wind) profile reports
-c                    (always) and single(flight)-level reports (when l_prof1lvl=T) with
-c                    NRLACQC events
+c                    (always) and single(flight)-level reports not part of any profile (when
+c                    l_prof1lvl=T) with NRLACQC events
 c     Unit 06      - Standard output print
 c     Unit 52      - Text file containing listing of all QC'd merged aircraft reports written
 c                    to profiles PREPBUFR-like file
@@ -158,7 +163,8 @@ c$$$
      +                            uob_ev,vob_ev,wqm_ev,wpc_ev,wrc_ev,
      +                            wbg,wpp,ddo_ev,ffo_ev,dfq_ev,dfp_ev,
      +                            dfr_ev,nrlacqc_pc,l_allev_pf,
-     +                            l_prof1lvl,l_operational,lwr)
+     +                            l_prof1lvl,l_mandlvl,tsplines,
+     +                            l_operational,lwr)
 
       implicit none
       integer mevwrt(1)   ! DAK: This is a "dummy" variable, not used anywhere.  For some
@@ -174,8 +180,8 @@ c Parameter statements/constants
 c ------------------------------
       integer    proflun              ! output unit number for post-PREPACQC PREPBUFR-like
                                       !  file containing merged profile reports (always) and
-                                      !  single(flight)-level reports (when l_prof1lvl=T)
-                                      !  with added NRLACQC events
+                                      !  single(flight)-level reports not part of any profile
+                                      !  (when l_prof1lvl=T) with added NRLACQC events
 
       integer    max_reps             ! maximum number of input merged (mass + wind piece)
                                       !  aircraft-type reports allowed
@@ -247,13 +253,21 @@ c -----------------------------------------------------------------------
                                 !        events are always encoded into full PREPBUFR file)
 
      +,         l_prof1lvl      ! T=encode merged single(flight)-level aircraft reports with
-                                !   NRLACQC events into PREPBUFR-like file, along with merged
-                                !   profiles from aircraft ascents and descents
+                                !   NRLACQC events that are not part of any profile into
+                                !   PREPBUFR-like file, along with merged profiles from
+                                !   aircraft ascents and descents
                                 !   **CAUTION: Will make code take a bit longer to run!!
                                 ! F=do not encode merged single(flight)-level aircraft
                                 !   reports with NRLACQC events into PREPBUFR-like file -
                                 !   only merged profiles from aircraft ascents and descents
                                 !   will be encoded into this file
+     +,         l_mandlvl       ! T=interpolate to mandatory levels in profile generation
+                                ! F=do not interpolate to mandatory levels in profile
+                                !   generation
+     +,         tsplines        ! T=use tension-splines for aircraft vertical velocity
+                                !   calculation
+                                ! F=use finite-differencing for aircraft vertical velocity
+                                !   calculation
 
 
 c Logicals controlling processing (not read in from namelist in main program)
@@ -841,7 +855,8 @@ ccccc+                rct_accum(1,11),rct_accum(1,12)
      +                       wuvevn_accum,wuvbg_accum,wuvpp_accum,
      +                       wdsevn_accum,mxe4prof,c_qc_accum,
      +                       num_events_prof,lvlsinprof,nlvinprof,
-     +                       nrlacqc_pc,l_operational,lwr)
+     +                       nrlacqc_pc,l_mandlvl,tsplines,
+     +                       l_operational,lwr)
 
 c Write the current profile to output
 c -----------------------------------
@@ -1326,7 +1341,8 @@ ccccc+     ', acid(j-1) = ',a8,', acid_last_profile = ',a8)
      +                   wuvevn_accum,wuvbg_accum,wuvpp_accum,
      +                   wdsevn_accum,mxe4prof,c_qc_accum,
      +                   num_events_prof,lvlsinprof,nlvinprof,
-     +                   nrlacqc_pc,l_operational,lwr)
+     +                   nrlacqc_pc,l_mandlvl,tsplines,
+     +                   l_operational,lwr)
 
 c Write the current profile to output
 c -----------------------------------

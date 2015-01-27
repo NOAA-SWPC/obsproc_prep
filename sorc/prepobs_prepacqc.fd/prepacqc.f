@@ -2,7 +2,7 @@ c$$$ Main Program Documentation Block
 c   BEST VIEWED WITH 94-CHARACTER WIDTH WINDOW
 c
 c Main Program: PREPOBS_PREPACQC
-c   Programmer: D. Keyser       Org: NP22       Date: 2014-09-03
+c   Programmer: D. Keyser       Org: NP22       Date: 2014-12-12
 c
 c Abstract: Performs the NRL aircraft data quality control on all types of reports (AIREP,
 c   PIREP, AMDAR, TAMDAR, MDCRS).  Replaces the previous routine of the same name originally
@@ -132,6 +132,21 @@ c                      return back to the calling main program, the main program
 c                      this case, does no further processing.  Instead the main program stops
 c                      with condition code 4 (to alert executing script prepobs_prepacqc.sh)
 c                      after printing a diagnostic message to stdout.
+c 2014-12-09  J. Purser/Y. Zhu     -- Added new namelist switches "l_mandlvl" and "tsplines",
+c                      used by subroutine sub2mem_mer to modify the calculation of vertical
+c                      velocity rate in the profiles {l_mandlvl=F excludes interpolation to
+c                      mandatory levels; tsplines=T calculates vertical velocity rate using
+c                      Jim Purser's tension-spline interpolation utility (source in-lined in
+c                      this program at this time) to get continuous gradient results in a
+c                      profile and mitigate missing time information; tsplines=F uses finite-
+c                      difference method to obtain vertical velocity rate, calculated for
+c                      both ascents and descents using the nearest neighboring pair which are
+c                      at least one minute apart (before, only finite-difference method was
+c                      used to obtain vertical velocity rate and it could only be calculated
+c                      for descents).
+c 2014-12-12  D. Keyser  -- Printout from vertical velocity rate calculation information for
+c                      QC'd merged aircraft reports written to profiles PREPBUFR-like file is
+c                      written to unit 41 rather than stdout.
 c
 c Usage:
 c   Input files:
@@ -150,14 +165,16 @@ c     Unit 35  - Text file containing position check information
 c     Unit 36  - Text file containing ordering check information
 c     Unit 37  - Text file containing suspect data check information
 c     Unit 38  - Text file containing reject list information
+c     Unit 41  - Text file containing vertical velocity rate calculation information for QC'd
+c                merged aircraft reports written to profiles PREPBUFR-like file
 c     Unit 51  - Text file containing sorted listing of all single-level QC'd aircraft
 c                reports written back to full PREPBUFR file
 c     Unit 52  - Text file containing sorted listing of all QC'd merged aircraft reports
 c                written to profiles PREPBUFR-like file
 c     Unit 61  - PREPBUFR file identical to input except containing NRLACQC events
 c     Unit 62  - PREPBUFR-like file containing merged (mass and wind) profile reports
-c                (always) and single(flight)-level reports (when l_prof1lvl=T) with NRLACQC
-c                 events
+c                (always) and single(flight)-level reports not part of any profile (when
+c                l_prof1lvl=T) with NRLACQC events
 c
 c   Subprograms called:
 c     Unique:    - ACFTOBS_QC        PR_WORKDATA INDEXC             DUPCHEK_QC
@@ -179,9 +196,7 @@ c
 c   Exit states:
 c     Cond =   0 - successful run
 c              4 - no aircraft reports of any type read in
-c             21 - input BUFR file found, but unable to open it mass and wind pieces in
-c                  original PREPBUFR file (subroutine input_acqc)
-calloc        23 - unexpected return code from readns; problems reading BUFR file
+c             23 - unexpected return code from readns; problems reading BUFR file
 c             31 - indexing problem encountered when trying to match QC'd data in arrays to
 c                  mass and wind pieces in original PREPBUFR file (subroutine
 c                  output_acqc_noprof)
@@ -189,6 +204,12 @@ c             59 - nlvinprof is zero coming into subroutine sub2mem_mer (should 
 c                  happen!)
 c             61 - index "j is .le. 1 meaning "iord" array underflow (should never happen!)
 c                  (subroutine sub2mem_mer)
+c             62 - error generating vertical velocity rate, coming from subroutine convertd
+c                  in tension-spline interpolation utility pspl (profiles only)
+c             63 - error generating vertical velocity rate, coming from subroutine
+c                  best_slalom in tension-spline interpolation utility pspl (profiles only)
+c             64 - error generating vertical velocity rate, coming from subroutine bnewton
+c                  in tension-spline interpolation utility pspl (profiles only)
 c             69 - row number for input data matrix is outside range of 1-34 (subroutine
 c                  tranQCflags)
 c             79 - characters on this machine are not ASCII, conversion of quality flag to
@@ -219,8 +240,8 @@ c            l_doprofiles   - logical:
 c                                 TRUE  - create merged raob lookalike QC'd profiles from
 c                                         aircraft ascents and descents (always) and output
 c                                         these as well as QC'd merged single(flight)-level
-c                                         aircraft reports (when l_prof1lvl=T) to a PREPBUFR-
-c                                         like file
+c                                         aircraft reports not part of any profile (when
+c                                         l_prof1lvl=T) to a PREPBUFR-like file
 c                                         **CAUTION: Will make code take quite a bit longer
 c                                                    to run!
 c                                 FALSE - SKIP creation of merged raob lookalike QC'd
@@ -241,16 +262,34 @@ c                                          PREPBUFR file}
 c                                 (default=FALSE)
 c            l_prof1lvl     - logical:
 c                                 TRUE  - encode merged single(flight)-level aircraft reports
-c                                         with NRLACQC events into PREPBUFR-like file, along
-c                                         with merged profiles from aircraft ascents and
-c                                         descents
+c                                         with NRLACQC events that are not part of any
+c                                         profile into PREPBUFR-like file, along with merged
+c                                         profiles from aircraft ascents and descents
 c                                         **CAUTION: Will make code take a bit longer to run!
 c                                 FALSE - DO NOT encode merged single(flight)-level aircraft
-c                                         reports with NRLACQC events into PREPBUFR-like file
+c                                         reports with NRLACQC events that are not part of
+c                                         any profile into PREPBUFR-like file
 c                                         - only merged profiles from aircraft ascents and
 c                                         descents will be encoded into this file
-c                                 (Note:  Applicable only when l_doprofiles=FALSE)
+c                                 (Note:  Applicable only when l_doprofiles=TRUE)
 c                                 (default=FALSE)
+c            l_mandlvl      - logical:
+c                                 TRUE  - interpolate obs data to mandatory levels in profile
+c                                         generation
+c                                 FALSE - DO NOT interpolate obs data to mandatory levels in
+c                                         profile generation
+c                                 (Note:  Applicable only when l_doprofiles=TRUE)
+c                                 (default=TRUE)
+c            tsplines       - logical:
+c                                 TRUE  - use Jim Purser's tension-spline interpolation
+c                                         utility to generate aircraft vertical velocity rate
+c                                         in profile generation
+c                                 FALSE - use finite-difference method based on nearest
+c                                         neighboring pair of obs which are at least one
+c                                         minute apart to generate aircraft vertical velocity
+c                                         rate in profile generation
+c                                 (Note:  Applicable only when l_doprofiles=TRUE)
+c                                 (default=TRUE)
 c
 c Attributes:
 c   Language: FORTRAN 90
@@ -495,15 +534,15 @@ c ------------------------------------------------------------------------------
 c Namelist variables
 c ------------------
       namelist /nrlacqcinput/ trad,l_otw,l_nhonly,l_doprofiles,
-     +                        l_allev_pf,l_prof1lvl
+     +                        l_allev_pf,l_prof1lvl,l_mandlvl,tsplines
 
       real trad               ! Time window radius for outputting reports (if l_otw=T)
       logical l_otw           ! T=eliminate reports outside the time window radius +/- trad
      +,       l_nhonly        ! T=eliminate reports outside tropics & N. Hemisphere
      +,       l_doprofiles    ! T=create merged raob lookalike QC'd profiles from aircraft
                               !   ascents and descents (always) and output these as well as
-                              !   QC'd merged single(flight)-level aircraft reports (when
-                              !   l_prof1lvl=T) to a PREPBUFR-like file
+                              !   QC'd merged single(flight)-level aircraft reports not part
+                              !   of any profile (when l_prof1lvl=T) to a PREPBUFR-like file
                               !   **CAUTION: Will make code take quite a bit longer to run!
                               ! F=skip creation of merged raob lookalike QC'd profiles from
                               !   aircraft ascents and descents into PREPBUFR-like file
@@ -518,14 +557,22 @@ c ------------------
                               ! Note 2: All pre-existing events plus latest (likely NRLACQC)
                               !         events are always encoded into full PREPBUFR file)
      +,       l_prof1lvl      ! T=encode merged single(flight)-level aircraft reports with
-                              !   NRLACQC events into PREPBUFR-like file, along with merged
-                              !   profiles from aircraft ascents and descents
+                              !   NRLACQC events that are not part of any profile into
+                              !   PREPBUFR-like file, along with merged profiles from
+                              !   aircraft ascents and descents
                               !   **CAUTION: Will make code take a bit longer to run!
                               ! F=do not encode merged single(flight)-level aircraft reports
-                              !   with NRLACQC events into PREPBUFR-like file - only merged
-                              !   profiles from aircraft ascents and descents will be encoded
-                              !   into this file
-                              !
+                              !   with NRLACQC events that are not part of any profile into
+                              !   PREPBUFR-like file - only merged profiles from aircraft
+                              !   ascents and descents will be encoded into this file
+                              ! Note : Applicable only when l_doprofiles=T
+     +,       l_mandlvl       ! T=interpolate to mandatory levels in profile generation
+                              ! F=do not interpolate to mandatory levels in profile
+                              !   generation
+     +,       tsplines        ! T=use tension-splines for aircraft vertical velocity
+                              !   calculation
+                              ! F=use finite-differencing for aircraft vertical velocity
+                              !   calculation
                               ! Note : Applicable only when l_doprofiles=T
 
 c Variables used to hold original aircraft data read from the input PREPBUFR file - necessary
@@ -767,11 +814,11 @@ c ******************************************************************************
 
 c Start program
 c -------------
-      call w3tagb('PREPOBS_PREPACQC',2014,246,1927,'NP20')
+      call w3tagb('PREPOBS_PREPACQC',2014,346,1927,'NP20')
 
       write(*,*)
       write(*,*) '************************************************'
-      write(*,*) 'Welcome to PREPOBS_PREPACQC, version 2014-09-03 '
+      write(*,*) 'Welcome to PREPOBS_PREPACQC, version 2014-12-12 '
       call system('date')
       write(*,*) '************************************************'
       write(*,*)
@@ -821,6 +868,8 @@ c --------------------------------------------------------------
       l_doprofiles = .false.
       l_allev_pf   = .false.
       l_prof1lvl   = .false.
+      l_mandlvl    = .true.
+      tsplines     = .true.
 
       read(5,nrlacqcinput,end=10)
    10 continue
@@ -1323,6 +1372,7 @@ c ------------------------------------------------------------------------------
      +                        wbg,wpp,
      +	                      ddo_ev,ffo_ev,dfq_ev,dfp_ev,dfr_ev,
      +                        nrlacqc_pc,l_allev_pf,l_prof1lvl,
+     +                        l_mandlvl,tsplines,
      +                        l_operational,lwr)
 
         write(*,*)

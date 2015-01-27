@@ -11,7 +11,7 @@ c   kernel (acftobs_qc).  Some NCEP data values are translated to NRL standards 
 c   dir/spd, quality information, and report type).  Also stores merged input "event"
 c   information into memory (e.g., nevents, *ob_ev, *qm_ev, *pc_ev, *rc_ev, *pg and *pp
 c   arrays) for use when later constructing merged (mass and wind) profile reports in
-c   PREPBUFR-like file (if requested, i.e., l_prof1lvl=T).
+c   PREPBUFR-like file (if requested, i.e., l_doprofiles=T).
 c
 c Program History Log:
 c 2010-11-15  S. Bender  -- Original Author
@@ -187,8 +187,7 @@ c       BUFRLIB: IREADMG    IREADSB    UFBINT     UFBSEQ     UFBEVN     READNS  
 c
 c   Exit States:
 c     Cond =  0 - successful run
-c	     21 - input BUFR file found, but unable to open it mass and wind pieces in
-c                 original PREPBUFR file
+c            23 - unexpected return code from readns; problems reading BUFR file
 c
 c Remarks: Called by main program.
 c
