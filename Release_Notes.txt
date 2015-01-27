@@ -3,76 +3,77 @@ obsproc_prep release 3.5.0 --> released ??? ??, 201?
                            --> implemented ??? ??, 201?
 
 files:
-  obsproc_prep/fix/prepobs_cqc_statbge
-  obsproc_prep/fix/prepobs_landc
-  obsproc_prep/fix/prepobs_prep.bufrtable
-  obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
-  obsproc_prep/fix/syndat_weight
-  obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
-  obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
-  obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
-  obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
-  obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
-  obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
-  obsproc_prep/sorc/prepobs_listheaders.fd/makefile
-  obsproc_prep/sorc/prepobs_monoprepbufr.fd/makefile
-  obsproc_prep/sorc/prepobs_monoprepbufr.fd/monoprepbufr.f90
-  obsproc_prep/sorc/prepobs_mpcopybufr.fd/makefile
-  obsproc_prep/sorc/prepobs_mpcopybufr.fd/mpcopybufr.f90
-  obsproc_prep/sorc/prepobs_oiqcbufr.fd/makefile
-  obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
-  obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
-  obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
-  obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/pietc.f90
- *obsproc_prep/sorc/prepobs_prepacqc.fd/pkind.f90
- *obsproc_prep/sorc/prepobs_prepacqc.fd/pmat.f90
- *obsproc_prep/sorc/prepobs_prepacqc.fd/pmat2.f90
- *obsproc_prep/sorc/prepobs_prepacqc.fd/pmat3.f90
- *obsproc_prep/sorc/prepobs_prepacqc.fd/prepacqc.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/pspl.f90
- *obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_mer.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
-  obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/makefile
-  obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3tovseds.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3tovsmnd.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
-  obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
-  obsproc_prep/sorc/prepobs_prevents.fd/makefile
-  obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
-  obsproc_prep/sorc/prepobs_profcqc.fd/makefile
-  obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
-  obsproc_prep/sorc/syndat_syndata.fd/makefile
-  obsproc_prep/sorc/syndat_syndata.fd/syndata.f
-  obsproc_prep/sorc/build.sh
-  obsproc_prep/sorc/clean.sh
-  obsproc_prep/sorc/install.sh
-  obsproc_prep/sorc/load_libs.rc
-  obsproc_prep/sorc/README.build
-  obsproc_prep/sorc/setlibs.rc
-  obsproc_prep/ush/prepobs_cqcbufr.sh
-  obsproc_prep/ush/prepobs_cqcvad.sh
-  obsproc_prep/ush/prepobs_makeprepbufr.sh
-  obsproc_prep/ush/prepobs_oiqcbufr.sh
- *obsproc_prep/ush/prepobs_prepacqc.sh
-  obsproc_prep/ush/prepobs_prevents.sh
-  obsproc_prep/ush/prepobs_profcqc.sh
-  obsproc_prep/ush/prepobs_syndata.sh
+   obsproc_prep/fix/prepobs_cqc_statbge
+   obsproc_prep/fix/prepobs_landc
+   obsproc_prep/fix/prepobs_prep.bufrtable
+   obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
+   obsproc_prep/fix/syndat_weight
+   obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
+   obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
+   obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
+ M obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
+   obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
+   obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
+   obsproc_prep/sorc/prepobs_listheaders.fd/makefile
+   obsproc_prep/sorc/prepobs_monoprepbufr.fd/makefile
+   obsproc_prep/sorc/prepobs_monoprepbufr.fd/monoprepbufr.f90
+   obsproc_prep/sorc/prepobs_mpcopybufr.fd/makefile
+   obsproc_prep/sorc/prepobs_mpcopybufr.fd/mpcopybufr.f90
+   obsproc_prep/sorc/prepobs_oiqcbufr.fd/makefile
+   obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
+   obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
+   obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
+   obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
+ A obsproc_prep/sorc/prepobs_prepacqc.fd/pietc.f90
+ A obsproc_prep/sorc/prepobs_prepacqc.fd/pkind.f90
+ A obsproc_prep/sorc/prepobs_prepacqc.fd/pmat.f90
+ A obsproc_prep/sorc/prepobs_prepacqc.fd/pmat2.f90
+ A obsproc_prep/sorc/prepobs_prepacqc.fd/pmat3.f90
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/prepacqc.f
+ A obsproc_prep/sorc/prepobs_prepacqc.fd/pspl.f90
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_mer.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
+   obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/makefile
+   obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3tovseds.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3tovsmnd.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
+   obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
+   obsproc_prep/sorc/prepobs_prevents.fd/makefile
+   obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
+   obsproc_prep/sorc/prepobs_profcqc.fd/makefile
+   obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
+   obsproc_prep/sorc/syndat_syndata.fd/makefile
+   obsproc_prep/sorc/syndat_syndata.fd/syndata.f
+   obsproc_prep/sorc/build.sh
+   obsproc_prep/sorc/clean.sh
+   obsproc_prep/sorc/install.sh
+   obsproc_prep/sorc/load_libs.rc
+   obsproc_prep/sorc/README.build
+   obsproc_prep/sorc/setlibs.rc
+   obsproc_prep/ush/prepobs_cqcbufr.sh
+   obsproc_prep/ush/prepobs_cqcvad.sh
+   obsproc_prep/ush/prepobs_makeprepbufr.sh
+   obsproc_prep/ush/prepobs_oiqcbufr.sh
+ M obsproc_prep/ush/prepobs_prepacqc.sh
+   obsproc_prep/ush/prepobs_prevents.sh
+   obsproc_prep/ush/prepobs_profcqc.sh
+   obsproc_prep/ush/prepobs_syndata.sh
 
-( * - changed/new)
+( A - added)
+( M - modified)
 
 
  USH script changes:
@@ -131,6 +132,13 @@ files:
                vertical motion profiles are recovered from incompletely known
                temporal reference data by exploiting the inherent smoothing
                property of spline functions.  
+   prepobs_cqcvad:
+      cqcvad (main program):
+       - Adjusted size definition of UW, VW, and MSK arrays to
+         utilize NSTN, NTIMES, and NINC rather than explicitly stating
+         the size of 3600.
+         BENEFIT:  This allows for more flexible and parameterized array
+                   definitions.
 
 
  Output changes:
@@ -173,197 +181,78 @@ files:
    Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
    needed.
 
-----------------------------------------------------------------------------
-----------------------------------------------------------------------------
-----------------------------------------------------------------------------
-obsproc_prep release ?.?.? --> released ??? ??, 2015
-                           --> implemented ??? ??, 2015
-
-files:
-  obsproc_prep/fix/prepobs_cqc_statbge
-  obsproc_prep/fix/prepobs_landc
-  obsproc_prep/fix/prepobs_prep.bufrtable
-  obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
-  obsproc_prep/fix/syndat_weight
-  obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
-  obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
-  obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
- *obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
-  obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
-  obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
-  obsproc_prep/sorc/prepobs_listheaders.fd/makefile
-  obsproc_prep/sorc/prepobs_monoprepbufr.fd/makefile
-  obsproc_prep/sorc/prepobs_monoprepbufr.fd/monoprepbufr.f90
-  obsproc_prep/sorc/prepobs_mpcopybufr.fd/makefile
-  obsproc_prep/sorc/prepobs_mpcopybufr.fd/mpcopybufr.f90
-  obsproc_prep/sorc/prepobs_oiqcbufr.fd/makefile
-  obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
-  obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
-  obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
-  obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/prepacqc.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_mer.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
-  obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/makefile
-  obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3tovseds.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3tovsmnd.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
-  obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
-  obsproc_prep/sorc/prepobs_prevents.fd/makefile
-  obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
-  obsproc_prep/sorc/prepobs_profcqc.fd/makefile
-  obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
-  obsproc_prep/sorc/syndat_syndata.fd/makefile
-  obsproc_prep/sorc/syndat_syndata.fd/syndata.f
-  obsproc_prep/sorc/build.sh
-  obsproc_prep/sorc/clean.sh
-  obsproc_prep/sorc/install.sh
-  obsproc_prep/sorc/load_libs.rc
-  obsproc_prep/sorc/README.build
-  obsproc_prep/sorc/setlibs.rc
-  obsproc_prep/ush/prepobs_cqcbufr.sh
-  obsproc_prep/ush/prepobs_cqcvad.sh
-  obsproc_prep/ush/prepobs_makeprepbufr.sh
-  obsproc_prep/ush/prepobs_oiqcbufr.sh
-  obsproc_prep/ush/prepobs_prepacqc.sh
-  obsproc_prep/ush/prepobs_prevents.sh
-  obsproc_prep/ush/prepobs_profcqc.sh
-  obsproc_prep/ush/prepobs_syndata.sh
-
-( * - changed)
-
-
- Source code changes:
-   prepobs_cqcvad:
-      cqcvad:
-       - Adjusted size definition of UW, VW, and MSK arrays to
-         utilize NSTN, NTIMES, and NINC rather than explicitly stating
-         the size of 3600.
-         BENEFIT:  This allows for more flexible and parameterized array 
-                   definitions.
-
-
- Output changes:
- ---------------
-  (For specific network changes see " Output changes" in Release Notest for
-   that network.)
-
- Shared Software:
- ----------------
-    - All source codes:
-         link to version 2.0.6 of w3nco library
-         link to version 10.2.5 of bufr library
-    - Source codes prepobs_cqcbufr, prepobs_prepacpf, prepobs_prepacqc,
-      prepobs_prepdata, prepobs_prevents, syndat_syndata:
-         link to version 2.2.0 of w3emc library
-    - Source codes prepobs_prepdata, prepobs_prevents, syndat_syndata
-         link to version 2.0.1 of bacio library
-         link to version 2.0.2 of sp library
-         link to version 1.0.1 of sigio library
-
-
- Preimplementation Testing Requirements:
- ---------------------------------------
-   There are no jobs in obsproc_prep.  Jobs executing this version of
-   obsproc_prep will be tested.
-
-
- Dissemination:
- --------------
-   See information about dissemination in the release notes for
-   obsproc_<NETWORK> packages which execute this version of obsproc_prep.
-
-
- Special Instructions:
- ---------------------
-   Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
-   needed.
-
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 obsproc_prep release 3.4.0 --> released Dec 4, 2014
                            --> implemented Dec 15, 2014
 
 files:
-  obsproc_prep/fix/prepobs_cqc_statbge
-  obsproc_prep/fix/prepobs_landc
-  obsproc_prep/fix/prepobs_prep.bufrtable
-  obsproc_prep/fix/prepobs_prepanow.bufrtable
-  obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
-  obsproc_prep/fix/syndat_weight
-  obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
-  obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
-  obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
-  obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
-  obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
-  obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
-  obsproc_prep/sorc/prepobs_listheaders.fd/makefile
-  obsproc_prep/sorc/prepobs_monoprepbufr.fd/makefile
-  obsproc_prep/sorc/prepobs_monoprepbufr.fd/monoprepbufr.f90
-  obsproc_prep/sorc/prepobs_mpcopybufr.fd/makefile
-  obsproc_prep/sorc/prepobs_mpcopybufr.fd/mpcopybufr.f90
-  obsproc_prep/sorc/prepobs_oiqcbufr.fd/makefile
-  obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
-  obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
-  obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
-  obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/prepacqc.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_mer.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
-  obsproc_prep/sorc/prepobs_prepanow.fd/makefile
-  obsproc_prep/sorc/prepobs_prepanow.fd/prepanow.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
-  obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/makefile
- *obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
- *obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
- *obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
-  obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
-  obsproc_prep/sorc/prepobs_prevents.fd/makefile
-  obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
-  obsproc_prep/sorc/prepobs_profcqc.fd/makefile
-  obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
-  obsproc_prep/sorc/syndat_syndata.fd/makefile
-  obsproc_prep/sorc/syndat_syndata.fd/syndata.f
-  obsproc_prep/sorc/build.sh
-  obsproc_prep/sorc/clean.sh
-  obsproc_prep/sorc/install.sh
-  obsproc_prep/sorc/load_libs.rc
-  obsproc_prep/sorc/README.build
-  obsproc_prep/sorc/setlibs.rc
-  obsproc_prep/ush/prepobs_cqcbufr.sh
-  obsproc_prep/ush/prepobs_cqcvad.sh
-  obsproc_prep/ush/prepobs_makeprepbufr.sh
-  obsproc_prep/ush/prepobs_oiqcbufr.sh
-  obsproc_prep/ush/prepobs_prepacqc.sh
-  obsproc_prep/ush/prepobs_prevents.sh
-  obsproc_prep/ush/prepobs_profcqc.sh
-  obsproc_prep/ush/prepobs_syndata.sh
+   obsproc_prep/fix/prepobs_cqc_statbge
+   obsproc_prep/fix/prepobs_landc
+   obsproc_prep/fix/prepobs_prep.bufrtable
+   obsproc_prep/fix/prepobs_prepanow.bufrtable
+   obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
+   obsproc_prep/fix/syndat_weight
+   obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
+   obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
+   obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
+   obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
+   obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
+   obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
+   obsproc_prep/sorc/prepobs_listheaders.fd/makefile
+   obsproc_prep/sorc/prepobs_monoprepbufr.fd/makefile
+   obsproc_prep/sorc/prepobs_monoprepbufr.fd/monoprepbufr.f90
+   obsproc_prep/sorc/prepobs_mpcopybufr.fd/makefile
+   obsproc_prep/sorc/prepobs_mpcopybufr.fd/mpcopybufr.f90
+   obsproc_prep/sorc/prepobs_oiqcbufr.fd/makefile
+   obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
+   obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
+   obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
+   obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/prepacqc.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_mer.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
+   obsproc_prep/sorc/prepobs_prepanow.fd/makefile
+   obsproc_prep/sorc/prepobs_prepanow.fd/prepanow.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
+   obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/makefile
+ M obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
+   obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
+   obsproc_prep/sorc/prepobs_prevents.fd/makefile
+   obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
+   obsproc_prep/sorc/prepobs_profcqc.fd/makefile
+   obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
+   obsproc_prep/sorc/syndat_syndata.fd/makefile
+   obsproc_prep/sorc/syndat_syndata.fd/syndata.f
+   obsproc_prep/sorc/build.sh
+   obsproc_prep/sorc/clean.sh
+   obsproc_prep/sorc/install.sh
+   obsproc_prep/sorc/load_libs.rc
+   obsproc_prep/sorc/README.build
+   obsproc_prep/sorc/setlibs.rc
+   obsproc_prep/ush/prepobs_cqcbufr.sh
+   obsproc_prep/ush/prepobs_cqcvad.sh
+   obsproc_prep/ush/prepobs_makeprepbufr.sh
+   obsproc_prep/ush/prepobs_oiqcbufr.sh
+   obsproc_prep/ush/prepobs_prepacqc.sh
+   obsproc_prep/ush/prepobs_prevents.sh
+   obsproc_prep/ush/prepobs_profcqc.sh
+   obsproc_prep/ush/prepobs_syndata.sh
 
-( * - changed)
+( M - modified)
 
 
  Source code changes:
@@ -453,73 +342,73 @@ obsproc_prep release 3.3.0 --> released Oct 23, 2014
                            --> implemented Nov 4, 2014
 
 files:
-  obsproc_prep/fix/prepobs_cqc_statbge
-  obsproc_prep/fix/prepobs_landc
-  obsproc_prep/fix/prepobs_prep.bufrtable
- *obsproc_prep/fix/prepobs_prepanow.bufrtable
-  obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
-  obsproc_prep/fix/syndat_weight
-  obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
-  obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
-  obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
-  obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
-  obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
-  obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
-  obsproc_prep/sorc/prepobs_listheaders.fd/makefile
-  obsproc_prep/sorc/prepobs_monoprepbufr.fd/makefile
-  obsproc_prep/sorc/prepobs_monoprepbufr.fd/monoprepbufr.f90
-  obsproc_prep/sorc/prepobs_mpcopybufr.fd/makefile
-  obsproc_prep/sorc/prepobs_mpcopybufr.fd/mpcopybufr.f90
-  obsproc_prep/sorc/prepobs_oiqcbufr.fd/makefile
-  obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
-  obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
-  obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
-  obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/prepacqc.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_mer.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
- *obsproc_prep/sorc/prepobs_prepanow.fd/makefile
- *obsproc_prep/sorc/prepobs_prepanow.fd/prepanow.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
-  obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/makefile
-  obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
-  obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
-  obsproc_prep/sorc/prepobs_prevents.fd/makefile
-  obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
-  obsproc_prep/sorc/prepobs_profcqc.fd/makefile
-  obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
-  obsproc_prep/sorc/syndat_syndata.fd/makefile
-  obsproc_prep/sorc/syndat_syndata.fd/syndata.f
-  obsproc_prep/sorc/build.sh
-  obsproc_prep/sorc/clean.sh
-  obsproc_prep/sorc/install.sh
-  obsproc_prep/sorc/load_libs.rc
-  obsproc_prep/sorc/README.build
-  obsproc_prep/sorc/setlibs.rc
-  obsproc_prep/ush/prepobs_cqcbufr.sh
-  obsproc_prep/ush/prepobs_cqcvad.sh
-  obsproc_prep/ush/prepobs_makeprepbufr.sh
-  obsproc_prep/ush/prepobs_oiqcbufr.sh
-  obsproc_prep/ush/prepobs_prepacqc.sh
-  obsproc_prep/ush/prepobs_prevents.sh
-  obsproc_prep/ush/prepobs_profcqc.sh
-  obsproc_prep/ush/prepobs_syndata.sh
+   obsproc_prep/fix/prepobs_cqc_statbge
+   obsproc_prep/fix/prepobs_landc
+   obsproc_prep/fix/prepobs_prep.bufrtable
+ M obsproc_prep/fix/prepobs_prepanow.bufrtable
+   obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
+   obsproc_prep/fix/syndat_weight
+   obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
+   obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
+   obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
+   obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
+   obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
+   obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
+   obsproc_prep/sorc/prepobs_listheaders.fd/makefile
+   obsproc_prep/sorc/prepobs_monoprepbufr.fd/makefile
+   obsproc_prep/sorc/prepobs_monoprepbufr.fd/monoprepbufr.f90
+   obsproc_prep/sorc/prepobs_mpcopybufr.fd/makefile
+   obsproc_prep/sorc/prepobs_mpcopybufr.fd/mpcopybufr.f90
+   obsproc_prep/sorc/prepobs_oiqcbufr.fd/makefile
+   obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
+   obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
+   obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
+   obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/prepacqc.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_mer.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
+ M obsproc_prep/sorc/prepobs_prepanow.fd/makefile
+ M obsproc_prep/sorc/prepobs_prepanow.fd/prepanow.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
+   obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/makefile
+   obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
+   obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
+   obsproc_prep/sorc/prepobs_prevents.fd/makefile
+   obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
+   obsproc_prep/sorc/prepobs_profcqc.fd/makefile
+   obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
+   obsproc_prep/sorc/syndat_syndata.fd/makefile
+   obsproc_prep/sorc/syndat_syndata.fd/syndata.f
+   obsproc_prep/sorc/build.sh
+   obsproc_prep/sorc/clean.sh
+   obsproc_prep/sorc/install.sh
+   obsproc_prep/sorc/load_libs.rc
+   obsproc_prep/sorc/README.build
+   obsproc_prep/sorc/setlibs.rc
+   obsproc_prep/ush/prepobs_cqcbufr.sh
+   obsproc_prep/ush/prepobs_cqcvad.sh
+   obsproc_prep/ush/prepobs_makeprepbufr.sh
+   obsproc_prep/ush/prepobs_oiqcbufr.sh
+   obsproc_prep/ush/prepobs_prepacqc.sh
+   obsproc_prep/ush/prepobs_prevents.sh
+   obsproc_prep/ush/prepobs_profcqc.sh
+   obsproc_prep/ush/prepobs_syndata.sh
 
-( * - changed/new)
+( M - modified)
 
 
  Source code changes:
@@ -583,70 +472,70 @@ obsproc_prep release 3.2.0 --> released Sep 14, 2014
                            --> implemented Nov 4, 2014
 
 files:
-  obsproc_prep/fix/prepobs_cqc_statbge
-  obsproc_prep/fix/prepobs_landc
- *obsproc_prep/fix/prepobs_prep.bufrtable
-  obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
-  obsproc_prep/fix/syndat_weight
-  obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
-  obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
-  obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
- *obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
-  obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
-  obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
-  obsproc_prep/sorc/prepobs_listheaders.fd/makefile
-  obsproc_prep/sorc/prepobs_monoprepbufr.fd/makefile
-  obsproc_prep/sorc/prepobs_monoprepbufr.fd/monoprepbufr.f90
-  obsproc_prep/sorc/prepobs_mpcopybufr.fd/makefile
-  obsproc_prep/sorc/prepobs_mpcopybufr.fd/mpcopybufr.f90
-  obsproc_prep/sorc/prepobs_oiqcbufr.fd/makefile
-  obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
-  obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
-  obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
-  obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/prepacqc.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_mer.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
-  obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/makefile
- *obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
-  obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
-  obsproc_prep/sorc/prepobs_prevents.fd/makefile
-  obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
-  obsproc_prep/sorc/prepobs_profcqc.fd/makefile
-  obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
-  obsproc_prep/sorc/syndat_syndata.fd/makefile
- *obsproc_prep/sorc/syndat_syndata.fd/syndata.f
-  obsproc_prep/sorc/build.sh
-  obsproc_prep/sorc/clean.sh
-  obsproc_prep/sorc/install.sh
- *obsproc_prep/sorc/load_libs.rc
-  obsproc_prep/sorc/README.build
- *obsproc_prep/sorc/setlibs.rc
-  obsproc_prep/ush/prepobs_cqcbufr.sh
-  obsproc_prep/ush/prepobs_cqcvad.sh
-  obsproc_prep/ush/prepobs_makeprepbufr.sh
-  obsproc_prep/ush/prepobs_oiqcbufr.sh
- *obsproc_prep/ush/prepobs_prepacqc.sh
-  obsproc_prep/ush/prepobs_prevents.sh
-  obsproc_prep/ush/prepobs_profcqc.sh
-  obsproc_prep/ush/prepobs_syndata.sh
+   obsproc_prep/fix/prepobs_cqc_statbge
+   obsproc_prep/fix/prepobs_landc
+ M obsproc_prep/fix/prepobs_prep.bufrtable
+   obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
+   obsproc_prep/fix/syndat_weight
+   obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
+   obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
+   obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
+ M obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
+   obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
+   obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
+   obsproc_prep/sorc/prepobs_listheaders.fd/makefile
+   obsproc_prep/sorc/prepobs_monoprepbufr.fd/makefile
+   obsproc_prep/sorc/prepobs_monoprepbufr.fd/monoprepbufr.f90
+   obsproc_prep/sorc/prepobs_mpcopybufr.fd/makefile
+   obsproc_prep/sorc/prepobs_mpcopybufr.fd/mpcopybufr.f90
+   obsproc_prep/sorc/prepobs_oiqcbufr.fd/makefile
+   obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
+   obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
+   obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
+   obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/prepacqc.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_mer.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
+   obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/makefile
+ M obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
+   obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
+   obsproc_prep/sorc/prepobs_prevents.fd/makefile
+   obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
+   obsproc_prep/sorc/prepobs_profcqc.fd/makefile
+   obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
+   obsproc_prep/sorc/syndat_syndata.fd/makefile
+ M obsproc_prep/sorc/syndat_syndata.fd/syndata.f
+   obsproc_prep/sorc/build.sh
+   obsproc_prep/sorc/clean.sh
+   obsproc_prep/sorc/install.sh
+ M obsproc_prep/sorc/load_libs.rc
+   obsproc_prep/sorc/README.build
+ M obsproc_prep/sorc/setlibs.rc
+   obsproc_prep/ush/prepobs_cqcbufr.sh
+   obsproc_prep/ush/prepobs_cqcvad.sh
+   obsproc_prep/ush/prepobs_makeprepbufr.sh
+   obsproc_prep/ush/prepobs_oiqcbufr.sh
+ M obsproc_prep/ush/prepobs_prepacqc.sh
+   obsproc_prep/ush/prepobs_prevents.sh
+   obsproc_prep/ush/prepobs_profcqc.sh
+   obsproc_prep/ush/prepobs_syndata.sh
 
-( * - changed)
+( M - modified)
 
 
  USH script changes:
@@ -840,70 +729,70 @@ obsproc_prep release 3.1.0 --> released Jul 23, 2014, updated Aug 5, 2014
                            --> implemented Aug 12, 2014
 
 files:
-  obsproc_prep/fix/prepobs_cqc_statbge
-  obsproc_prep/fix/prepobs_landc
-  obsproc_prep/fix/prepobs_prep.bufrtable
-  obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
-  obsproc_prep/fix/syndat_weight
-  obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
-  obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
-  obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
-  obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
-  obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
-  obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
-  obsproc_prep/sorc/prepobs_listheaders.fd/makefile
-  obsproc_prep/sorc/prepobs_monoprepbufr.fd/makefile
-  obsproc_prep/sorc/prepobs_monoprepbufr.fd/monoprepbufr.f90
-  obsproc_prep/sorc/prepobs_mpcopybufr.fd/makefile
-  obsproc_prep/sorc/prepobs_mpcopybufr.fd/mpcopybufr.f90
-  obsproc_prep/sorc/prepobs_oiqcbufr.fd/makefile
-  obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
-  obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
-  obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
-  obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/prepacqc.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_mer.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
-  obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
-  obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/makefile
-  obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
-  obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
-  obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
-  obsproc_prep/sorc/prepobs_prevents.fd/makefile
-  obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
-  obsproc_prep/sorc/prepobs_profcqc.fd/makefile
-  obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
-  obsproc_prep/sorc/syndat_syndata.fd/makefile
-  obsproc_prep/sorc/syndat_syndata.fd/syndata.f
- *obsproc_prep/sorc/build.sh
-  obsproc_prep/sorc/clean.sh
-  obsproc_prep/sorc/install.sh
-  obsproc_prep/sorc/load_libs.rc
- *obsproc_prep/sorc/README.build
-  obsproc_prep/sorc/setlibs.rc
-  obsproc_prep/ush/prepobs_cqcbufr.sh
-  obsproc_prep/ush/prepobs_cqcvad.sh
- *obsproc_prep/ush/prepobs_makeprepbufr.sh
-  obsproc_prep/ush/prepobs_oiqcbufr.sh
-  obsproc_prep/ush/prepobs_prepacqc.sh
-  obsproc_prep/ush/prepobs_prevents.sh
-  obsproc_prep/ush/prepobs_profcqc.sh
-  obsproc_prep/ush/prepobs_syndata.sh
+   obsproc_prep/fix/prepobs_cqc_statbge
+   obsproc_prep/fix/prepobs_landc
+   obsproc_prep/fix/prepobs_prep.bufrtable
+   obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
+   obsproc_prep/fix/syndat_weight
+   obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
+   obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
+   obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
+   obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
+   obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
+   obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
+   obsproc_prep/sorc/prepobs_listheaders.fd/makefile
+   obsproc_prep/sorc/prepobs_monoprepbufr.fd/makefile
+   obsproc_prep/sorc/prepobs_monoprepbufr.fd/monoprepbufr.f90
+   obsproc_prep/sorc/prepobs_mpcopybufr.fd/makefile
+   obsproc_prep/sorc/prepobs_mpcopybufr.fd/mpcopybufr.f90
+   obsproc_prep/sorc/prepobs_oiqcbufr.fd/makefile
+   obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
+   obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
+   obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
+   obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/prepacqc.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_mer.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
+   obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/makefile
+   obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
+   obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
+   obsproc_prep/sorc/prepobs_prevents.fd/makefile
+   obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
+   obsproc_prep/sorc/prepobs_profcqc.fd/makefile
+   obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
+   obsproc_prep/sorc/syndat_syndata.fd/makefile
+   obsproc_prep/sorc/syndat_syndata.fd/syndata.f
+ M obsproc_prep/sorc/build.sh
+   obsproc_prep/sorc/clean.sh
+   obsproc_prep/sorc/install.sh
+   obsproc_prep/sorc/load_libs.rc
+ M obsproc_prep/sorc/README.build
+   obsproc_prep/sorc/setlibs.rc
+   obsproc_prep/ush/prepobs_cqcbufr.sh
+   obsproc_prep/ush/prepobs_cqcvad.sh
+ M obsproc_prep/ush/prepobs_makeprepbufr.sh
+   obsproc_prep/ush/prepobs_oiqcbufr.sh
+   obsproc_prep/ush/prepobs_prepacqc.sh
+   obsproc_prep/ush/prepobs_prevents.sh
+   obsproc_prep/ush/prepobs_profcqc.sh
+   obsproc_prep/ush/prepobs_syndata.sh
 
-( * - changed)
+( M - modified)
 
 
  USH script changes:
@@ -1037,70 +926,71 @@ obsproc_prep release 3.0.0 --> released May 5, 2014
 Initial population of vertical structure.
 
 files:
- *obsproc_prep/fix/prepobs_cqc_statbge
- *obsproc_prep/fix/prepobs_landc
- *obsproc_prep/fix/prepobs_prep.bufrtable
- *obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
- *obsproc_prep/fix/syndat_weight
- *obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
- *obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
- *obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
- *obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
- *obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
- *obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
- *obsproc_prep/sorc/prepobs_listheaders.fd/makefile
- *obsproc_prep/sorc/prepobs_monoprepbufr.fd/makefile
- *obsproc_prep/sorc/prepobs_monoprepbufr.fd/monoprepbufr.f90
- *obsproc_prep/sorc/prepobs_mpcopybufr.fd/makefile
- *obsproc_prep/sorc/prepobs_mpcopybufr.fd/mpcopybufr.f90
- *obsproc_prep/sorc/prepobs_oiqcbufr.fd/makefile
- *obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
- *obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
- *obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
- *obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/prepacqc.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_mer.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
- *obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
- *obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
- *obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
- *obsproc_prep/sorc/prepobs_prepdata.fd/makefile
- *obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
- *obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
- *obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
- *obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
- *obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
- *obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
- *obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
- *obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
- *obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
- *obsproc_prep/sorc/prepobs_prevents.fd/makefile
- *obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
- *obsproc_prep/sorc/prepobs_profcqc.fd/makefile
- *obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
- *obsproc_prep/sorc/syndat_syndata.fd/makefile
- *obsproc_prep/sorc/syndat_syndata.fd/syndata.f
- *obsproc_prep/sorc/build.sh
- *obsproc_prep/sorc/clean.sh
- *obsproc_prep/sorc/install.sh
- *obsproc_prep/sorc/load_libs.rc
- *obsproc_prep/sorc/README.build
- *obsproc_prep/sorc/setlibs.rc
- *obsproc_prep/ush/prepobs_cqcbufr.sh
- *obsproc_prep/ush/prepobs_cqcvad.sh
- *obsproc_prep/ush/prepobs_makeprepbufr.sh
- *obsproc_prep/ush/prepobs_oiqcbufr.sh
- *obsproc_prep/ush/prepobs_prepacqc.sh
- *obsproc_prep/ush/prepobs_prevents.sh
- *obsproc_prep/ush/prepobs_profcqc.sh
- *obsproc_prep/ush/prepobs_syndata.sh
+ M obsproc_prep/fix/prepobs_cqc_statbge
+ M obsproc_prep/fix/prepobs_landc
+ M obsproc_prep/fix/prepobs_prep.bufrtable
+ M obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
+ M obsproc_prep/fix/syndat_weight
+ M obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
+ M obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
+ M obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
+ M obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
+ M obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
+ M obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
+ M obsproc_prep/sorc/prepobs_listheaders.fd/makefile
+ M obsproc_prep/sorc/prepobs_monoprepbufr.fd/makefile
+ M obsproc_prep/sorc/prepobs_monoprepbufr.fd/monoprepbufr.f90
+ M obsproc_prep/sorc/prepobs_mpcopybufr.fd/makefile
+ M obsproc_prep/sorc/prepobs_mpcopybufr.fd/mpcopybufr.f90
+ M obsproc_prep/sorc/prepobs_oiqcbufr.fd/makefile
+ M obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
+ M obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
+ M obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/prepacqc.f
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_mer.f
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
+ M obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/makefile
+ M obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
+ M obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
+ M obsproc_prep/sorc/prepobs_prevents.fd/makefile
+ M obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
+ M obsproc_prep/sorc/prepobs_profcqc.fd/makefile
+ M obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
+ M obsproc_prep/sorc/syndat_syndata.fd/makefile
+ M obsproc_prep/sorc/syndat_syndata.fd/syndata.f
+ A obsproc_prep/sorc/build.sh
+ A obsproc_prep/sorc/clean.sh
+ A obsproc_prep/sorc/install.sh
+ A obsproc_prep/sorc/load_libs.rc
+ A obsproc_prep/sorc/README.build
+ A obsproc_prep/sorc/setlibs.rc
+ M obsproc_prep/ush/prepobs_cqcbufr.sh
+ M obsproc_prep/ush/prepobs_cqcvad.sh
+ M obsproc_prep/ush/prepobs_makeprepbufr.sh
+ M obsproc_prep/ush/prepobs_oiqcbufr.sh
+ M obsproc_prep/ush/prepobs_prepacqc.sh
+ M obsproc_prep/ush/prepobs_prevents.sh
+ M obsproc_prep/ush/prepobs_profcqc.sh
+ M obsproc_prep/ush/prepobs_syndata.sh
 
-( * - changed)
+( A - added)
+( M - modified)
 
 
  USH script changes:
