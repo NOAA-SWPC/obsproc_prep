@@ -147,18 +147,20 @@ files:
    network, if that network executes this version of obsproc_prep.)
 
 
- Shared Software:
- ----------------
-    - All source codes:
-         link to version 2.0.6 of w3nco library
-         link to version 10.2.5 of bufr library
-    - Source codes prepobs_cqcbufr, prepobs_prepacpf, prepobs_prepacqc,
-      prepobs_prepdata, prepobs_prevents, syndat_syndata:
-         link to version 2.2.0 of w3emc library
-    - Source codes prepobs_prepdata, prepobs_prevents, syndat_syndata
-         link to version 2.0.1 of bacio library
-         link to version 2.0.2 of sp library
-         link to version 1.0.1 of sigio library
+ Libraries:
+ ----------
+   w3nco   2.0.6 (all)
+   bufr   10.2.5 (all)
+   w3emc   2.2.0 (prepobs_cqcbufr, prepobs_prepacpf, prepobs_prepacqc,
+                  prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   bacio   2.0.1 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   sp      2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   sigio   1.0.1 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+
+
+ Build Instructions:
+ -------------------
+   - See sorc/README.build
 
 
  Preimplementation Testing Requirements:
