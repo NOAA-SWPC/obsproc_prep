@@ -1,7 +1,7 @@
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    IW3UNPBF
-C   PRGMMR: MELCHIOR         ORG: NP22       DATE: 2014-02-01
+C   PRGMMR: KEYSER           ORG: NP22       DATE: 2015-01-30
 C
 C ABSTRACT: READS AND UNPACKS ONE REPORT FROM INPUT NCEP BUFR DUMP
 C   FILE INTO SPECIFIED FORMAT.  FUNCTION RETURNS THE UNPACKED REPORT
@@ -381,6 +381,15 @@ C     WORD 43 CONTAINS SATELLITE ZENITH ANGLE (DEGREES, SATWND TYPES
 C     ONLY)
 C 2014-02-01  S. MELCHIOR  -- ADDED NEW REPORT TYPE (RTP) OF 534 FOR
 C     SURFACE MARINE COAST GUARD TIDE GAUGE REPORTS
+C 2015-01-30  D. A. KEYSER --  Added logic to handle new NASA/VIIRS
+C     (NPP) POES winds in tank NC005090 (e.g., recognizes that they now
+C     exist, counts of reports with flagged QI values, counts of
+C     reports by satellite number).  Added logic to properly handle
+C     GOES IR short-wave winds in tank NC005019 (e.g., new instrument
+C     type 19, process the quality information correctly). Added some
+C     missing logic which summarizes processing of NESDIS/AVHRR POES
+C     winds in tank NC005080 (e.g., counts of reports by satellite
+C     number).
 C
 C
 C USAGE:    II = IW3UNPBF(NUNIT, OBS, STNID, CRES1, CRES2, OBS2, OBS3,
@@ -579,8 +588,8 @@ C               Radiosonde type - see BUFR CODE TABLE 0-02-011
 C             SATELLITE-DERIVED WIND (SATWND) (DUMP REPORT TYPE 63):
 C               NESDIS satellite wind type
 C                 0       Reserved
-C                 1       IR automated winds (low density)
-C                 2       IR manual winds
+C                 1       IR (long-wave) automated winds (low density)
+C                 2       IR (long-wave) manual winds
 C                 3       Picture triplet (low density)
 C                 4       Water vapor automated (low density)
 C                 5       Visible manual
@@ -594,10 +603,11 @@ C                12       Altimeter
 C                13       LAWS
 C                14       High-density water vapor sounder, channel 10
 C                15       High-density water vapor sounder, channel 11
-C                16       High-density ir imager automated winds
+C                16       High-density IR (long-wave) imager automated winds
 C                17       High-density visible imager automated winds
 C                18       High-density water vapor imager
-C             19-254      Reserved for future use
+C                19       High-density IR (short-wave) imager automated winds
+C             20-254      Reserved for future use
 C               255       Missing value
 C             AIRCRAFT (AIRCFT) (DUMP REPORT TYPE 41):
 C               0-96      Reserved
@@ -1110,7 +1120,7 @@ C$$$
       PARAMETER (NUMCAT=8, LEVLIM=300)
 
       COMMON/IUBFAA/BMISS
-      COMMON/IUBFBB/KNDX,KSKACF(8),KSKUPA,KSKSFC,KSKSAT,KFLSAT(10),
+      COMMON/IUBFBB/KNDX,KSKACF(8),KSKUPA,KSKSFC,KSKSAT,KFLSAT(12),
      $ KSKSMI
       COMMON/IUBFCC/SUBSET
       COMMON/IUBFDD/HDR(12),RCATS(50,LEVLIM,NUMCAT),IKAT(NUMCAT),
@@ -1122,7 +1132,7 @@ C$$$
       COMMON/IUBFII/PWMIN
       COMMON/IUBFJJ/ISET,MANLIN(1001)
       COMMON/IUBFKK/KOUNT(499,18,2),KNTSAT(250:260),KNTMODIS(783:785),
-     $ IFLSAT
+     $ KNTavhrr(3:224),KNTviirs(224:225),IFLSAT
       COMMON/IUBFLL/Q8(255,2)
       COMMON/IUBFMM/XIND(255)
       COMMON/IUBFNN/STNIDX,CRES1X,CRES2X
@@ -1132,6 +1142,7 @@ C$$$
       COMMON/IUBFRR/IDATEB
  
       DIMENSION    OBS(*),OBS2(43),OBS3(5,255,7),NOBS3(7),JWFILE(100)
+      dimension    istart(3),iend(3)
 
       CHARACTER*8  STNID,STNIDX,CRES1,CRES1X,CRES2,CRES2X,DSNAME,DSNAMX,
      $ SUBSET_r,SUBSET
@@ -1145,6 +1156,7 @@ C$$$
       SAVE
 
       DATA JWFILE/100*0/,LASTF/0/,ITIMES/0/
+      data istart/3,200,223/,iend/5,209,223/
 
       IF(ITIMES.EQ.0)  THEN
 
@@ -1167,6 +1179,8 @@ C  --------------------------------------------------------------------
          KOUNT    =  0
          KNTSAT   =  0
          KNTMODIS =  0
+         KNTavhrr =  0
+         KNTviirs =  0
          IFLSAT   =  0
 
 C  IKAT defines the category number
@@ -1226,7 +1240,7 @@ C  THE JWFILE INDICATOR: =0 IF UNOPENED; =2 IF OPENED AND NCEP BUFR
 C  ----------------------------------------------------------------
  
       IF(JWFILE(LUNIT).EQ.0) THEN
-         PRINT'(" ===> IW3UNPBF - WCOSS VERSION: 02-01-2014")'
+         PRINT'(" ===> IW3UNPBF - WCOSS VERSION: 01-30-2015")'
 
 C  DETERMINE MACHINE WORD LENGTH (BYTES) FOR BOTH INTEGERS AND REALS
 C  -----------------------------------------------------------------
@@ -1373,6 +1387,12 @@ C   this type/subtype with reports present for the diagnostic print
             IF(KFLSAT(10).GT.0)  PRINT *, 'IW3UNPBF - TOTAL NO. OF ',
      $       'AVHRR POES SATWND REPORTS FLAGGED WITH WQM=13 DUE TO QI ',
      $       'MANUAL/AUTOMATIC Q.C. INDICATOR >/= LIMqc = ',KFLSAT(10)
+            IF(KFLSAT(11).GT.0)  PRINT *, 'IW3UNPBF - TOTAL NO. OF ',
+     $       'VIIRS POES SATWND REPORTS FLAGGED WITH WQM=13 DUE TO QI ',
+     $       'CONFIDENCE FACTOR </= LIMqi % = ',KFLSAT(11)
+            IF(KFLSAT(12).GT.0)  PRINT *, 'IW3UNPBF - TOTAL NO. OF ',
+     $       'VIIRS POES SATWND REPORTS FLAGGED WITH WQM=13 DUE TO QI ',
+     $       'MANUAL/AUTOMATIC Q.C. INDICATOR >/= LIMqc = ',KFLSAT(12)
             IF(KSKSMI.GT.0)  PRINT'(" IW3UNPBF - TOTAL NO. OF SPSSMI ",
      $       "REPORTS TOSSED = ",I0)', KSKSMI
             IF(IFLSAT.EQ.1)  THEN
@@ -1410,6 +1430,42 @@ C   this type/subtype with reports present for the diagnostic print
                ENDDO
                IF(KNTMODIS(785).GT.0)  THEN
                   PRINT 8104, KNTMODIS(785)
+                  MFLAG = 1
+               ENDIF
+               IF(MFLAG.EQ.0)  PRINT 8110
+               PRINT 8105
+               MFLAG = 0
+               PRINT 8203
+ 8203 FORMAT(/' ---> IW3UNPBF: SUMMARY OF NESDIS/AVHRR POES REPORT ',
+     $ 'COUNTS GROUPED BY SATELLITE ID (PRIOR TO ANY FILTERING BY ',
+     $ 'CALLING PROGRAM)'/)
+               do ii = 1,3
+                  DO  IDSAT = istart(ii),iend(ii)
+                     IF(KNTavhrr(IDSAT).GT.0) THEN
+                        PRINT 8103, IDSAT,KNTavhrr(IDSAT)
+                        MFLAG = 1
+                     ENDIF
+                  ENDDO
+               enddo
+               IF(KNTavhrr(224).GT.0)  THEN
+                  PRINT 8104, KNTavhrr(224)
+                  MFLAG = 1
+               ENDIF
+               IF(MFLAG.EQ.0)  PRINT 8110
+               PRINT 8105
+               MFLAG = 0
+               PRINT 8204
+ 8204 FORMAT(/' ---> IW3UNPBF: SUMMARY OF NASA/VIIRS POES REPORT ',
+     $ 'COUNTS GROUPED BY SATELLITE ID (PRIOR TO ANY FILTERING BY ',
+     $ 'CALLING PROGRAM)'/)
+               DO  IDSAT = 224,224
+                  IF(KNTviirs(IDSAT).GT.0) THEN
+                     PRINT 8103, IDSAT,KNTviirs(IDSAT)
+                     MFLAG = 1
+                  ENDIF
+               ENDDO
+               IF(KNTviirs(225).GT.0)  THEN
+                  PRINT 8104, KNTviirs(225)
                   MFLAG = 1
                ENDIF
                IF(MFLAG.EQ.0)  PRINT 8110
@@ -2624,7 +2680,7 @@ C     ---> PROCESSES ADPUPA DATA (002/*, 004/005)
       PARAMETER (NUMCAT=8, LEVLIM=300)
 
       COMMON/IUBFAA/BMISS
-      COMMON/IUBFBB/KNDX,KSKACF(8),KSKUPA,KSKSFC,KSKSAT,KFLSAT(10),
+      COMMON/IUBFBB/KNDX,KSKACF(8),KSKUPA,KSKSFC,KSKSAT,KFLSAT(12),
      $ KSKSMI
       COMMON/IUBFCC/SUBSET
       COMMON/IUBFDD/HDR(12),RCATS(50,LEVLIM,NUMCAT),IKAT(NUMCAT),
@@ -3379,7 +3435,7 @@ C***********************************************************************
 C     ---> PROCESSES SURFACE AND MESONET DATA (000/*, 001/*, 255/*)
  
       COMMON/IUBFAA/BMISS
-      COMMON/IUBFBB/KNDX,KSKACF(8),KSKUPA,KSKSFC,KSKSAT,KFLSAT(10),
+      COMMON/IUBFBB/KNDX,KSKACF(8),KSKUPA,KSKSFC,KSKSAT,KFLSAT(12),
      $ KSKSMI
       COMMON/IUBFCC/SUBSET
       COMMON/IUBFEE/POB(255),QOB(255),TOB(255),ZOB(255),DOB(255),
@@ -3936,7 +3992,7 @@ C***********************************************************************
 C     ---> PROCESSES AIRCRAFT DATA (004/001-004, 004/006-009)
 
       COMMON/IUBFAA/BMISS
-      COMMON/IUBFBB/KNDX,KSKACF(8),KSKUPA,KSKSFC,KSKSAT,KFLSAT(10),
+      COMMON/IUBFBB/KNDX,KSKACF(8),KSKUPA,KSKSFC,KSKSAT,KFLSAT(12),
      $ KSKSMI
       COMMON/IUBFCC/SUBSET
       COMMON/IUBFEE/POB(255),QOB(255),TOB(255),ZOB(255),DOB(255),
@@ -4777,20 +4833,20 @@ C***********************************************************************
 C     ---> PROCESSES SATWIND DATA (005/*)
  
       COMMON/IUBFAA/BMISS
-      COMMON/IUBFBB/KNDX,KSKACF(8),KSKUPA,KSKSFC,KSKSAT,KFLSAT(10),
+      COMMON/IUBFBB/KNDX,KSKACF(8),KSKUPA,KSKSFC,KSKSAT,KFLSAT(12),
      $ KSKSMI
       COMMON/IUBFCC/SUBSET
       COMMON/IUBFEE/POB(255),QOB(255),TOB(255),ZOB(255),DOB(255),
      $              SOB(255),VSG(255),OB8(255),CF8(255)
       COMMON/IUBFFF/PQM(255),QQM(255),TQM(255),ZQM(255),WQM(255)
       COMMON/IUBFKK/KOUNT(499,18,2),KNTSAT(250:260),KNTMODIS(783:785),
-     $ IFLSAT
+     $ KNTavhrr(3:224),KNTviirs(224:225),IFLSAT
       COMMON/IUBFLL/Q81(255),Q82(255)
  
       CHARACTER*80 HDSTR,LVSTR,QMSTR,RCSTR
       CHARACTER*8  SUBSET,SID,RSV1,RSV2
-      CHARACTER*1  CSAT(499),CPROD(0:4),CPRDF(0:2),CPRDFN(51),C8(9)
-      INTEGER      IPRDF(0:2),ISWCM(5,9:10,2),ITP_C8(9),ISWDL(7)
+      CHARACTER*1  CSAT(499),CPROD(0:4),CPRDF(0:2),CPRDFN(51),C8(10)
+      INTEGER      IPRDF(0:2),ISWCM(5,9:10,2),ITP_C8(10),ISWDL(7)
       REAL(8) RID_8,UFBINT_8,PCCF_8(2,12),GNAP_8(12),HDR_8(20),RCT_8(5),
      $ ARR_8(10),OBS2_8(43),OBS3_8(5,255,7),WIND_8(2,5),PRLC_8(11),
      $ QFGU_8(8),BMISS
@@ -4873,8 +4929,8 @@ C  C8 is eighth character in report id, it determines instrument/
 C  product type (ITP_C8 later stored into ITP) for all producers and is
 C  defined a bit further below
 
-      DATA      C8/'C','P','V','B','T','L','I','Z','W'/
-      DATA  ITP_C8/ 1 , 3 , 4 , 6 ,14 ,15, 16, 17, 18/
+      DATA      C8/'C','P','V','B','T','L','I','Z','W','S'/
+      DATA  ITP_C8/ 1 , 3 , 4 , 6 ,14 ,15, 16, 17, 18, 19/
 
 C=======================================================================
 C Note: ISWDL below is valid for all input data dump files regardless
@@ -4886,8 +4942,8 @@ C=======================================================================
                    ! below)
 
 C -> Wind type:
-C          INFRARED  VISIBLE   WV-CLTOP  PTRIPLET  WV-DPLYR  N/A
-C          --------  --------  --------  --------  --------  ---
+C         IR(LW,SW)  VISIBLE   WV-CLTOP  PTRIPLET  WV-DPLYR  N/A
+C         ---------  --------  --------  --------  --------  ---
      $          2 ,       2 ,       2 ,    99999,       1 ,  2* 99999 /
 
 C=======================================================================
@@ -4955,8 +5011,8 @@ C   = 9 - INDICATOR MISSING (REVERTS TO DEFAULT CLOUD TOP)
 
 C  THE INSTRUMENT TYPE INDICATES THE PRODUCT TYPE
 C  ----------------------------------------------
-C   = 1 - IR AUTOMATED WINDS (LOW DENSITY)
-C   = 2 - IR MANUAL WINDS
+C   = 1 - IR (LONG-WAVE) AUTOMATED WINDS (LOW DENSITY)
+C   = 2 - IR (LONG-WAVE) MANUAL WINDS
 C   = 3 - PICTURE TRIPLET (LOW DENSITY)
 C   = 4 - WATER VAPOR AUTOMATED (LOW DENSITY)
 C   = 5 - VISIBLE MANUAL
@@ -4969,9 +5025,10 @@ C   =12 - ALTIMETER
 C   =13 - LAWS
 C   =14 - HIGH-DENSITY WATER VAPOR SOUNDER, CHN. 10
 C   =15 - HIGH-DENSITY WATER VAPOR SOUNDER, CHN. 11
-C   =16 - HIGH-DENSITY IR IMAGER AUTOMATED WINDS
+C   =16 - HIGH-DENSITY IR (LONG-WAVE) IMAGER AUTOMATED WINDS
 C   =17 - HIGH-DENSITY VISIBLE IMAGER AUTOMATED WINDS
 C   =18 - HIGH-DENSITY WATER VAPOR IMAGER
+C   =19 - HIGH-DENSITY IR (SHORT-WAVE) IMAGER AUTOMATED WINDS
 
 
       ITP = IMISS
@@ -5019,22 +5076,22 @@ C                              (UNIQUE FOR EACH NCEP BUFR CHAR 1/2/6
 C                               COMB.)
 C    REPROCESSED CHAR 8 -----> WINDS PRODUCED BY NESDIS:
 C                               OLD FORMAT, (GOES -LOW-DENSITY-OBSOLETE)
-C                                     -- INFRA-RED CLOUD DRIFT   GET 'C'
-C                                     -- VISIBLE   CLOUD DRIFT   GET 'C'
+C                                     -- IR(LW)  CLOUD DRIFT     GET 'C'
+C                                     -- VISIBLE CLOUD DRIFT     GET 'C'
 C                                     -- PICTURE TRIPLET         GET 'C'
 C                                     -- WATER VAPOR             GET 'V'
 C                               NEW FORMAT (GOES - HIGH-DENSITY)
-C                                     -- IR  IMAGER CLOUD DRIFT  GET 'I'
+C                                     -- IR(LW) IMAGER CLD DRIFT GET 'I'
 C                                     -- VIS IMAGER CLOUD DRIFT  GET 'Z'
 C                                     -- WATER VAPOR IMAGER      GET 'W'
 C                                     -- WATER VAPR SNDR, CHN 10 GET 'T'
 C                                     -- WATER VAPR SNDR, CHN 11 GET 'L'
 C                               NEW FORMAT (GMS  - LOW-DENSITY)
-C                                     -- INFRA-RED CLOUD DRIFT   GET 'C'
+C                                     -- IR(LW) CLOUD DRIFT      GET 'C'
 C                                     -- WATER VAPOR             GET 'V'
 C                       -----> WINDS PRODUCED BY FOREIGN PRODUCERS:
-C                                     -- INFRA-RED CLOUD DRIFT   GET 'C'
-C                                     -- VISIBLE   CLOUD DRIFT   GET 'B'
+C                                     -- IR(LW)  CLOUD DRIFT     GET 'C'
+C                                     -- VISIBLE CLOUD DRIFT     GET 'B'
 C                                     -- WATER VAPOR             GET 'V'
 
          SID = '????????'
@@ -5132,7 +5189,7 @@ C  --------------------------------------------------------------------
 C  .. Cloud top/deep-layer indicator for winds generated by NESDIS
                CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'SWDL');SWDL=UFBINT_8
             IF(SWDL.GE.BMISS) THEN ! NESDIS GTS (& eventually V10 server
-                                   !  too) & MODIS/AVHRR winds come here
+                                   !  too) & MODIS winds come here
 
                   IF(NINT(SWCM).GT.0.AND.NINT(SWCM).LT.8) THEN
                      IF(ISWDL(NINT(SWCM)).LT.3) SWDL = ISWDL(NINT(SWCM))
@@ -5183,7 +5240,9 @@ C***********************************************************************
          IF((SID(1:1).GE.'A'.AND.SID(1:1).LE.'D') .OR.
      $    (SUBSET(7:8).EQ.'50'.OR.SUBSET(7:8).EQ.'51') .OR.
      $    (SUBSET(7:8).EQ.'70'.OR.SUBSET(7:8).EQ.'71') .OR.
-     $    (SUBSET(7:8).EQ.'80')) THEN
+     $    (SUBSET(7:8).EQ.'80') .OR.
+     $    (SUBSET(7:8).EQ.'90')) THEN
+
 C  .. Product type for winds generated by NESDIS/NASA
             CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'SWTP');SWTP=UFBINT_8
             CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'CMCM');CMCM=UFBINT_8
@@ -5206,7 +5265,7 @@ C  .. Product type for winds generated by NESDIS/NASA
                END IF
             ELSE
                                    !From NESDIS BUFR Fmt (WMO)
-               DO  K=1,9
+               DO  K=1,10
                   IF(SID(8:8).EQ.C8(K))  THEN
                      ITP = ITP_C8(K)
                      EXIT
@@ -5216,8 +5275,8 @@ C  .. Product type for winds generated by NESDIS/NASA
 C  .. Cloud top/deep-layer indicator for winds generated by NESDIS or
 C     NASA
             CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'SWDL');SWDL=UFBINT_8
-            IF(SWDL.GE.BMISS) THEN ! NESDIS GTS & MODIS/AVHRR winds
-                                   ! come here
+            IF(SWDL.GE.BMISS) THEN ! NESDIS GTS & MODIS/AVHRR/VIIRS
+                                   ! winds come here
                CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'SWCM')
                SWCM=UFBINT_8
                IF(NINT(SWCM).GT.0.AND.NINT(SWCM).LT.8) THEN
@@ -5280,13 +5339,13 @@ C            = 4 -- H2O intercept height assignment
 C            = 5 -- CO2 slicing height assignment
 C            = 6 -- Original (primary height assignment)
 C   Note: JTP = 1 always for non-GOES, or non-NESDIS GTS, or
-C                 non-MODIS/AVHRR wind types
+C                 non-MODIS/AVHRR/VIIRS wind types
 
       IF(IRET.EQ.1)  THEN
          JTP = 1
       ELSE
          JTP = 1  ! Here hardwired to be final for GOES, and NESDIS
-                  !  GTS, and MODIS/AVHRR wind types
+                  !  GTS, and MODIS/AVHRR/VIIRS wind types
       ENDIF
 
       IF(PRLC(JTP).LT.BMISS)  POB(1) =  NINT(PRLC(JTP)*.1)
@@ -5355,13 +5414,13 @@ C            = 3 -- Original
 C            = 4 -- Image 1 to 2
 C            = 5 -- Image 2 to 3
 C   Note: KTP = 1 always for non-GOES, or non-NESDIS GTS, or
-C                 non-MODIS/AVHRR wind types
+C                 non-MODIS/AVHRR/VIIRS wind types
 
       IF(IRET.EQ.1)  THEN
          KTP = 1
       ELSE
          KTP = 1  ! Here hardwired to be final for GOES, and NESDIS
-                  !  GTS, and MODIS/AVHRR wind types
+                  !  GTS, and MODIS/AVHRR/VIIRS wind types
       ENDIF
 
       DOB(1) = WIND(1,KTP)
@@ -5390,11 +5449,12 @@ CVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
 
       IF((SUBSET(7:8).GE.'10'.AND.SUBSET(7:8).LE.'12') .OR.
      $   SUBSET(7:8).EQ.'14'                           .OR.
-     $   (SUBSET(7:8).GE.'15'.AND.SUBSET(7:8).LE.'18') .OR.
+     $   (SUBSET(7:8).GE.'15'.AND.SUBSET(7:8).LE.'19') .OR.
      $   (SUBSET(7:8).GE.'44'.AND.SUBSET(7:8).LE.'46') .OR.
      $   (SUBSET(7:8).GE.'64'.AND.SUBSET(7:8).LE.'66') .OR.
      $   (SUBSET(7:8).GE.'70'.AND.SUBSET(7:8).LE.'71') .OR.
-     $   (SUBSET(7:8).GE.'80'))  THEN
+     $   (SUBSET(7:8).EQ.'80') .OR.
+     $   (SUBSET(7:8).EQ.'90')) THEN
 
          IF(SUBSET(7:8).GE.'64'.AND.SUBSET(7:8).LE.'66') THEN !EUMETSAT
             INDX  =   1
@@ -5430,12 +5490,22 @@ ccccccccc               !  than or equal to this - flag
             LIMqi =  49 ! if QI less than or equal to this - flag
             LIMqc =   3 ! if Manual/automatic q.c. indicator greater
                         !  than or equal to this - flag
-         ELSE IF((SUBSET(7:8).GE.'70'.AND.SUBSET(7:8).LE.'71')  .OR.
-     $           (SUBSET(7:8).GE.'10'.AND.SUBSET(7:8).LE.'12')  .OR.
-     $           SUBSET(7:8).EQ.'14'                          ) THEN
-                                                             !MODIS POES
+         ELSE IF((SUBSET(7:8).GE.'10'.AND.SUBSET(7:8).LE.'12')  .OR.
+     $           (SUBSET(7:8).EQ.'14') .OR. (SUBSET(7:8).EQ.'19')) THEN
                                                              !GOES-V10
                                                              !  (server)
+            INDX  =   5
+            IVARS =   2 ! number of variables w/ quality info
+            IOFF  =   1
+            IQI   =   3 ! value of GNAP for QI w/ forecast
+            IQIwo =   1 ! value of GNAP for QI w/o forecast
+            IRFF  =   2 ! value of GNAP for RFF
+            IEE   =   4 ! value of GNAP for NESDIS Expected Error
+            LIMqi =  49 ! if QI less than or equal to this - flag
+            LIMqc =   3 ! if Manual/automatic q.c. indicator greater
+                        !  than or equal to this - flag
+         ELSE IF(SUBSET(7:8).GE.'70'.AND.SUBSET(7:8).LE.'71') THEN
+                                                             !MODIS POES
             INDX  =   7
             IVARS =   2 ! number of variables w/ quality info
             IOFF  =   1
@@ -5448,6 +5518,20 @@ ccccccccc               !  than or equal to this - flag
                         !  than or equal to this - flag
          ELSE IF(SUBSET(7:8).EQ.'80') THEN !AVHRR POES
             INDX  =   9
+            IVARS =   2 ! number of variables w/ quality info
+            IOFF  =   1
+            IQI   =   3 ! value of GNAP for QI w/ forecast
+            IQIwo =   1 ! value of GNAP for QI w/o forecast
+            IRFF  =   2 ! value of GNAP for RFF
+            IEE   =   4 ! value of GNAP for NESDIS Expected Error
+ccccccccc   LIMqi =  49 ! if QI less than or equal to this - flag
+            LIMqi =   0 ! if QI less than or equal to this - flag
+ccccccccc   LIMqc =   3 ! if Manual/automatic q.c. indicator greater
+ccccccccc               !  than or equal to this - flag
+            LIMqc = 999 ! if Manual/automatic q.c. indicator greater
+                        !  than or equal to this - flag
+         ELSE IF(SUBSET(7:8).EQ.'90') THEN !VIIRS POES
+            INDX  =  11
             IVARS =   2 ! number of variables w/ quality info
             IOFF  =   1
             IQI   =   3 ! value of GNAP for QI w/ forecast
@@ -5556,9 +5640,11 @@ C                             and GNAP(4),(8) are the same
             ENDDO
 
 C  EUMETSAT QI with forecast must be > LIMqi % for EUMETSAT/JMA/GOES/
-C   POES (MODIS or AVHRR), else flag (note: This should be moved to
-C   prepdata)
-C  ------------------------------------------------------------------
+C   POES (MODIS, AVHRR or VIIRS), else flag (note: This should be moved
+C   to prepdata)  ==> MAY NO LONGER BE NEEDED FOR NETs WHOSE GSI READS
+C   SATWND DUMP DIRECTLY, RATHER THAN GETTING SATWND REPORTS OUT OF
+C   PREPBUFR FILE
+C  --------------------------------------------------------------------
 
             IF(WQM(1).EQ.2.AND.QI_with.LT.BMISS)  THEN
                IF(NINT(QI_with).LE.LIMqi)  THEN
@@ -5572,8 +5658,10 @@ C  ------------------------------------------------------------------
             END IF
 
 C  Manual/automatic q.c. indicator must be < LIMqc, else flag
-C  (note: This should be moved to prepdata)
-C  ----------------------------------------------------------
+C  (note: This should be moved to prepdata)  ==> MAY NO LONGER BE
+C  NEEDED FOR NETs WHOSE GSI READS SATWND DUMP DIRECTLY, RATHER THAN
+C  GETTING SATWND REPORTS OUT OF PREPBUFR FILE
+C  -----------------------------------------------------------------
 
             IF(WQM(1).EQ.2.AND.QC_QI_with.LT.BMISS)  THEN
                IF(NINT(QC_QI_with).GE.LIMqc)  THEN
@@ -5702,6 +5790,36 @@ C  -------------------------------------------------------------------
          END IF
       END IF
  
+      IF(SUBSET(7:8).EQ.'80') THEN
+
+C  KEEP TRACK OF NESDIS/AVHRR POES SATELLITE WIND COUNTS BY SATELLITE ID
+C  ---------------------------------------------------------------------
+
+         IF(IDS.LT.IMISS)  THEN
+            IF((IDS.GT.  2.AND.IDS.LT.  6) .OR.
+     $         (IDS.GT.199.AND.IDS.LT.210) .OR.
+     $         (IDS.EQ.223)) THEN
+               KNTavhrr(IDS) = KNTavhrr(IDS) + 1
+            ELSE
+               KNTavhrr(224) = KNTavhrr(224) + 1
+            END IF
+         END IF
+      END IF
+ 
+      IF(SUBSET(7:8).EQ.'90') THEN
+
+C  KEEP TRACK OF NASA/VIIRS POES SATELLITE WIND COUNTS BY SATELLITE ID
+C  -------------------------------------------------------------------
+
+         IF(IDS.LT.IMISS)  THEN
+            IF(IDS.EQ.224)  THEN
+               KNTviirs(IDS) = KNTviirs(IDS) + 1
+            ELSE
+               KNTviirs(225) = KNTviirs(225) + 1
+            END IF
+         END IF
+      END IF
+ 
       RETURN
 
  9999 CONTINUE
@@ -5724,7 +5842,7 @@ C***********************************************************************
 C     ---> PROCESSES REPROCESSED SSM/I (SPSSMI) DATA (012/*)
 
       COMMON/IUBFAA/BMISS
-      COMMON/IUBFBB/KNDX,KSKACF(8),KSKUPA,KSKSFC,KSKSAT,KFLSAT(10),
+      COMMON/IUBFBB/KNDX,KSKACF(8),KSKUPA,KSKSFC,KSKSAT,KFLSAT(12),
      $ KSKSMI
       COMMON/IUBFCC/SUBSET
       COMMON/IUBFEE/POB(255),QOB(255),TOB(255),ZOB(255),DOB(255),

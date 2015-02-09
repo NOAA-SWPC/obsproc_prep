@@ -40,9 +40,9 @@ files:
    obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
    obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
    obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
-   obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
    obsproc_prep/sorc/prepobs_prepdata.fd/makefile
-   obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
@@ -139,6 +139,32 @@ files:
          the size of 3600.
          BENEFIT:  This allows for more flexible and parameterized array
                    definitions.
+   prepobs_prepdata:
+      prepdata.f (main program):
+       - All references to IR satellite-derived winds now expanded to refer to
+         IR "long-wave".
+         BENEFIT: Differentiates IR "long-wave" winds from IR "short-wave"
+                  winds which are now produced from GOES but are not processed
+                  by this program.
+       - Skips over the reading of reports in "satwnd" dump coming from tanks
+         NC005080 (AVHRR POES) and NC005090 (VIIRS POES) since these cannot be
+         processed by this program.
+         BENEFIT:  Prevents diagnostic "invalid producer/sat combination"
+                   printout from being generated for every report in these two
+                   tanks.
+      iw3unpbf.f (subroutine):
+       - Added logic to handle new NASA/VIIRS (NPP) POES winds in tank NC005090
+         (e.g., recognizes that they now exist, counts of reports with flagged
+         QI values, counts of reports by satellite number). Added logic to
+         properly handle GOES IR short-wave winds in tank NC005019 (e.g., new
+         instrument type 19, process the quality information correctly). Added
+         some missing logic which summarizes processing of NESDIS/AVHRR POES
+         winds in tank NC005080 (e.g., counts of reports by satellite number).
+         BENEFIT: NASA/VIIRS (NPP) POES winds, GOES IR short-wave winds and
+                  NESDIS/AVHRR POES winds will all be translated properly from
+                  the "satwnd" dumps.  (Although they will not be processed by
+                  prepobs_prepdata they are listed by bufr_listdumps which uses
+                  this same dump-interface subroutine.)
 
 
  Output changes:
@@ -165,6 +191,21 @@ files:
 
  Preimplementation Testing Requirements:
  ---------------------------------------
+   This must be implemented either simultaneously with or after the
+   implementation of:
+      v2.4.2 of obsproc_satingest.
+   This must be implemented simultaneously with the implementations of:
+      v2.0.4 of obsproc_cdas,
+      v3.2.1 of obsproc_dump,
+      v1.2.2 of obsproc_dump_monitor,
+      v2.0.1 of obsproc_dump_post,
+      v2.1.1 of obsprod_global,
+      v2.0.3 of obsproc_nam,
+      v2.0.3 of obsproc_rap,
+ ???? v2.0.4 of obsproc_rtma,
+ ???? v2.0.4 of obsproc_urma,
+      v1.2.0 of obsproc_shared/bufr_dumplist.
+
    There are no jobs in obsproc_prep.  Jobs executing this version of
    obsproc_prep will be tested.
 

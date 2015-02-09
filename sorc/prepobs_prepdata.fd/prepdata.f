@@ -1,7 +1,7 @@
 C$$$  MAIN PROGRAM DOCUMENTATION BLOCK
 C
 C MAIN PROGRAM: PREPOBS_PREPDATA
-C   PRGMMR: KEYSER                ORG: NP22   DATE: 2014-11-25
+C   PRGMMR: KEYSER                ORG: NP22   DATE: 2015-01-30
 C
 C ABSTRACT: PREPARES DATA FOR USE IN ANALYSES FOR THE NDAS, NAM, GDAS,
 C   GFS, RAP (RAPID REFRESH), RTMA, AND URMA NETWORKS.  ALL ANALYSES
@@ -1104,6 +1104,13 @@ C     precision native lat/lon) is right at Prime Meridian.
 C 2014-11-25  D. A. Keyser -- Removed input argument "IDATE" (central
 C     date) from call to subr. W3CNVXTOVS since year {IDATE(1)} is no
 C     longer needed to obtain BUFR satellite ID.
+C 2015-01-30  D. A. Keyser -- All references to IR satellite-derived
+C     winds now expanded to refer to IR "long-wave" - this
+C     differentiates them from IR "short-wave" winds which are now
+C     produced from GOES but are not processed by this program. Skips
+C     over the reading of reports in "satwnd" dump coming from tanks
+C     NC005080 (AVHRR POES) and NC005090 (VIIRS POES) since these
+C     cannot be processed by this program.
 C
 C USAGE:
 C   INPUT FILES:
@@ -1521,11 +1528,13 @@ C                     8 - NASA/MODIS / TERRA SATELLITE
 C                           (NOTE: 1-6 ARE GEOSTATIONARY SATELLITES,
 C                                  7-8 ARE POLAR-ORBITING SATELLITES)
 C                ** THE THIRD ELEMENT IDENTIFIED AS FOLLOWS:
-C                     1 - CONVENTIONAL IR CLOUD-DRIFT WINDS/TEMPERATURE
+C                     1 - CONVENTIONAL IR (LONG-WAVE) CLOUD-DRIFT WINDS/
+C                         TEMPERATURE
 C                     2 - CONVENTIONAL IMAGER WATER-VAPOR WINDS (DEEP-
 C                         LAYER AND CLOUD TOP) (NO TEMPERATURE)
 C                     3 - CONVENTIONAL VISIBLE CLOUD-DRIFT WINDS/TEMP
-C                     4 - HIGH-DENSITY IMAGER IR CLOUD-DRIFT WINDS/TEMP
+C                     4 - HIGH-DENSITY IMAGER IR (LONG-WAVE) CLOUD-
+C                         DRIFT WINDS/TEMPERATURE
 C                     5 - HIGH-DENSITY VIS CLOUD-DRIFT WINDS/TEMPERATURE
 C                     6 - HIGH-DENSITY IMAGER CLOUD-TOP WATER VAPOR
 C                         WINDS/TEMPERATURE
@@ -2699,23 +2708,23 @@ C  IN INTERFACE WITH SUBROUTINE IW3UNPBF
      $  'ACFT: FLIGHT-LEVEL TAMDAR               ',  ! 234
      $  'ACFT: FLIGHT-LEVEL CANADIAN AMDAR       ',  ! 235
      $  '-- EMPTY --                             ',  ! 240
-     $  'SATWND: INDIA  INSAT/KALPANA IR/VZ C-DFT',  ! 241
-     $  'SATWND: JAPAN  GMS/MTSAT IR/VZ C-DRFT LO',  ! 242
-     $  'SATWND: EUMSAT MTEOSAT IR/VZ CLD-DRFT LO',  ! 243
+     $  'SATWND: INDIA  INSAT/KLPNA IR(LW)/VZ C-D',  ! 241
+     $  'SATWND: JAPAN  GMS/MTST IR(LW)/VZ C-D LO',  ! 242
+     $  'SATWND: EUMSAT MTEOSAT IR(LW)/VZ C-DR LO',  ! 243
      $  '-- EMPTY --                             ',  ! 244
-     $  'SATWND: NESDIS GOES    H-D IR CLOUD DRFT',  ! 245
+     $  'SATWND: NESDIS GOES    H-D IR(LW) CL DFT',  ! 245
      $  'SATWND: NESDIS GOES    H-D IM WV/CL. TOP',  ! 246
      $  'SATWND: NESDIS GOES    H-D IM WV/DEEP LY',  ! 247
      $  'SATWND: NESDIS GOES    H-D SN WV/CL. TOP',  ! 248
      $  'SATWND: NESDIS GOES    H-D SN WV/DEEP LY',  ! 249
      $  'SATWND: JAPAN  GMS/MTSAT IM WV(C-T, D-L)',  ! 250
      $  'SATWND: NESDIS GOES    H-D VZ CLD-DRIFT ',  ! 251
-     $  'SATWND: JAPAN  GMS/MTSAT IR/VZ C-DRFT HI',  ! 252
-     $  'SATWND: EUMSAT MTEOSAT IR/VZ CLD-DRFT HI',  ! 253
+     $  'SATWND: JAPAN  GMS/MTSAT IR(LW)/VZ CD HI',  ! 252
+     $  'SATWND: EUMSAT MTEOSAT IR(LW)/VZ C-DF HI',  ! 253
      $  'SATWND: EUMSAT MTEOSAT IM WV (C-T, D-L) ',  ! 254
      $  'SATWND: NESDIS GOES    PICTURE TRIPLET  ',  ! 255
      $  'SATWND: INDIA INSAT/KALPANA IM WV(CT,DL)',  ! 256
-     $  'SATWND: NASA/MODIS POES IR CLOUD-DRIFT  ',  ! 257
+     $  'SATWND: NASA/MODIS POES IR(LW) CL-DRFT  ',  ! 257
      $  'SATWND: NASA/MODIS POES IMGR WV/CLD. TOP',  ! 258
      $  'SATWND: NASA/MODIS POES IMGR WV/DEEP LYR',  ! 259
      $ 10*'-- EMPTY --                             ',! 260-9
@@ -2755,11 +2764,11 @@ C  IN INTERFACE WITH SUBROUTINE IW3UNPBF
      $  'ACFT: FLIGHT-LEVEL TAMDAR               ',  ! 134
      $  'ACFT: FLIGHT-LEVEL CANADIAN AMDAR       ',  ! 135
      $  '-- EMPTY --                             ',  ! 140
-     $  'SATWND: INDIA  INSAT/KALPANA IR/VZ C-DFT',  ! 141
-     $  'SATWND: JAPAN  GMS/MTSAT IR/VZ CLD-DRIFT',  ! 142
-     $  'SATWND: EUMSAT MTEOSAT IR/VZ CLOUD-DRIFT',  ! 143
+     $  'SATWND: INDIA  INSAT/KLPNA IR(LW)/VZ C-D',  ! 141
+     $  'SATWND: JAPAN  GMS/MTSAT IR(LW)/VZ C-DFT',  ! 142
+     $  'SATWND: EUMSAT MTEOSAT IR(LW)/VZ CL-DRFT',  ! 143
      $  'SATWND: NESDIS GOES    H-D VZ CLD-DRIFT ',  ! 144
-     $  'SATWND: NESDIS GOES    H-D IR CLD-DRIFT ',  ! 145
+     $  'SATWND: NESDIS GOES    H-D IR(LW) CL DFT',  ! 145
      $  'SATWND: NESDIS GOES    H-D IM WV/CL. TOP',  ! 146
      $  'SATWND: NESDIS GOES    H-D IM WV/DEEP LY',  ! 147
      $  'SATWND: NESDIS GOES    H-D SN WV/CL. TOP',  ! 148
@@ -2988,10 +2997,10 @@ C  THAT LAST INCOMPLETE BUFR MESSAGE SHOULD BE WRITTEN OUT
      $ '   -- NUMBER OF SATWND REPORTS WITH INVALID        ',8X,/,35X,
      $ '       PRODUCER/SATELLITE/PRODUCT COMBINATION    = ',I8,/,35X,
      $ '   -- NO. SATWND (ALL PRODUCERS/SATELLITES)...        ',/,35X,
-     $ '          CONVENTIONAL IR CLOUD DRIFT            = ',I8,/,35X,
+     $ '          CONVENTIONAL IR (LONG-WAVE) CLOUD DRIFT= ',I8,/,35X,
      $ '          CONVENTIONAL IMGR WTR VPR(CL-TOP,D-LYR)= ',I8,/,35X,
      $ '          CONVENTIONAL VISIBLE CLOUD DRIFT       = ',I8,/,35X,
-     $ '          HI-DENSITY IR CLOUD DRIFT              = ',I8,/,35X,
+     $ '          HI-DENSITY IR (LONG-WAVE) CLOUD DRIFT  = ',I8,/,35X,
      $ '          HI-DENSITY VISIBLE CLOUD DRIFT         = ',I8,/,35X,
      $ '          HI-DENSITY IMAGER  WATER VAPOR-CLD TOP = ',I8,/,35X,
      $ '          HI-DENSITY IMAGER  WATER VAPOR-DEEP LYR= ',I8,/,35X,
@@ -3310,7 +3319,7 @@ C-----------------------------------------------------------------------
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    PREP
-C   PRGMMR: KEYSER/LING      ORG: NP22       DATE: 2014-04-25
+C   PRGMMR: KEYSER           ORG: NP22       DATE: 2015-01-30
 C
 C ABSTRACT: PERFORMS SEVERAL FUNCTIONS - UNPACKS REPORTS ONE AT A TIME
 C   INTO UNPACKED IW3UNPBF FMT, PERFORMING SEVERAL CHECKS SUCH AS
@@ -3464,6 +3473,13 @@ C 2014-04-25  Y. Ling      -- Handles new VAD wind reports from Level 2
 C     decoder.  Differentiates between these and existing Radar Coded
 C     Message (RCM) VAD wind reports via use of report subtype (TSB=1
 C     for RCM and =2 for Level 2).
+C 2015-01-30  D. A. Keyser -- All references to IR satellite-derived
+C     winds now expanded to refer to IR "long-wave" - this
+C     differentiates them from IR "short-wave" winds which are now
+C     produced from GOES but are not processed by this program. Skips
+C     over the reading of reports in "satwnd" dump coming from tanks
+C     NC005080 (AVHRR POES) and NC005090 (VIIRS POES) since these
+C     cannot be processed by this program.
 C
 C USAGE:    CALL PREP
 C   INPUT FILES:
@@ -3637,12 +3653,12 @@ C CHECK TO SEE IF AIRCFT DATA SHOULD BE PROCESSED
      $      SUBSKP(004,013).AND.SUBSKP(004,009))
      $    GO TO 7001
       ELSE IF(NN.EQ.4)  THEN
-         SUBSKP(005,001:071) = .TRUE.
+         SUBSKP(005,001:090) = .TRUE.
 C CHECK TO SEE IF ANY BUFR MESSAGES CAN BE SKIPPED IN INPUT SATWND DUMP
          LOOP1: DO II=1,6
             LOOP1n1: DO JJ=1,2
                IF(MIN(JSWIND(II,JJ,4),JSMASS(II,JJ,4)).LT.9999)  THEN
-                   ! ** GOES-E AND GOES-W Infrared **
+                   ! ** GOES-E AND GOES-W Infrared (long-wave) **
                   SUBSKP(005,010) = .FALSE. ! current
                   SUBSKP(005,001) = .FALSE. ! historical (oldest)
                   SUBSKP(005,005) = .FALSE. ! historical
@@ -3738,7 +3754,7 @@ C CHECK TO SEE IF ANY BUFR MESSAGES CAN BE SKIPPED IN INPUT SATWND DUMP
          LOOP8: DO II=1,6
             LOOP8n1: DO JJ=5,6
                IF(MIN(JSWIND(II,JJ,1),JSMASS(II,JJ,1)).LT.9999)  THEN
-                   ! ** METEOSAT-ODD AND METEOSAT-EVEN Infrared **
+              ! ** METEOSAT-ODD AND METEOSAT-EVEN Infrared (long-wave)**
                   SUBSKP(005,064) = .FALSE. ! current
                   SUBSKP(005,061) = .FALSE. ! historical
                   EXIT LOOP8
@@ -3768,7 +3784,7 @@ C CHECK TO SEE IF ANY BUFR MESSAGES CAN BE SKIPPED IN INPUT SATWND DUMP
          LOOP6: DO II=1,6
             LOOP6n1: DO JJ=7,8
                IF(MIN(JSWIND(II,JJ,4),JSMASS(II,JJ,4)).LT.9999)  THEN
-                   ! ** AQUA AND TERRA (NASA/MODIS POES) Infrared **
+            ! ** AQUA AND TERRA (NASA/MODIS POES) Infrared (long-wave)**
                   SUBSKP(005,070) = .FALSE. ! current
                   EXIT LOOP6
                END IF
@@ -3837,10 +3853,10 @@ C IFLAG = 1 RETURNS DATA SET INFO (ONLY) AFTER FIRST CALL
   872          FORMAT(25X,'---> HIGH-DENSITY U.S. GEOSTATIONARY ',
      $          'REPORTS:')
                IF(.NOT.SUBSKP(005,010))  THEN
-               NAME1 = 'NESDIS: GOES-ODD IMAGER CL.DFT-IR (6 LAT BANDS)'
+               NAME1 = 'NESDIS: GOES-ODD IMAGER C D-IR-LW (6 LAT BANDS)'
                   PRINT 8872, NAME1,(SWINDO_e(I,1,4),I=1,6),
      $             (SWINDO_l(I,1,4),I=1,6)
-               NAME1 = 'NESDIS: GOES-EVN IMAGER CL.DFT-IR (6 LAT BANDS)'
+               NAME1 = 'NESDIS: GOES-EVN IMGR C.DFT-IR-LW (6 LAT BANDS)'
                   PRINT 8872, NAME1,(SWINDO_e(I,2,4),I=1,6),
      $             (SWINDO_l(I,2,4),I=1,6)
                END IF
@@ -3892,7 +3908,7 @@ C IFLAG = 1 RETURNS DATA SET INFO (ONLY) AFTER FIRST CALL
  8873          FORMAT(25X,'---> CONVENTIONAL FOREIGN GEOSTATIONARY ',
      $          'REPORTS:')
                IF(.NOT.SUBSKP(005,021))  THEN
-               NAME1 = 'INDIA: INSAT/KALPANA CLD DRFT -IR (6 LAT BANDS)'
+               NAME1 = 'INDIA: INSAT/KALPANA CL.DFT-IR-LW (6 LAT BANDS)'
                   PRINT 8872, NAME1,(SWINDO_e(I,3,1),I=1,6),
      $             (SWINDO_l(I,3,1),I=1,6)
                END IF
@@ -3907,7 +3923,7 @@ C IFLAG = 1 RETURNS DATA SET INFO (ONLY) AFTER FIRST CALL
      $             (SWINDO_l(I,3,2),I=1,6)
                END IF
                IF(.NOT.SUBSKP(005,041).OR..NOT.SUBSKP(005,044))  THEN
-               NAME1 = 'JAPAN: GMS/MTSAT CLOUD DRIFT - IR (6 LAT BANDS)'
+               NAME1 = 'JAPAN: GMS/MTSAT CL. DRIFT- IR-LW (6 LAT BANDS)'
                   PRINT 8872, NAME1,(SWINDO_e(I,4,1),I=1,6),
      $             (SWINDO_l(I,4,1),I=1,6)
                END IF
@@ -3922,10 +3938,10 @@ C IFLAG = 1 RETURNS DATA SET INFO (ONLY) AFTER FIRST CALL
      $             (SWINDO_l(I,4,2),I=1,6)
                END IF
                IF(.NOT.SUBSKP(005,061).OR..NOT.SUBSKP(005,064))  THEN
-               NAME1 = 'ESA: METEOSAT-ODD CLOUD DRIFT -IR (6 LAT BANDS)'
+               NAME1 = 'ESA: METEOSAT-ODD CL DRIFT -IR-LW (6 LAT BANDS)'
                   PRINT 8872, NAME1,(SWINDO_e(I,5,1),I=1,6),
      $             (SWINDO_l(I,5,1),I=1,6)
-               NAME1 = 'ESA: METEOSAT-EVN CLOUD DRIFT -IR (6 LAT BANDS)'
+               NAME1 = 'ESA: METEOSAT-EVN CL DRIFT -IR-LW (6 LAT BANDS)'
                   PRINT 8872, NAME1,(SWINDO_e(I,6,1),I=1,6),
      $             (SWINDO_l(I,6,1),I=1,6)
                END IF
@@ -3949,10 +3965,10 @@ C IFLAG = 1 RETURNS DATA SET INFO (ONLY) AFTER FIRST CALL
      $          PRINT 8874
  8874          FORMAT(25X,'---> POLAR-ORBITING REPORTS:')
                IF(.NOT.SUBSKP(005,070))  THEN
-               NAME1 = 'NASA/MODIS: AQUA  IMAGR CL.DFT-IR (6 LAT BANDS)'
+               NAME1 = 'NASA/MODIS: AQUA  IMGR C.DR-IR-LW (6 LAT BANDS)'
                   PRINT 8872, NAME1,(SWINDO_e(I,7,4),I=1,6),
      $             (SWINDO_l(I,7,4),I=1,6)
-               NAME1 = 'NASA/MODIS: TERRA IMAGR CL.DFT-IR (6 LAT BANDS)'
+               NAME1 = 'NASA/MODIS: TERRA IMGR C.DR-IR-LW (6 LAT BANDS)'
                   PRINT 8872, NAME1,(SWINDO_e(I,8,4),I=1,6),
      $             (SWINDO_l(I,8,4),I=1,6)
                END IF
@@ -6859,7 +6875,7 @@ C TRANSFER TMP ARRAY BACK TO DAT ARRAY
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    SWNTBL
-C   PRGMMR: D. A. KEYSER     ORG: NP22       DATE: 2006-11-29
+C   PRGMMR: D. A. KEYSER     ORG: NP22       DATE: 2015-01-30
 C
 C ABSTRACT: COMPILES COUNTS FOR EACH SATWND TYPE (FOR ALL VALID COMB.
 C   OF PRODUCER/SATELLITE/PRODUCT) AND SUMMARIZES EACH TYPE IN A
@@ -6891,6 +6907,10 @@ C     "ODD" AND "EVEN" SATELLITES SEPARATELY FOR PROCESS/NO-PROCESS/
 C     FLAG ALL/FLAG EVERY-OTHER (N-LIST SWITCHES "JSMASS"/"JSWIND"),
 C     TIME WINDOW ("SWINDO_e"/"SWINDO_l"), LAND/NO-LAND ("SWNLND"), ALL
 C     BY LAT BAND AND PRODUCT TYPE
+C 2015-01-30  D. A. Keyser -- All references to IR satellite-derived
+C     winds now expanded to refer to IR "long-wave" - this
+C     differentiates them from IR "short-wave" winds which are now
+C     produced from GOES but are not processed by this program. 
 C
 C USAGE:    CALL SWNTBL
 C   OUTPUT FILES:
@@ -6917,9 +6937,9 @@ C$$$
      $ (NAME10,NAMEA(1,10))
       DATA  NAME1/'>>>?????????????????????????????????????????<<<',
      $            '                                               ',
-     $            '>>>   INDIA GEOSTATIONARY IR CLOUD-DRIFT    <<<',
-     $            '>>>    JAPAN GEOSTATIONARY IR CLOUD-DRIFT   <<<',
-     $            '>>>  EUMETSAT GEOSTATIONARY IR CLOUD-DRIFT  <<<',
+     $            '>>> INDIA GEOSTATIONARY IR(LW) CLOUD-DRIFT  <<<',
+     $            '>>>  JAPAN GEOSTATIONARY IR(LW) CLOUD-DRIFT <<<',
+     $            '>>>EUMETSAT GEOSTATIONARY IR(LW) CLOUD-DRIFT<<<',
      $            '                                               ',
      $            '>>>?????????????????????????????????????????<<<',
      $            '                                               '/
@@ -6939,13 +6959,13 @@ C$$$
      $            '                                               ',
      $            '>>>?????????????????????????????????????????<<<',
      $            '                                               '/
-      DATA  NAME4/'>>> NESDIS GEOSTATIONARY IMAGER IR CLD-DRIFT<<<',
+      DATA  NAME4/'>>> NESDIS GEOSTATIONARY IMGR IR(LW) CLD-DFT<<<',
      $            '                                               ',
      $            '>>>?????????????????????????????????????????<<<',
      $            '>>>?????????????????????????????????????????<<<',
      $            '>>>?????????????????????????????????????????<<<',
      $            '                                               ',
-     $            '>>>NASA/MODIS POLAR-ORBITING IMGR IR CL-DRFT<<<',
+     $            '>>>NASA/MODIS PLR-ORBITING IMGR IR(LW) C-DFT<<<',
      $            '                                               '/
       DATA  NAME5/'>>> NESDIS GEOSTATIONARY VISIBLE CLOUD-DRIFT<<<',
      $            '                                               ',
@@ -10395,7 +10415,7 @@ C**********************************************************************
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    GETC06
-C   PRGMMR: KEYSER           ORG: NP22        DATE: 2014-04-25
+C   PRGMMR: KEYSER           ORG: NP22        DATE: 2015-01-30
 C
 C ABSTRACT: RETRIEVES SINGLE LEVEL {AIRCRAFT FLIGHT-LEVEL, SATWND (ALL
 C   TYPES), RECCO} REPORTS FROM DATA LEVEL CAT. 6.  RECCOS MAY INCLUDE
@@ -10646,6 +10666,10 @@ C     allows GSI to identify cloud-top vs. deep-layer WV winds and IR
 C     vs. visible winds for METEOSAT and JMA since, unlike NESDIS, both
 C     have same report types (250-JMA & 254-EUMETSAT for WV, 242/252-
 C     JMA & 243/253-EUMETSAT for IR/VIS).
+C 2015-01-30  D. A. Keyser -- All references to IR satellite-derived
+C     winds now expanded to refer to IR "long-wave" - this
+C     differentiates them from IR "short-wave" winds which are now
+C     produced from GOES but are not processed by this program.
 C
 C USAGE:    CALL GETC06(NN,CYCLET,*,*)
 C   INPUT ARGUMENT LIST:
@@ -10825,10 +10849,10 @@ C           =6-EUMETSAT/METEOSAT-EVEN (GEOSTATIONARY);
 C           =7-NASA/MODIS AQUA (POLAR-ORBITING);
 C           =8-NASA/MODIS TERRA (POLAR-ORBITING)
 C IPD IS DEFINED AS FOLLOWS:
-C           = 1-CONVENTIONAL IR CLOUD DRIFT (CLOUD TOP);
+C           = 1-CONVENTIONAL IR (LONG-WAVE) CLOUD DRIFT (CLOUD TOP);
 C           = 2-CONVENTIONAL IMAGER WATER VPR (CLOUD TOP OR DEEP LAYER);
 C           = 3-CONVENTIONAL VISIBLE CLOUD DRIFT (CLOUD TOP);
-C           = 4-HIGH-DENSITY IR CLOUD DRIFT (CLOUD TOP);
+C           = 4-HIGH-DENSITY IR  (LONG-WAVE) CLOUD DRIFT (CLOUD TOP);
 C           = 5-HIGH-DENSITY VISIBLE CLOUD DRIFT (CLOUD TOP);
 C           = 6-HIGH-DENSITY IMAGER WATER VAPOR (CLOUD TOP);
 C           = 7-HIGH-DENSITY IMAGER WATER VAPOR (DEEP LAYER);
@@ -10849,11 +10873,13 @@ C DETERMINED FROM CHARACTER IN POSITION 8 OF STN. ID AND FROM CLOUD
 C  MASK INDICATOR
 C
 C   CHARACTER IN POSITION 8 OF STN. ID:
-C        1 - 'C' ---> CONVENTIONAL IR CLOUD-DRIFT (ALWAYS CLOUD TOP)
+C        1 - 'C' ---> CONVENTIONAL IR (LONG-WAVE) CLOUD-DRIFT (ALWAYS
+C                     CLOUD TOP)
 C        2 - 'V' ---> CONVENTIONAL IMAGER WATER VAPOR (CLOUD TOP OR
 C                     DEEP LAYER)
 C        3 - 'B' ---> CONVENTIONAL VISIBLE CLOUD-DRIFT (ALWAYS CLD TOP)
-C        4 - 'I' ---> HIGH-DENSITY IR CLOUD-DRIFT (ALWAYS CLOUD TOP)
+C        4 - 'I' ---> HIGH-DENSITY IR (LONG-WAVE) CLOUD-DRIFT (ALWAYS
+C                     CLOUD TOP)
 C        5 - 'Z' ---> HIGH-DENSITY VISIBLE CLOUD-DRIFT (ALWAYS CLD TOP)
 C        6 - 'W' ---> HIGH-DENSITY IMAGER WATER VAPOR (CLOUD TOP)
 C        7 - 'W' ---> HIGH-DENSITY IMAGER WATER VAPOR (DEEP LAYER)
