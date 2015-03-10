@@ -152,6 +152,9 @@ files:
          BENEFIT:  Prevents diagnostic "invalid producer/sat combination"
                    printout from being generated for every report in these two
                    tanks.
+       - Output argument "CBULL" returned from IW3UNPBF for unpacked reports
+         (character*11 string containing WMO bulletin header and originator -
+         filled only for aircraft types right now).
       iw3unpbf.f (subroutine):
        - Added logic to handle new NASA/VIIRS (NPP) POES winds in tank NC005090
          (e.g., recognizes that they now exist, counts of reports with flagged
@@ -165,6 +168,12 @@ files:
                   the "satwnd" dumps.  (Although they will not be processed by
                   prepobs_prepdata they are listed by bufr_listdumps which uses
                   this same dump-interface subroutine.)
+       - Now stores WMO bulletin header and originator in new output
+         character*11 argument CBULL for aircraft data (only) (all blanks for
+         all other data types for now). (Note: Previously, WMO bulletin
+         originator had been stored in characters 1-4 of header reserve
+         character word 1 and bulletin header was not stored.)
+         BENEFIT: This information may be included in PREPBUFR files someday.
 
 
  Output changes:

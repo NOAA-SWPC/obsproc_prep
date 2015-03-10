@@ -1,7 +1,7 @@
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    IW3UNPBF
-C   PRGMMR: KEYSER           ORG: NP22       DATE: 2015-01-30
+C   PRGMMR: KEYSER           ORG: NP22       DATE: 2015-03-09
 C
 C ABSTRACT: READS AND UNPACKS ONE REPORT FROM INPUT NCEP BUFR DUMP
 C   FILE INTO SPECIFIED FORMAT.  FUNCTION RETURNS THE UNPACKED REPORT
@@ -390,11 +390,17 @@ C     type 19, process the quality information correctly). Added some
 C     missing logic which summarizes processing of NESDIS/AVHRR POES
 C     winds in tank NC005080 (e.g., counts of reports by satellite
 C     number).
+C 2015-03-09  D. A. KEYSER --  Now stores WMO bulletin header and
+C     originator in new output character*11 argument CBULL for aircraft
+C     data (only) (all blanks for all other data types for now). (Note:
+C     Previously, WMO bulletin originator had been stored in characters
+C     1-4 of header reserve character word 1 and bulletin header was
+C     not stored.)
 C
 C
-C USAGE:    II = IW3UNPBF(NUNIT, OBS, STNID, CRES1, CRES2, OBS2, OBS3,
-C                         NOBS3, DSNAME, IDSDAT, IDSDMP_8, SUBSET_r,
-C                         SUBSKP, IER)
+C USAGE:    II = IW3UNPBF(NUNIT, OBS, STNID, CRES1, CRES2, CBULL, OBS2,
+C                         OBS3, NOBS3, DSNAME, IDSDAT, IDSDMP_8,
+C                         SUBSET_r, SUBSKP, IER)
 C   INPUT ARGUMENT LIST:
 C     NUNIT    - FORTRAN UNIT NUMBER FOR SEQUENTIAL DATA SET CONTAINING
 C                PACKED NCEP BUFR REPORTS (DUMP FILE)
@@ -434,7 +440,7 @@ C                FORMAT.  FORMAT IS MIXED, USER MUST EQUIVALENCE
 C                INTEGER ARRAY TO THIS ARRAY (SEE REMARKS FOR UNPACKED
 C                FORMAT) THE LENGTH OF THE ARRAY SHOULD BE AT LEAST
 C                3500 (NOTE: DOES NOT INCLUDE STATION ID, CHARACTER
-C                RESERVE WORD 1, AND CHARACTER RESERVE WORD 2)
+C                RESERVE WORD 1, CHARACTER RESERVE WORD 2 AND CBULL)
 C     STNID    - CHARACTER*8 SINGLE REPORT STATION IDENTIFICATION (UP
 C                TO 8 CHARACTERS, LEFT-JUSTIFIED)
 C     CRES1    - CHARACTER*8 SINGLE REPORT CHARACTER RESERVE WORD 1
@@ -443,6 +449,10 @@ C                TYPE OF DATA)
 C     CRES2    - CHARACTER*8 SINGLE REPORT CHARACTER RESERVE WORD 2
 C                (SEE DOCUMENTATION/COMMENTS IN THIS PROGRAM (VARIES BY
 C                TYPE OF DATA)
+C     CBULL    - CHARACTER*11 STRING HOLDING WMO BULLETIN HEADER (CHAR.
+C                1-6) AND ORIGINATOR (CHAR. 8-11) (CHAR. 7 IS BLANK)
+C                (Note: Currently only applies to aircraft reports,
+C                       this string is all blanks for all other types.)
 C     OBS2     - 43-WORD ARRAY CONTAINING ADDITIONAL REPORT DATA NOT
 C                PRESENT IN OBS ARRAY (DATA RESTRICTION INFO,
 C                ALTIMETER SETTING, SST, SINGLE-LEVEL SENSIBLE WEATHER
@@ -490,7 +500,7 @@ C
 C REMARKS:
 C     THE RETURN FLAGS IN IER (AND FUNCTION IW3UNPBF ITSELF) ARE:
 C          =   0  OBSERVATION READ AND UNPACKED INTO LOCATIONS 'OBS',
-C                   'STNID', 'CRES1', 'CRES2', 'OBS2', 'OBS3',
+C                   'STNID', 'CRES1', 'CRES2', 'CBULL', 'OBS2', 'OBS3',
 C                   'DSNAME', 'IDSDAT', AND 'IDSDMP_8'.  SEE REMARKS
 C                   BELOW FOR CONTENTS. NEXT CALL TO IW3UNPBF WILL
 C                   RETURN NEXT OBSERVATION IN DATA SET.
@@ -518,11 +528,12 @@ C                        TOP OF NCEP BUFR DUMP FILE, OR SOME OTHER
 C                        PROBLEM IN DECODING ONE OR MORE REPORTS IN AN
 C                        NCEP BUFR DUMP FILE.
 C                  NO USEFUL INFORMATION IN 'OBS', 'STNID', 'CRES1',
-C                  'CRES2', 'OBS2', 'OBS3', 'DSNAME', 'IDSDAT', AND
-C                  'IDSDMP_8' ARRAYS.  CALLING PROGRAM CAN CHOOSE TO
-C                  STOP WITH NON-ZERO CONDITION CODE OR RESET 'NUNIT'
-C                  TO POINT TO A NEW DATA SET (IN WHICH CASE NEXT CALL
-C                  TO IW3UNPBF SHOULD RETURN WITH IER=1).
+C                  'CRES2', 'CBULL', 'OBS2', 'OBS3', 'DSNAME',
+C                  'IDSDAT', AND 'IDSDMP_8' ARRAYS.  CALLING PROGRAM
+C                  CAN CHOOSE TO STOP WITH NON-ZERO CONDITION CODE OR
+C                  RESET 'NUNIT' TO POINT TO A NEW DATA SET (IN WHICH
+C                  CASE NEXT CALL TO IW3UNPBF SHOULD RETURN WITH
+C                  IER=1).
 C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C
@@ -531,9 +542,10 @@ C               {MISSING INTEGER DATA ARE SET TO IMISS (99999);
 C                MISSING REAL DATA ARE SET TO XMISS (99999.)}
 C
 C     (NOTE: DOES NOT INCLUDE STATION IDENTIFICATION, CHARACTER RESERVE
-C            WORD 1, AND CHARACTER RESERVE WORD 2, "OBS2" AND "OBS3"
-C            ARRAY OUTPUT - SEE OUTPUT ARGUMENTS "STNID", "CRES1", AND
-C            "CRES2" ABOVE AND "OBS2", AND "OBS3" CONTENTS BELOW)
+C            WORD 1, CHARACTER RESERVE WORD 2, "CBULL", "OBS2" AND
+C            "OBS3" ARRAY OUTPUT - SEE OUTPUT ARGUMENTS "STNID",
+C            "CRES1", "CRES2" AND "CBULL" ABOVE AND "OBS2", AND "OBS3"
+C            CONTENTS BELOW)
 C
 C   ***************************************************************
 C   WORD   CONTENT                   UNIT                 FORMAT
@@ -1114,8 +1126,8 @@ C   LANGUAGE: FORTRAN 90
 C   MACHINE:  NCEP WCOSS
 C
 C$$$
-      FUNCTION IW3UNPBF(LUNIT,OBS,STNID,CRES1,CRES2,OBS2,OBS3,NOBS3,
-     $ DSNAME,IDSDAT,IDSDMP_8,SUBSET_r,SUBSKP,IER)
+      FUNCTION IW3UNPBF(LUNIT,OBS,STNID,CRES1,CRES2,CBULL,OBS2,OBS3,
+     $ NOBS3,DSNAME,IDSDAT,IDSDMP_8,SUBSET_r,SUBSKP,IER)
  
       PARAMETER (NUMCAT=8, LEVLIM=300)
 
@@ -1140,12 +1152,14 @@ C$$$
       COMMON/IUBFPP/LWI,LWR
       COMMON/IUBFQQ/NPRINT(0:255,0:200)
       COMMON/IUBFRR/IDATEB
+      COMMON/IUBFSS/CBULLX
  
       DIMENSION    OBS(*),OBS2(43),OBS3(5,255,7),NOBS3(7),JWFILE(100)
       dimension    istart(3),iend(3)
 
       CHARACTER*8  STNID,STNIDX,CRES1,CRES1X,CRES2,CRES2X,DSNAME,DSNAMX,
      $ SUBSET_r,SUBSET
+      CHARACTER*11 CBULL,CBULLX
 
       INTEGER(8) IDSDMP_8,IDSDAX_8,IDSDMX_8
 
@@ -1240,7 +1254,7 @@ C  THE JWFILE INDICATOR: =0 IF UNOPENED; =2 IF OPENED AND NCEP BUFR
 C  ----------------------------------------------------------------
  
       IF(JWFILE(LUNIT).EQ.0) THEN
-         PRINT'(" ===> IW3UNPBF - WCOSS VERSION: 01-30-2015")'
+         PRINT'(" ===> IW3UNPBF - WCOSS VERSION: 03-09-2015")'
 
 C  DETERMINE MACHINE WORD LENGTH (BYTES) FOR BOTH INTEGERS AND REALS
 C  -----------------------------------------------------------------
@@ -1486,6 +1500,7 @@ C   this type/subtype with reports present for the diagnostic print
       STNID    = STNIDX
       CRES1    = CRES1X
       CRES2    = CRES2X
+      CBULL    = CBULLX
       DSNAME   = DSNAMX
       IDSDAT   = IDSDAX_8
       IDSDMP_8 = IDSDMX_8
@@ -2353,6 +2368,7 @@ C***********************************************************************
 C     ---> INITIALIZES INPUT ARRAYS
  
       CHARACTER*8  STNIDX,CRES1X,CRES2X
+      CHARACTER*11 CBULLX
       REAL(8)      BMISS
 
       COMMON/IUBFAA/BMISS
@@ -2363,6 +2379,7 @@ C     ---> INITIALIZES INPUT ARRAYS
       COMMON/IUBFLL/Q8(255,2)
       COMMON/IUBFMM/XIND(255)
       COMMON/IUBFNN/STNIDX,CRES1X,CRES2X
+      COMMON/IUBFSS/CBULLX
  
       SAVE
  
@@ -2382,6 +2399,7 @@ C  ----------------------------------------------------------------
       STNIDX = '        '
       CRES1X = '        '
       CRES2X = '        '
+      CBULLX = '           '
  
       RETURN
       END
@@ -4000,18 +4018,21 @@ C     ---> PROCESSES AIRCRAFT DATA (004/001-004, 004/006-009)
       COMMON/IUBFFF/PQM(255),QQM(255),TQM(255),ZQM(255),WQM(255)
       COMMON/IUBFLL/Q81(255),Q82(255)
       COMMON/IUBFRR/IDATEB
+      COMMON/IUBFSS/CBULLX
  
       CHARACTER*80 HDSTR,LVSTR,QMSTR,RCSTR,CRAWR
       CHARACTER*500 CRAWRX
-      CHARACTER*8  SUBSET,SID,RSV1,RSV2,CCL,CRAW(255),ACID,QCD
-      REAL(8) RID_8,RCL_8,UFBINT_8,RNS_8,OBS2_8(43),OBS3_8(5,255,7),
-     $ RACID_8,RTAM_8(2),RTAM_WDIR_8,RQCD_8
+      CHARACTER*11  CBULLX
+      CHARACTER*8  SUBSET,SID,RSV1,RSV2,CRAW(255),ACID,QCD,CBUHD,
+     $ CBORG
+      REAL(8) RID_8,UFBINT_8,RNS_8,OBS2_8(43),OBS3_8(5,255,7),
+     $ RACID_8,RTAM_8(2),RTAM_WDIR_8,RQCD_8,BULL_8(2)
       REAL(8) HDR_8(20),RCT_8(5,255),ARR_8(10,255),RAW_8(255),TRBX_8(5),
      $ ROLF_8,BMISS,AMINIMUM_8,AMAXIMUM_8
       DIMENSION    OBS(*),OBS2(43),OBS3(5,255,7),NOBS3(7),HDR(20),
      $ RCT(5,255),ARR(10,255),TRBX(5)
-      EQUIVALENCE  (RID_8,SID),(RCL_8,CCL),(RAW_8,CRAW),(RACID_8,ACID),
-     $ (RQCD_8,QCD)
+      EQUIVALENCE  (RID_8,SID),(RAW_8,CRAW),(RACID_8,ACID),
+     $ (RQCD_8,QCD),(BULL_8(1),CBORG),(BULL_8(2),CBUHD)
 
       SAVE
  
@@ -4216,53 +4237,56 @@ C  --------------------------------------------------------------------
       RSV1 = '        '
       RSV2 = '        '
 
-C  BULLETIN LOCATION IDENTIFIER STORED IN BYTES 1-4 OF HEADER RESERVE
-C   CHARACTER WORD 1
-C  ------------------------------------------------------------------
+C  BULLETIN HEADER AND ORIGINATOR STORED IN CBULLX
+C  -----------------------------------------------
 
-      CALL UFBINT(LUNIT,RCL_8,1,1,IRET,'BORG')     ! Effective 5/2002
-cccc  IF(IRET.NE.0.AND.(RCL_8.LE.BMISS-5000..OR.RCL_8.GE.BMISS+5000.))
-cccc $ THEN
+      CALL UFBINT(LUNIT,BULL_8,2,1,IRET,'BORG BUHD')
+
+cccc  IF(IRET.NE.0.AND.(BULL_8(1).LE.BMISS-5000..OR.
+cccc $ BULL_8(1).GE.BMISS+5000.)) THEN
 cxxxx
 cpppppppppp
-cc    print'(" rcl_8,icbfms(ccl,8): ",G0,1X,I0)', rcl_8,icbfms(ccl,8)
+cc    print'(" bull_8(1),icbfms(CBORG,8): ",G0,1X,I0)', bull_8(1),
+cc   $ icbfms(CBORG,8)
 cpppppppppp
-ccccc IF(ICBFMS(CCL,8).EQ.0) THEN
+ccccc IF(ICBFMS(CBORG,8).EQ.0) THEN
 C above line not working right - may return 0 when missing, so use next
 C  two lines below temporarily until this is fixed (readlc will return
-C  all blanks for ccl when mnemonic "BORG" not found) - dak 2/19/13
-         call readlc(lunit,ccl,'BORG')
+C  all blanks for CBORG when mnemonic "BORG" not found) - dak 2/19/13
+         call readlc(lunit,CBORG,'BORG')
 cpppppppppp
-cc    print'(" ccl = """,A,"""")', ccl
+cc    print'(" CBORG = """,A,"""")', CBORG
 cpppppppppp
-         if(ccl.ne.'        ')  then
+         if(CBORG.ne.'        ')  then
 cxxxx
-         RSV1(1:4) = CCL(1:4)
+         CBULLX = CBUHD(1:6)//' '//CBORG(1:4)
       ELSE
-         CALL UFBINT(LUNIT,RCL_8,1,1,IRET,'ICLI')  ! Prior to  5/2002
-cccc     IF(IRET.NE.0.AND.(RCL_8.LE.BMISS-5000..OR.RCL_8.GE.BMISS+
-cccc $    5000.))  RSV1(1:4) = CCL(1:4)
+         CALL UFBINT(LUNIT,BULL_8,2,1,IRET,'ICLI')  ! Prior to  5/2002
+cccc     IF(IRET.NE.0.AND.(BULL_8(1).LE.BMISS-5000..OR.
+cccc $    BULL_8(1).GE.BMISS+5000.))  CBULLX = '       '//CBORG(1:4)
 cxxxx
 cpppppppppp
-cc    print'(" rcl_8,icbfms(ccl,8): ",G0,1X,I0)', rcl_8,icbfms(ccl,8)
+cc    print'(" bull_8(1),icbfms(CBORG,8): ",G0,1X,I0)', bull_8(1),
+cc   $ icbfms(CBORG,8)
 cpppppppppp
-         IF(ICBFMS(CCL,8).EQ.0) RSV1(1:4) = CCL(1:4)
+         IF(ICBFMS(CBORG,8).EQ.0) CBULLX = '       '//CBORG(1:4)
 C above line not working right - may return 0 when missing, so use next
 C  two lines below temporarily until this is fixed (readlc will return
-C  all blanks for ccl when mnemonic "ICLI" not found) - dak 2/19/13
-         call readlc(lunit,ccl,'ICLI')
+C  all blanks for CBORG when mnemonic "ICLI" not found) - dak 2/19/13
+         call readlc(lunit,CBORG,'ICLI')
 cpppppppppp
-cc    print'(" ccl = """,A,"""")', ccl
+cc    print'(" CBORG = """,A,"""")', CBORG
 cpppppppppp
-         rsv1(1:4) = ccl(1:4) ! will set rsv1(1:4) back to all blanks
-                              !  if readlc returns ccl as all blanks
-                              !  {rsv1(1:4) may have been set to
+         CBULLX = '       '//CBORG(1:4)
+                              ! will set CBULLX back to all blanks
+                              !  if readlc returns CBORG as all blanks
+                              !  {CBULLX may have been set to
                               !  garbage above if ICBFMS incorrectly
-                              !  returned as zero when ccl is actually
-                              !  missing) -- if ccl(1:4) is filled with
-                              !  a valid character string by readlc,
-                              !  this will also get translated into
-                              !  rsv1(1:4) here
+                              !  returned as zero when CBORG is
+                              !  actually missing) -- if CBORG is
+                              !  filled with a valid character string
+                              !  by readlc, this will also get
+                              !  translated into CBULLX here
 cxxxx
       END IF
 
@@ -4280,12 +4304,12 @@ C  --------------------------------------
 
 C  AFWA (NEVER HAPPENS) INDICATOR STORED IN BYTE 1 OF HEADER RESERVE
 C   CHARACTER WORD 2
-C   (NOTE: NAS9000 ONLY ASSIGNED BULLETIN LOCATION IDENTIFIER "KAWN" AS
-C           AFWA, ALTHOUGH BULLETIN LOCATION IDENTIFIERS "PHWR" AND
-C          "EGWR" ARE ALSO APPARENTLY ALSO AFWA)
-C  --------------------------------------------------------------------
+C   (NOTE: NAS9000 ONLY ASSIGNED BULLETIN ORIGINATOR "KAWN" AS AFWA,
+C          ALTHOUGH BULLETIN ORIGINATORS "PHWR" AND "EGWR" ARE
+C          APPARENTLY ALSO AFWA)
+C  -----------------------------------------------------------------
 
-         IF(RSV1(1:4).EQ.'KAWN')  RSV2(1:1) = 'C'
+         IF(CBULLX(8:11).EQ.'KAWN')  RSV2(1:1) = 'C'
 
       ELSE IF(SUBSET.EQ.'NC004004') THEN
  
@@ -4429,12 +4453,12 @@ C   will do the same here.
 C   ACTUALLY, JEFF ATOR HAS REMOVED THESE FROM THE DECODER, SO WE
 C    SHOULD NEVER EVEN SEE THEM IN THE DATABASE, but it won't hurt
 C    anything to keep this in here.
-C   (NOTE: These all have bulletin location identifier "PHWR")
+C   (NOTE: These all have bulletin originator "PHWR".)
 
-         if(RSV1(1:4).eq.'PHWR')  then
+         if(CBULLX(8:11).eq.'PHWR')  then
 cpppppppppp
 cc    print'(" IW3UNPBF/R05UBF: TOSS ""PHWR"" AIREP FORMAT with ID = ",
-cc   $ A,"; CCL = ",A)', SID,RSV1(1:4)
+cc   $ A,"; CBORG = ",A)', SID,CBULLX(8:11)
 cpppppppppp
             R05UBF = -9999
             kskacf(8) = kskacf(8) + 1
@@ -4452,9 +4476,8 @@ C      COMMENTED THIS OUT.
 C
 C      These disguised reports can be identified by the string
 C      " Sxyz" in the raw report (beyond byte 40), where y is 0,1, or 2.
-C      (NOTE: Apparently AFWA here applies to more bulletin location
-C             identifiers than just "KAWN", so report header is not
-C             even checked.)
+C      (NOTE: Apparently AFWA here applies to more bulletin originators
+C             than just "KAWN", so report header is not even checked.)
 
 C        2) AFWA also converts MDCRS ACARS reports into AIREP format.
 C      These MAY duplicate true reports in the MDCRS ACARS subtype.
@@ -4462,9 +4485,8 @@ C      The NAS9000 decoder always excluded this type (no dup-checking
 C      was done).  All of these will be removed here. These disguised
 C      reports can be identified by the string " Sxyz" in the raw
 C      report (beyond byte 40), where y is 3 or greater.
-C      (NOTE: Apparently AFWA here applies to more bulletin location
-C             identifiers than just "KAWN", so report header is not
-C             even checked.)
+C      (NOTE: Apparently AFWA here applies to more bulletin originators
+C             than just "KAWN", so report header is not even checked.)
 
          crawrx = ' '
          crawr = ' '
@@ -4516,7 +4538,7 @@ C  ----------------------------------------------------------------
 
 cpppppppppp
 cc    print'(" IW3UNPBF/R05UBF: Found a AFWA AMDAR in AIREP format ",
-cc   $ "for ",A,"; CCL = ",A)', SID,RSV1(1:4)
+cc   $ "for ",A,"; CBORG = ",A)', SID,CBULLX(8:11)
 cpppppppppp
 cdak  R05UBF = -9999
 cdak  KSKACF(3) = KSKACF(3) + 1
@@ -4529,7 +4551,7 @@ C  ----------------------------------------------------------------
 
 cpppppppppp
 cc    print'(" IW3UNPBF/R05UBF: Found a AFWA ACARS in AIREP format ",
-cc   $ "for ",A,"; CCL = ",A)', SID,RSV1(1:4)
+cc   $ "for ",A,"; CBORG = ",A)', SID,CBULLX(8:11)
 cpppppppppp
       R05UBF = -9999
       KSKACF(4) = KSKACF(4) + 1
@@ -4546,12 +4568,12 @@ cpppppppppp
 caaaaa temporary?
 
 C  AFWA INDICATOR STORED IN BYTE 1 OF HEADER RESERVE CHARACTER WORD 2
-C   (NOTE: NAS9000 ONLY ASSIGNED BULLETIN LOCATION IDENTIFIER "KAWN" AS
-C          AFWA, ALTHOUGH BULLETIN LOCATION IDENTIFIERS "PHWR" AND
-C          "EGWR" ARE ALSO APPARENTLY ALSO AFWA)
-C  --------------------------------------------------------------------
+C   (NOTE: NAS9000 ONLY ASSIGNED BULLETIN ORIGINATOR "KAWN" AS AFWA,
+C          ALTHOUGH BULLETIN ORIGINATORS "PHWR" AND "EGWR" ARE
+C          APPARENTLY ALSO AFWA)
+C  ------------------------------------------------------------------
 
-         IF(RSV1(1:4).EQ.'KAWN')  RSV2(1:1) = 'C'
+         IF(CBULLX(8:11).EQ.'KAWN')  RSV2(1:1) = 'C'
 
       END IF
  
