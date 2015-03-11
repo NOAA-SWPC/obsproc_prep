@@ -149,12 +149,24 @@ files:
        - Skips over the reading of reports in "satwnd" dump coming from tanks
          NC005080 (AVHRR POES) and NC005090 (VIIRS POES) since these cannot be
          processed by this program.
-         BENEFIT:  Prevents diagnostic "invalid producer/sat combination"
-                   printout from being generated for every report in these two
-                   tanks.
+         BENEFIT: Prevents diagnostic "invalid producer/sat combination"
+                  printout from being generated for every report in these two
+                  tanks.
        - Output argument "CBULL" returned from IW3UNPBF for unpacked reports
          (character*11 string containing WMO bulletin header and originator -
          filled only for aircraft types right now).
+       - Fixed several issues related to storage of SQN (sequence number):
+         - Now initialized as 999990 instead of 99999.
+         - Corrected bug which was not encoding it properly for AIRCAR type
+           when SQN was > 99998.
+         - Now encoded as missing rather than 99999 for types which do not
+           store SQN.
+         BENEFIT: Correct value of SQN encoded in PREPBUFR files.  Prevents
+                  possible falure in downstream PREPOBS_PREPACQC program since
+                  it uses SQN to ensure indexing is correct when events are
+                  written to PREPBUFR file. (Note: This failure could only
+                  occur in runs that do not split PREPOBS_PREPDATA into
+                  separate tasks (i.e., non-operational runs.)
       iw3unpbf.f (subroutine):
        - Added logic to handle new NASA/VIIRS (NPP) POES winds in tank NC005090
          (e.g., recognizes that they now exist, counts of reports with flagged

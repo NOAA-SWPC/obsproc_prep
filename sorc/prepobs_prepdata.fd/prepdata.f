@@ -1,7 +1,7 @@
 C$$$  MAIN PROGRAM DOCUMENTATION BLOCK
 C
 C MAIN PROGRAM: PREPOBS_PREPDATA
-C   PRGMMR: KEYSER                ORG: NP22   DATE: 2015-03-09
+C   PRGMMR: KEYSER                ORG: NP22   DATE: 2015-03-11
 C
 C ABSTRACT: PREPARES DATA FOR USE IN ANALYSES FOR THE NDAS, NAM, GDAS,
 C   GFS, RAP (RAPID REFRESH), RTMA, AND URMA NETWORKS.  ALL ANALYSES
@@ -1115,6 +1115,13 @@ C 2015-03-09  D. A. Keyser -- In subr. UNPREPBF, accounts for new
 C     output argument "CBULL" returned from IW3UNPBF for unpacked
 C     reports (character*11 string containing WMO bulletin header and
 C     originator - filled only for aircraft types right now).
+C 2015-03-11  D. A. Keyser -- Fixed issues related to storage of SQN
+C     (sequence number):
+C         - Now initialized as 999990 instead of 99999.
+C         - Corrected bug which was not encoding it properly for AIRCAR
+C           type when SQN was > 99998.
+C         - Now encoded as missing rather than 99999 for types which do
+C           not store SQN.
 C
 C USAGE:
 C   INPUT FILES:
@@ -2202,7 +2209,8 @@ C                   LAUNCH TIME IS MISSING)
 C        HDR(15)  = SATELLITE ID (SEE BUFR C.T. 0-01-007, APPLIES
 C                   ONLY TO SATELLITE DATA TYPES)
  
-C      MISSING PARAMETERS SET TO XMISS (99999.)
+C      MISSING PARAMETERS SET TO XMISS (99999.), EXCEPT FOR HDR(11)
+C      WHICH IS SET TO XMISS*10. (999990.)
 C      ITYPE = (KI * 100) + (NI * 10) + JI
 C        WHERE, KI = OBSERVATION  TYPE (1 FOR MASS, 2 FOR WINDS)
 C               NI = INSTRUMENT
@@ -2830,7 +2838,7 @@ C  IN INTERFACE WITH SUBROUTINE IW3UNPBF
      $ FLACMS,IACFTH,SUBSKP,JPGPSD,GWINDO,RASS,TWINDO,JPWDSD,IWWNDO,
      $ FLDMFR,WRMISS,SKGP45,JPASCD,IAWNDO,npkrpt
       NAMELIST/PARM/IUNIT
-      CALL W3TAGB('PREPOBS_PREPDATA',2015,0068,0061,'NP22')
+      CALL W3TAGB('PREPOBS_PREPDATA',2015,0070,0061,'NP22')
 C DETERMINE MACHINE WORD LENGTH (BYTES) FOR BOTH INTEGERS AND REALS
       CALL WORDLENGTH(LWI,LWR)
       PRINT 2213, LWI,LWR
@@ -2873,7 +2881,7 @@ C    CARDS FILE, JUST AFTER NAMELIST TASK, BY THE MAKE_PREPBUFR SCRIPT)
          PRINT 321, NET(1)
       END IF
   321 FORMAT(/37X,'WELCOME TO THE UNIVERSAL ',A14,' DATA PREPROCESSOR'/
-     $ 48X,'WCOSS VERSION CREATED 09 MAR 2015'/)
+     $ 48X,'WCOSS VERSION CREATED 11 MAR 2015'/)
       PRINT 322, (IUNIT(I),I=1,8),IUNIT(16),IUNIT(17)
   322 FORMAT(//53X,'TABLE OF UNIT NUMBERS'/31X,
      $ 'INPUTS IN UNIT NUMBERS 11-50 - OUTPUTS IN UNIT NUMBERS 51-90'//
@@ -4873,7 +4881,7 @@ C GRID IS POLAR STEREOGRAPHIC
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    RPTLBL
-C   PRGMMR: D. A. KEYSER     ORG: W/NMC22    DATE: 2012-11-27
+C   PRGMMR: D. A. KEYSER     ORG: W/NMC22    DATE: 2015-03-11
 C
 C ABSTRACT: FOR ALL REPORT TYPES, STORES WORDS 2 (LONGITUDE), 3
 C   (LATITUDE), 4 (REPORT D-TIME), 5 (RECEIPT TIME), 7 (DUMP REPORT
@@ -4931,6 +4939,8 @@ C     (SEQUENCE NUMBER) ENCODED INTO PREPBUFR FILE FROM 99998 TO 524286
 C     (NEEDED BECAUSE THERE CAN NOW BE > 99998 MDCRS REPORTS IN A
 C     MONOLITHIC "AIRCAR" DUMP FILE - THIS CAUSES PREPACQC TO FAIL IN
 C     SERIAL PREPBUFR PROCESSING RUNS, E.G. IN SDMEDIT)
+C 2015-03-11  D. A. Keyser -- SQN (sequence number) now initialized as
+C     999990 instead of 99999.
 C
 C USAGE:    CALL RPTLBL(CYCLET)
 C   INPUT ARGUMENT LIST:
@@ -4963,6 +4973,7 @@ C$$$
       DATA  XMISS/99999./, YMISS/99998.8/,IMISS/99999/
       EQUIVALENCE (RDATA,IDATA)
       HDR(2:MXWRDH) = XMISS
+      HDR(11) = XMISS*10.
       ALNCH = XMISS
 C LONGITUDE GOES IN HDR(2) (EAST, RANGE: 0.0 TO 359.99)
       HDR(2) = RDATA(2)
@@ -5009,9 +5020,9 @@ C CHECK FOR ADPUPA REPORT LAUNCH TIME
             DO I = 1,IDATA(27)
                L = L + 4
                IF(NINT(RDATA(L+1)).EQ.21)  THEN
-cdakccccccccccccc IF(RDATA(L).LT.YMISS)  THEN
-                  IF(RDATA(L).LT.YMISS*10.)  THEN !SQN can now be >
-                                                  ! XMISS (99999.)
+ccdak             IF(RDATA(L).LT.YMISS)  THEN
+                                       !SQN can now be > XMISS (99999.)
+                  IF(RDATA(L).LT.YMISS*10.)  THEN
 C ACARS REPORT SEQUENCE NUMBER FOUND
                      HDR(11) = NINT(RDATA(L))
                      GO TO 856
@@ -10032,7 +10043,6 @@ C 2014-04-25  D. A. Keyser -- 1-dim array OBS2 returned from IW3UNPBF
 C     increased from 42 to 43 words to hold satellite zenith angle
 C     (degrees, for all SATWND types).
 C
-C
 C USAGE:    CALL FILLX(LL,IERF)
 C   INPUT ARGUMENT LIST:
 C     LL       - IF .GE. 0 - THE NUMBER OF LEVELS IN THE REPORT
@@ -10424,7 +10434,7 @@ C**********************************************************************
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    GETC06
-C   PRGMMR: KEYSER           ORG: NP22        DATE: 2015-01-30
+C   PRGMMR: KEYSER           ORG: NP22        DATE: 2015-03-11
 C
 C ABSTRACT: RETRIEVES SINGLE LEVEL {AIRCRAFT FLIGHT-LEVEL, SATWND (ALL
 C   TYPES), RECCO} REPORTS FROM DATA LEVEL CAT. 6.  RECCOS MAY INCLUDE
@@ -10679,6 +10689,8 @@ C 2015-01-30  D. A. Keyser -- All references to IR satellite-derived
 C     winds now expanded to refer to IR "long-wave" - this
 C     differentiates them from IR "short-wave" winds which are now
 C     produced from GOES but are not processed by this program.
+C 2015-03-11  D. A. Keyser -- Corrected bug which was not encoding SQN
+C     (sequence number) properly for AIRCAR type when SQN was > 99998.
 C
 C USAGE:    CALL GETC06(NN,CYCLET,*,*)
 C   INPUT ARGUMENT LIST:
@@ -11562,8 +11574,11 @@ C  AIREP/PIREP, AMDAR, E-ADAS, TAMDAR OR CAN-AMDAR AIRCFT, OR TO
 C  "ISQNUM(4)" IF SATELLITE (CLOUD-DRIFT, W. VAPOR, VISIBLE, ETC) AND
 C  STORE IN HDR(11)
 C  {NOTE: "ISQNUM(2)" FOR ACARS AIRCFT IS NOT USED HERE SINCE HDR(11)
-C         HAS ALREADY BEEN FILLED IN SUBR. RPTLBL}
-         IF(HDR(11).GE.YMISS)  HDR(11) = ISQNUM(NN)
+C         HAS ALREADY BEEN FILLED IN SUBR. RPTLBL, THUS THE TEST FOR
+C         MISSING BELOW}
+ccdak    IF(HDR(11).GE.YMISS)  HDR(11) = ISQNUM(NN)
+                                       !SQN can now be > XMISS (99999.)
+         IF(HDR(11).GE.YMISS*10.)  HDR(11) = ISQNUM(NN)
 C NOW CALL FILLX TO INITIATE PROCESS TO ENCODE RPT INTO PREPBUFR FILE
          CALL FILLX(LL,IERF)
          IF(IERF.EQ.1)  THEN
@@ -11702,8 +11717,11 @@ C  AIREP/PIREP, AMDAR, E-ADAS, TAMDAR OR CAN-AMDAR AIRCFT, OR TO
 C  "ISQNUM(4)" IF SATELLITE (CLOUD-DRIFT, W. VAPOR, VISIBLE, ETC) AND
 C  STORE IN HDR(11)
 C  {NOTE: "ISQNUM(2)" FOR ACARS AIRCFT IS NOT USED HERE SINCE HDR(11)
-C         HAS ALREADY BEEN FILLED IN SUBR. RPTLBL}
-         IF(HDR(11).GE.YMISS)  HDR(11) = ISQNUM(NN)
+C         HAS ALREADY BEEN FILLED IN SUBR. RPTLBL, THUS THE TEST FOR
+C         MISSING BELOW}
+ccdak    IF(HDR(11).GE.YMISS)  HDR(11) = ISQNUM(NN)
+                                       !SQN can now be > XMISS (99999.)
+         IF(HDR(11).GE.YMISS*10.)  HDR(11) = ISQNUM(NN)
 C NOW CALL FILLX TO PUT THIS REPORT INTO BLOCK OF REPORTS
          CALL FILLX(LL,IERF)
          IF(IERF.EQ.1)  THEN
@@ -11774,8 +11792,11 @@ C  AIREP/PIREP, AMDAR, E-ADAS, TAMDAR OR CAN-AMDAR AIRCFT, OR TO
 C  "ISQNUM(4)" IF SATELLITE (CLOUD-DRIFT, W. VAPOR, VISIBLE, ETC) AND
 C  STORE IN HDR(11)
 C  {NOTE: "ISQNUM(2)" FOR ACARS AIRCFT IS NOT USED HERE SINCE HDR(11)
-C         HAS ALREADY BEEN FILLED IN SUBR. RPTLBL}
-                  IF(HDR(11).GE.YMISS)  HDR(11) = ISQNUM(NN)
+C         HAS ALREADY BEEN FILLED IN SUBR. RPTLBL, THUS THE TEST FOR
+C         MISSING BELOW}
+ccdak             IF(HDR(11).GE.YMISS)  HDR(11) = ISQNUM(NN)
+                                       !SQN can now be > XMISS (99999.)
+                  IF(HDR(11).GE.YMISS*10.)  HDR(11) = ISQNUM(NN)
 C NOW CALL FILLX TO PUT THIS REPORT INTO BLOCK OF REPORTS
                   CALL FILLX(LL,IERF)
                   IF(IERF.EQ.0)  THEN
@@ -18142,8 +18163,8 @@ C FOR SUBSET = SATWND .....
       HDR(9) = HHDR(9)
       IF(HHDR(10).LT.YMISS)  HDR(10) = HHDR(10)
 ccdak IF(HHDR(11).LT.YMISS)  HDR(11) = HHDR(11)
-      IF(HHDR(11).LT.YMISS*10.) HDR(11)= HHDR(11) !SQN can now be >
-                                                  ! XMISS (99999.)
+                                       !SQN can now be > XMISS (99999.)
+      IF(HHDR(11).LT.YMISS*10.) HDR(11)= HHDR(11)
       IF(HHDR(12).LT.YMISS)  HDR(12) = HHDR(12)
       HDR(17) = HHDR(13)
       HDR(18) = HHDR(14)
