@@ -23,11 +23,11 @@ files:
    obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
    obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
    obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
-   obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
    obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
  M obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
  M obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
-   obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
  M obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
  A obsproc_prep/sorc/prepobs_prepacqc.fd/pietc.f90
  A obsproc_prep/sorc/prepobs_prepacqc.fd/pkind.f90
@@ -86,9 +86,16 @@ files:
  Source code changes:
    prepobs_prepacqc:
       prepacqc (main program):
+       - Increased maximum number of merged reports that can be processed
+         "max_reps" from 220K to 300K.
+         BENEFIT: The number of merged reports currently processed routinely
+                  exceeds 90% of 220K, so it is getting close to the limit.
+                  More and more reports are expected in the future.
        - Added new namelist switches "l_mandlvl" and "tsplines" (used by
          subroutine sub2mem_mer, see below).
        - Minor corrections in Docblock, comments.
+      acftobs_qc (subroutine):
+       - Added a print statement.
       sub2mem_mer (subroutine):
        - Modified the calculation of vertical velocity rate in profiles (if
          they are processed). Previously, could only be done via finite-
@@ -106,11 +113,25 @@ files:
          interpolate obs data to mandatory levels (now represented by
          l_mandlvl=T, the default).
        - Minor corrections in Docblock, comments.
+      output_acqc_noprof (subroutine):
+       - Fixed a bug which, for cases where the maximum number of merged
+         reports that can be processed ("max_reps") is exceeded, prevented any
+         original reports above "max_reps" from being written out (without any
+         QC).
+         BENEFIT: Allows all of the original aircraft reports to get to the
+                  GSI, even if some do not have any QC from prepobs_prepacqc.
+                  The GSI may be able to do its own QC on some of these data.
+                  Prevents all reports in PREPBUFR message type "AIRCFT" from
+                  being missing (this could cause downstream problems; possible
+                  since PREPBUFR processes reports from the "aircar" dump
+                  followed by reports from "aircft" dump, and the vast majority
+                  of reports are from the "aircar" dump).
       output_acqc_prof (subroutine):
        - Pass "l_mandlvl" and "tspline" into subroutine sub2mem_mer.
        - Minor corrections in Docblock, comments.
       input_acqc (subroutine):
        - Minor corrections in Docblock.
+       - Added a print statement.
       pietc, pkind, pmat, pmat2, pmat3, pspl (f90 subroutines):
        - New. Jim Purser's package of regular and and tensioned splines.
          [These will eventually be placed in a library since these can be

@@ -2,7 +2,7 @@ c$$$ Main Program Documentation Block
 c   BEST VIEWED WITH 94-CHARACTER WIDTH WINDOW
 c
 c Main Program: PREPOBS_PREPACQC
-c   Programmer: D. Keyser       Org: NP22       Date: 2014-12-12
+c   Programmer: D. Keyser       Org: NP22       Date: 2015-03-16
 c
 c Abstract: Performs the NRL aircraft data quality control on all types of reports (AIREP,
 c   PIREP, AMDAR, TAMDAR, MDCRS).  Replaces the previous routine of the same name originally
@@ -147,6 +147,14 @@ c                      for descents).
 c 2014-12-12  D. Keyser  -- Printout from vertical velocity rate calculation information for
 c                      QC'd merged aircraft reports written to profiles PREPBUFR-like file is
 c                      written to unit 41 rather than stdout.
+c 2015-03-16  D. Keyser  --
+c                 - Increased maximum number of merged reports that can be processed
+c                   "max_reps" from 220K to 300K to handle future increase in all types of
+c                   aircraft reports.
+c                 - In subr. output_acqc_prof, fixed a bug which, for cases where the maximum
+c                   number of merged reports that can be processed ("max_reps") is exceeded,
+c                   prevented any original reports above "max_reps" from being written out
+c                   (without any QC).
 c
 c Usage:
 c   Input files:
@@ -317,7 +325,7 @@ c ------------------------------
 
       integer    max_reps             ! maximum number of input merged (mass + wind piece)
                                       !  aircraft-type reports allowed
-      parameter (max_reps = 220000)
+      parameter (max_reps = 300000)
 
 cvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 c replace above with this in event of future switch to dynamic memory allocation
@@ -814,11 +822,11 @@ c ******************************************************************************
 
 c Start program
 c -------------
-      call w3tagb('PREPOBS_PREPACQC',2014,346,1927,'NP20')
+      call w3tagb('PREPOBS_PREPACQC',2015,075,1927,'NP20')
 
       write(*,*)
       write(*,*) '************************************************'
-      write(*,*) 'Welcome to PREPOBS_PREPACQC, version 2014-12-12 '
+      write(*,*) 'Welcome to PREPOBS_PREPACQC, version 2015-03-16 '
       call system('date')
       write(*,*) '************************************************'
       write(*,*)
