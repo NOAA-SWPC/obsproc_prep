@@ -188,6 +188,10 @@ files:
                   written to PREPBUFR file. (Note: This failure could only
                   occur in runs that do not split PREPOBS_PREPDATA into
                   separate tasks (i.e., non-operational runs.)
+       - Encodes new, unique report subtype (TSP) values into PREPBUFR file for
+         AIRCAR types based on WMO bulletin header/originator (1-U.S. MDCRS,
+         2-Mexican MDCRS, 3-ADS-C MDCRS, 99-default/unknown).
+         BENEFIT: The GSI will be able to identify these types based on TSB.
       iw3unpbf.f (subroutine):
        - Added logic to handle new NASA/VIIRS (NPP) POES winds in tank NC005090
          (e.g., recognizes that they now exist, counts of reports with flagged
