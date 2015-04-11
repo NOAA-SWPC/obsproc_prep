@@ -176,6 +176,11 @@ files:
        - Output argument "CBULL" returned from IW3UNPBF for unpacked reports
          (character*11 string containing WMO bulletin header and originator -
          filled only for aircraft types right now).
+       - Encodes new, unique report subtype (TSP) values into PREPBUFR file for
+         AIRCAR types based on WMO bulletin header/originator now returned from
+         call to IW3UNPBF (see just above) (1-U.S. MDCRS, 2-Mexican MDCRS,
+         3-ADS-C MDCRS, 99-default/unknown).
+         BENEFIT: The GSI will be able to identify these types based on TSB.
        - Fixed several issues related to storage of SQN (sequence number):
          - Now initialized as 999990 instead of 99999.
          - Corrected bug which was not encoding it properly for AIRCAR type
@@ -188,10 +193,16 @@ files:
                   written to PREPBUFR file. (Note: This failure could only
                   occur in runs that do not split PREPOBS_PREPDATA into
                   separate tasks (i.e., non-operational runs.)
-       - Encodes new, unique report subtype (TSP) values into PREPBUFR file for
-         AIRCAR types based on WMO bulletin header/originator (1-U.S. MDCRS,
-         2-Mexican MDCRS, 3-ADS-C MDCRS, 99-default/unknown).
-         BENEFIT: The GSI will be able to identify these types based on TSB.
+       - Added new namelist switch TDMAX, defined as the upper limit for
+         acceptable dewpoint temperature obs (the moisture on any level, for
+         any report type, with dewpoint temperature on that level > TDMAX will
+         be flagged with QM=15 in the PREPBUFR file if it is not already
+         flagged as bad). (Default is 999.K, not invoked).
+         BENEFIT: The moisture on report levels with very high (and likely
+                  invalid) dewpoint temperature obs will not be considered by a
+                  particular network's analysis if TDMAX is set in that
+                  network's prepdata parm cards. This value is network
+                  dependent.
       iw3unpbf.f (subroutine):
        - Added logic to handle new NASA/VIIRS (NPP) POES winds in tank NC005090
          (e.g., recognizes that they now exist, counts of reports with flagged
@@ -211,6 +222,8 @@ files:
          originator had been stored in characters 1-4 of header reserve
          character word 1 and bulletin header was not stored.)
          BENEFIT: This information may be included in PREPBUFR files someday.
+                  It is used to tag MDCRS types in report subtype (TSP) which
+                  is encoded into PREPBUFR.
 
 
  Output changes:
