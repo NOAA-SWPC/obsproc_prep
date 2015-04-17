@@ -208,11 +208,11 @@ files:
          around obs lat/lon location {4 inner points as before (which is still
          an option) plus also now 12 points in next, outer ring}.  If any one
          of the 16 points is over water, the obs is deemed over water. On the
-         mask boundary (i.e., Prime Meridian), check reverts back to only
-         surrounding 4 points since 1 or more mask points are not stored in
-         outer 12 point ring in this case.  Several additional mask points in
-         key geographical locations known to be over water are also converted
-         from over land to over water (after being read in). 
+         mask boundary (i.e., Prime Meridian or Equator), check reverts back to
+         only surrounding 4 points since 1 or more mask points are not stored
+         in outer 12 point ring in this case.  Several additional mask points
+         in key geographical locations known to be over water are also
+         converted from over land to over water (after being read in). 
          BENEFIT: It is known that many valid N.H. marine ship and buoy reports
                   at the coastline are being flagged as over land (and not used
                   by the analysis) due to their imprecise lat/lon. This change

@@ -1138,17 +1138,17 @@ C     conditions) to check 16 points around obs lat/lon location {4
 C     inner points as before (which is still an option) plus also now
 C     12 points in next, outer ring}.  If any one of the 16 points is
 C     over water, the obs is deemed over water. On the mask boundary
-C     (i.e., Prime Meridian), check reverts back to only surrounding 4
-C     points since 1 or more mask points are not stored in outer 12
-C     point ring in this case.  Several additional mask points in key
-C     geographical locations known to be over water are also converted
-C     from over land to over water (after being read in). It is known
-C     that many valid N.H. marine ship and buoy reports at the
-C     coastline are being flagged as over land (and not used by the
-C     analysis) due to their imprecise lat/lon. This change will allow
-C     these to now be used by the analysis, but it will still flag
-C     reports with invalid lat or lon (when it results in them being
-C     well inland).
+C     (i.e., Prime Meridian or Equator), check reverts back to only
+C     surrounding 4 points since 1 or more mask points are not stored
+C     in outer 12 point ring in this case.  Several additional mask
+C     points in key geographical locations known to be over water are
+C     also converted from over land to over water (after being read
+C     in). It is known that many valid N.H. marine ship and buoy
+C     reports at the coastline are being flagged as over land (and not
+C     used by the analysis) due to their imprecise lat/lon. This change
+C     will allow these to now be used by the analysis, but it will
+C     still flag reports with invalid lat or lon (when it results in
+C     them being well inland).
 C
 C USAGE:
 C   INPUT FILES:
@@ -5296,12 +5296,12 @@ C    has option (under certain conditions) to check 16 points around
 C    obs lat/lon location {4 inner points as before (which is still an
 C    option) plus also now 12 points in next, outer ring}.  If any one
 C    of the 16 points is over water, the obs is deemed over water. On
-C    the mask boundary (i.e., Prime Meridian), check reverts back to
-C    only surrounding 4 points since 1 or more mask points are not
-C    stored in outer 12 point ring in this case.  Several additional
-C    mask points in key geographical locations known to be over water
-C    are also converted from over land to over water (after being read
-C    in).
+C    the mask boundary (i.e., Prime Meridian or Equator), check reverts
+C    back to only surrounding 4 points since 1 or more mask points are
+C    not stored in outer 12 point ring in this case.  Several
+C    additional mask points in key geographical locations known to be
+C    over water are also converted from over land to over water (after
+C    being read in).
 C    
 C
 C USAGE:    CALL LNDCHK(YLAT,ELON,ITYC,NPTS,ICHK,GRID,NX,NY,CRIT,ILAND)

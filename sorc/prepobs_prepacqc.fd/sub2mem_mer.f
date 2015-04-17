@@ -2,7 +2,7 @@ c$$$  Subprogram Documentation Block
 c   BEST VIEWED WITH 94-CHARACTER WIDTH WINDOW
 c
 c Subprogram: sub2mem_mer
-c   Programmer: D. Keyser       Org: NP22       Date: 2014-12-12
+c   Programmer: D. Keyser       Org: NP22       Date: 2015-04-17
 c
 c Abstract: Takes a merged (mass and wind) aircraft data profile, containing NRLACQC events,
 c   (read from input arrays *_accum), adds mandatory levels (via interpolation from spanning
@@ -23,7 +23,7 @@ c                           rate_accum) still using a finite-difference method, 
 c                           calculated for both ascents and descents using the nearest
 c                           neighboring pair which are at least one minute apart (before,
 c                           only only be calculated for descents)
-c 2014-12-09  Y. Zhu    --  Add new namelist switch "l_mandlvl" which, when F, will skip
+c 2014-12-09  Y. Zhu     -- Add new namelist switch "l_mandlvl" which, when F, will skip
 c                           interpolation to mandatory levels
 c 2014-12-09  J. Purser/Y. Zhu -- Add new namelist switch "tsplines" which, when T, will
 c                           calculate vertical velocity rate (stored in rate_accum) using
@@ -33,6 +33,19 @@ c                           time information
 c 2014-12-12  D. Keyser  -- Printout from vertical velocity rate calculation information for
 c                           QC'd merged aircraft reports written to profiles PREPBUFR-like
 c                           file is written to unit 41 rather than stdout.
+c 2015-04-17  Y. Zhu     -- 
+c                       1) This subroutine is more robust.  If there is an error in the
+c                          generation of vertical velocity rate in the tension-spline
+c                          interpolation utility pspl (called in this subroutine), this
+c                          subroutine (and thus the program itself) will no longer abort
+c                          (with either c. code 62, 63 or 64 depending upon which routine
+c                          inside pspl generated the error) but will instead revert to the
+c                          finite difference method for calculating vertical velocity rate.  
+c                       2) Previously, halfgate was set to be 30 for the data profiles that
+c                          don't have second information in time, but a tighter value of 10
+c                          for the data profiles that do have second information in time. Now
+c                          halfgate is relaxed to be 30 for the data profiles that do have
+c                          complete time information.
 c
 c Usage: call sub2mem_mer(proflun,bmiss,mxlv,mxnmev,maxmandlvls,
 c                         mandlvls,mesgtype,hdr2wrt,
@@ -151,12 +164,6 @@ c   Exit States:
 c     Cond =  0 - successful run
 c            59 - nlvinprof is zero coming into this subroutine (should never happen!)
 c            61 - index "j is .le. 1 meaning "iord" array underflow (should never happen!)
-c            62 - error generating vertical velocity rate, coming from subroutine convertd
-c                 in tension-spline interpolation utility pspl
-c            63 - error generating vertical velocity rate, coming from subroutine
-c                 best_slalom in tension-spline interpolation utility pspl
-c            64 - error generating vertical velocity rate, coming from subroutine bnewton
-c                 in tension-spline interpolation utility pspl
 c
 c Remarks: Called by subroutine output_acqc_prof.
 c
@@ -551,14 +558,17 @@ c Variables related to tspline
 !     real(dp),parameter:: bigT=120.0,halfgate=30.0,heps=.01
       real(dp),parameter:: bigT=120.0,heps=.01
       integer nh,nh2,m,mh,maxita,maxitb,maxit,maxrts,doru
+      integer err_tspline
       real(dp) enbest,timemin
       real(dp) halfgate
       integer, allocatable :: idx(:)
       integer, allocatable :: modebest(:)
       integer, allocatable :: pof(:)
+      integer, allocatable :: hgts(:)
+      integer, allocatable :: hgtp(:)
       real, allocatable :: tdata(:),hdata(:),wdata(:)
-      real(dp), allocatable :: ts(:),hs(:),te(:),dhdt(:)
-      real(dp), allocatable :: tp(:),hp(:)
+      real(dp), allocatable :: te(:),hs(:),dhdt(:)
+      real(dp), allocatable :: hp(:)
       real(dp), allocatable :: qbest(:),habest(:)
       logical descending,FF,nearsec
 
@@ -831,7 +841,157 @@ c Calculate vertical velocity rate_accum
 c add ascent/descent rate here
 c -----------------------------------------
       write(41,*) 'nlv2wrt_tot=', nlv2wrt_tot,'c_acftreg=',c_acftreg1
-      if ((nlv2wrt_tot.gt.1) .and. (.not.tsplines)) then
+      err_tspline = 0
+
+      if ((nlv2wrt_tot.gt.1) .and. tsplines) then
+         nh = 0
+         do j = 1,nlv2wrt_tot
+            jj = iord(j)
+            if (ibfms(drinfo_accum(3,jj)).eq.0) then
+               nh = nh + 1
+c              write(41,*) 'j,ord,z,t=', j, jj,zevn_accum(1,jj,1),
+c    +                 drinfo_accum(3,jj)
+            end if
+         end do
+         nh2 = nh * 2
+
+         halfgate=30.0
+!        nearsec=.false.
+!        do j = 1,nlv2wrt_tot
+!           jj = iord(j)
+!           if (ibfms(drinfo_accum(3,jj)).eq.0) then
+!              timemin=drinfo_accum(3,jj)*60.0
+!              timemin=abs(timemin-nint(timemin))
+!              if (timemin>=0.01 .and. timemin<=0.99) nearsec=.true.
+!           end if
+!        end do
+!        if (nearsec) halfgate=10.0
+         write(41,*) 'halfgate=', halfgate
+
+         allocate(idx(nh),pof(nh))
+         allocate(tdata(nh),hdata(nh),wdata(nh))
+         allocate(te(nh),hgts(nh),hs(nh),dhdt(nh))
+         maxita = 0
+         maxitb = 0
+         maxrts = 0
+         maxit  = 0
+
+         nh = 0
+         do j = 1,nlv2wrt_tot
+            jj = iord(j)
+            if (ibfms(drinfo_accum(3,jj)).eq.0) then
+               nh = nh + 1
+               tdata(nh) = drinfo_accum(3,jj) ! hours
+               hdata(nh) = zevn_accum(1,jj,1) ! meters
+               pof(nh)   = nint(acft_seq_accum(2,jj))
+               write(41,*) 'tdata,hdata,pof=',nh,tdata(nh),hdata(nh),
+     +          pof(nh)
+            end if
+         end do
+
+c        arrange data with time increase
+         call convertd(nh,halfgate,tdata,hdata,pof,
+     +        doru,idx,hgts,hs,descending,FF)
+!!!!!!!! if (FF) call w3tage('PREPOBS_PREPACQC')
+!!!!!!!! if (FF) call errexit(62)
+         if (FF) then 
+c Error generating vertical velocity rate in tension-spline interpolation utility pspl
+c  (coming out of subroutine convertd) - use finite difference method
+c ------------------------------------------------------------------------------------
+            print*,"WARNING: tspline err in utility pspl, coming out ",
+     +             "of subr. convertd - use finite difference method" 
+            write(41,*)"WARNING: tspline err in utility pspl, coming ",
+     +                 "out of subr. convertd - use finite difference ",
+     +                 "method" 
+            err_tspline = 1
+            go to 666
+         end if
+         if (descending)then
+            write(41,'('' set descending'')')
+         else
+            write(41,'('' set ascending'')')
+         endif
+
+         call count_gates(nh,hgts(1:nh),mh)
+         m = mh*2
+         allocate(hgtp(m),hp(m),qbest(m),habest(m),modebest(mh))
+         call best_slalom(nh,mh,doru,hgts,hs,halfgate,bigT,hgtp,hp,
+     +     qbest,habest,enbest,modebest,maxita,maxitb,maxit,maxrts,FF)
+          write(41,*) 'maxita,maxitb,maxit,maxrts=',maxita,maxitb,maxit,
+     +     maxrts
+!!!!!!!! if (FF) call w3tage('PREPOBS_PREPACQC')
+!!!!!!!! if (FF) call errexit(63)
+         if (FF) then 
+c Error generating vertical velocity rate in tension-spline interpolation utility pspl
+c  (coming out of subroutine best_slalom) - use finite difference method
+c ------------------------------------------------------------------------------------
+            print*,"WARNING: tspline err in utility pspl, coming out ",
+     +             "of subr. best_slalom - use finite difference method" 
+            write(41,*)"WARNING: tspline err in utility pspl, coming ",
+     +                 "out of subr. best_slalom - use finite ",
+     +                 "difference method" 
+            err_tspline = 1
+            go to 666
+         end if
+
+c        Use bounded Newton iterations to estimate the vertical velocity
+         call bnewton(nh,m,bigT,halfgate,hgts,hs,hgtp,habest,
+     +        qbest,te(1:nh),dhdt(1:nh),FF)
+!!!!!!!! if (FF) call w3tage('PREPOBS_PREPACQC')
+!!!!!!!! if (FF) call errexit(64)
+         if (FF) then 
+c Error generating vertical velocity rate in tension-spline interpolation utility pspl
+c  (coming out of subroutine bnewton) - use finite difference method
+c ------------------------------------------------------------------------------------
+            print*,"WARNING: tspline err in utility pspl, coming out ",
+     +             "of subr. bnewton - use finite difference method" 
+            write(41,*)"WARNING: tspline err in utility pspl, coming ",
+     +                 "out of subr. bnewton - use finite difference ",
+     +                 "method" 
+            err_tspline = 1
+            go to 666
+         end if
+
+c        convert back data with time decrease for ascending
+         call convertd_back(nh,halfgate,wdata,tdata,dhdt,hgts,idx,
+     +                      descending)
+         do j = 1, nh
+            write(41,*) 'hgts,hs,dhdt,wdata=', j,hgts(j),hs(j),dhdt(j),
+     +       wdata(j)
+         end do
+
+c        Encode dhdt into PREPBUFR-like file as IALR
+         nh = 0
+         do j = 1,nlv2wrt_tot
+            jj = iord(j)
+            if (ibfms(drinfo_accum(3,jj)).eq.0) then
+               nh = nh + 1
+               rate_accum(jj) = wdata(nh)
+               write(41,*) 'j,z,rate=',j,zevn_accum(1,jj,1),
+     +          rate_accum(jj)
+            end if
+         end do
+
+ 666     continue
+
+         if(allocated(idx)) deallocate(idx)
+         if(allocated(pof)) deallocate(pof)
+         if(allocated(tdata)) deallocate(tdata)
+         if(allocated(hdata)) deallocate(hdata)
+         if(allocated(wdata)) deallocate(wdata)
+         if(allocated(te)) deallocate(te)
+         if(allocated(hgts)) deallocate(hgts)
+         if(allocated(hs)) deallocate(hs)
+         if(allocated(dhdt)) deallocate(dhdt)
+         if(allocated(hgtp)) deallocate(hgtp)
+         if(allocated(hp)) deallocate(hp)
+         if(allocated(qbest)) deallocate(qbest)
+         if(allocated(habest)) deallocate(habest)
+         if(allocated(modebest)) deallocate(modebest)
+      end if ! nlv2wrt_tot.gt.1 .and. tsplines
+
+      if (((nlv2wrt_tot.gt.1) .and. (.not.tsplines)) 
+     +                           .or. err_tspline>0) then
         do j = 1,nlv2wrt_tot
           jj = iord(j)
           write(41,*) 'j,ord,z,t,pof=', j, jj,zevn_accum(1,jj,1),
@@ -955,104 +1115,7 @@ c Need gross checks on ascent/descent rate here?
              write(41,*) ''
           end if
         end do
-      end if ! (nlv2wrt_tot.gt.1) .and. (.not.tsplines)
-
-      if ((nlv2wrt_tot.gt.1) .and. tsplines) then
-         nh = 0
-         do j = 1,nlv2wrt_tot
-            jj = iord(j)
-            if (ibfms(drinfo_accum(3,jj)).eq.0) then
-               nh = nh + 1
-c              write(41,*) 'j,ord,z,t=', j, jj,zevn_accum(1,jj,1),
-c    +                 drinfo_accum(3,jj)
-            end if
-         end do
-         nh2 = nh * 2
-
-         halfgate=30.0
-         nearsec=.false.
-         do j = 1,nlv2wrt_tot
-            jj = iord(j)
-            if (ibfms(drinfo_accum(3,jj)).eq.0) then
-               timemin=drinfo_accum(3,jj)*60.0
-               timemin=abs(timemin-nint(timemin))
-               if (timemin>=0.01 .and. timemin<=0.99) nearsec=.true.
-            end if
-         end do
-         if (nearsec) halfgate=10.0
-         write(41,*) 'halfgate=', halfgate
-
-         allocate(idx(nh),pof(nh))
-         allocate(tdata(nh),hdata(nh),wdata(nh))
-         allocate(ts(nh),hs(nh),te(nh),dhdt(nh))
-         maxita = 0
-         maxitb = 0
-         maxrts = 0
-         maxit  = 0
-
-         nh = 0
-         do j = 1,nlv2wrt_tot
-            jj = iord(j)
-            if (ibfms(drinfo_accum(3,jj)).eq.0) then
-               nh = nh + 1
-               tdata(nh) = drinfo_accum(3,jj) ! hours
-               hdata(nh) = zevn_accum(1,jj,1) ! meters
-               pof(nh)   = nint(acft_seq_accum(2,jj))
-               write(41,*) 'tdata,hdata,pof=',nh,tdata(nh),hdata(nh),
-     +          pof(nh)
-            end if
-         end do
-
-c        arrange data with time increase
-         call convertd(nh,halfgate,hdata,tdata,pof,
-     +        doru,idx,hs,ts,descending,FF)
-         if (FF) call errexit(62)
-         if (descending)then
-            write(41,'('' set descending'')')
-         else
-            write(41,'('' set ascending'')')
-         endif
-
-         call count_gates(nh,ts(1:nh),halfgate,mh)
-         m = mh*2
-         allocate(tp(m),hp(m),qbest(m),habest(m),modebest(mh))
-         call best_slalom(nh,mh,doru,ts,hs,halfgate,bigT,tp,hp,
-     +     qbest,habest,enbest,modebest,maxita,maxitb,maxit,maxrts,FF)
-          write(41,*) 'maxita,maxitb,maxit,maxrts=',maxita,maxitb,maxit,
-     +     maxrts
-         if (FF) call errexit(63)
-
-c        Use bounded Newton iterations to estimate the vertical velocity
-         call bnewton(nh,m,bigT,halfgate,ts,hs,tp,habest,
-     +        qbest,te(1:nh),dhdt(1:nh),FF)
-         if (FF) call errexit(64)
-
-c        convert back data with time decrease for ascending
-         call convertd_back(nh,wdata,tdata,dhdt,te,idx,descending)
-         do j = 1, nh
-            write(41,*) 'te,hs,dhdt,wdata=', j,te(j),hs(j),dhdt(j),
-     +       wdata(j)
-         end do
-
-c        Encode dhdt into PREPBUFR-like file as IALR
-         nh = 0
-         do j = 1,nlv2wrt_tot
-            jj = iord(j)
-            if (ibfms(drinfo_accum(3,jj)).eq.0) then
-               nh = nh + 1
-               rate_accum(jj) = wdata(nh)
-               write(41,*) 'j,z,rate=',j,zevn_accum(1,jj,1),
-     +          rate_accum(jj)
-            end if
-         end do
-
-         deallocate(idx,pof)
-         deallocate(tdata,hdata,wdata)
-         deallocate(ts,hs,te,dhdt)
-         deallocate(tp,hp)
-         deallocate(qbest,habest,modebest)
-      end if ! nlv2wrt_tot.gt.1 .and. tsplines
-
+      end if ! ((nlv2wrt_tot.gt.1) .and. (.not.tsplines)) .or. err_tspline>0
 
 c Interpolate position and time to mandatory level (will be stored in XDR YDR HRDR) (need to
 c   have mandatory levels inserted into the profile before this step)

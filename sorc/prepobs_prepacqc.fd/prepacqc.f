@@ -2,7 +2,7 @@ c$$$ Main Program Documentation Block
 c   BEST VIEWED WITH 94-CHARACTER WIDTH WINDOW
 c
 c Main Program: PREPOBS_PREPACQC
-c   Programmer: D. Keyser       Org: NP22       Date: 2015-03-16
+c   Programmer: D. Keyser       Org: NP22       Date: 2015-04-17
 c
 c Abstract: Performs the NRL aircraft data quality control on all types of reports (AIREP,
 c   PIREP, AMDAR, TAMDAR, MDCRS).  Replaces the previous routine of the same name originally
@@ -155,12 +155,46 @@ c                 - In subr. output_acqc_prof, fixed a bug which, for cases wher
 c                   number of merged reports that can be processed ("max_reps") is exceeded,
 c                   prevented any original reports above "max_reps" from being written out
 c                   (without any QC).
+c 2015-04-17  J. Purser   -- Updates to tension-spline interpolation utility pspl:
+c                   In April 2015 some significant changes were made to pspl.f90 to improve
+c                   the robustness of the algorithm and the usefulness of the energy
+c                   diagnostic:
+c                       1) The allowance of B iterations was increased from 40 to 80 owing to
+c                          a single failure in a parallel run (where 43 iterations were
+c                          required) (and the halfgate parameter was increased to 30 for all
+c                          data in the parallels, which also increases robustness).
+c                       2) There was included an explicit energy check at each A iteration to
+c                          force an exit when this energy fails to decrease. This change was
+c                          prompted by a single failure in a parallel run (courtesy Russ
+c                          Treadon) in which the A and B iterations flip-flopped at zero
+c                          energy change in a case of grazing contact with a gatepost.
+c                       3) The energy is now normalized by the energy that would be computed
+c                          from a spline that fits only the first and last gateposts. The
+c                          renormalized energy diagnostic tells how sinuous the final profile
+c                          is -- very large values are indiciative of a halfgate chosen to be
+c                          too narrow for the given profile data.
+c                       4) The normalized time data are now handled as integer arrays instead
+c                          of reals in those parts of the code dealing with the combinatorics
+c                          of routes.  This is just better coding practice.
+c 2015-04-17  Y. Zhu -- Updates to subroutine sub2mem_mer:
+c                       1) Subroutine is more robust.  If there is an error in the generation
+c                          of vertical velocity rate in the tension-spline interpolation
+c                          utility pspl (called in this subroutine), this subroutine (and thus
+c                          the program itself) will no longer abort (with either c. code 62,
+c                          63 or 64 depending upon which routine inside pspl generated the
+c                          error) but will instead revert to the finite difference method for
+c                          calculating vertical velocity rate.
+c                       2) Previously, halfgate was set to be 30 for the data profiles that
+c                          don't have second information in time, but a tighter value of 10
+c                          for the data profiles that do have second information in time. Now
+c                          halfgate is relaxed to be 30 for the data profiles that do have
+c                          complete time information. 
 c
 c Usage:
 c   Input files:
 c     Unit 05  - Standard input (namelist)
 c     Unit 11  - PREPBUFR file containing all obs, prior to any processing by this program
-C
+c
 c   Output files:
 c     Unit 06  - Standard output print
 c     Unit 08  - Text file containing full log of all NRL QC information
@@ -212,12 +246,6 @@ c             59 - nlvinprof is zero coming into subroutine sub2mem_mer (should 
 c                  happen!)
 c             61 - index "j is .le. 1 meaning "iord" array underflow (should never happen!)
 c                  (subroutine sub2mem_mer)
-c             62 - error generating vertical velocity rate, coming from subroutine convertd
-c                  in tension-spline interpolation utility pspl (profiles only)
-c             63 - error generating vertical velocity rate, coming from subroutine
-c                  best_slalom in tension-spline interpolation utility pspl (profiles only)
-c             64 - error generating vertical velocity rate, coming from subroutine bnewton
-c                  in tension-spline interpolation utility pspl (profiles only)
 c             69 - row number for input data matrix is outside range of 1-34 (subroutine
 c                  tranQCflags)
 c             79 - characters on this machine are not ASCII, conversion of quality flag to
@@ -822,11 +850,11 @@ c ******************************************************************************
 
 c Start program
 c -------------
-      call w3tagb('PREPOBS_PREPACQC',2015,075,1927,'NP20')
+      call w3tagb('PREPOBS_PREPACQC',2015,107,1927,'NP22')
 
       write(*,*)
       write(*,*) '************************************************'
-      write(*,*) 'Welcome to PREPOBS_PREPACQC, version 2015-03-16 '
+      write(*,*) 'Welcome to PREPOBS_PREPACQC, version 2015-04-17 '
       call system('date')
       write(*,*) '************************************************'
       write(*,*)

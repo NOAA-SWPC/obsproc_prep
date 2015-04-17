@@ -24,15 +24,16 @@ use pkind, only: dp
 use pietc, only: T,F,u0,o2,u1 ! True, False, 0., .5,  1.
 implicit none
 private
-public:: expm,expmm,coshm,sinhm,coshmm,xcms,                bnewton, &
+public:: expm,expmm,coshm,sinhm,coshmm,xcms,enbase_t,      bnewton, &
      fit_tspline,eval_tspline,int_tspline,eval_itspline,             &
      fit_uspline,eval_uspline,int_uspline,eval_iuspline,             &
      best_slalom,count_gates,set_gates,set_posts,                    &
-     count_routes,list_routes,next_route,slalom_spline,convertd,convertd_back
+     count_routes,list_routes,next_route,                            &
+     slalom_tspline,slalom_uspline,convertd,convertd_back
 
 integer, parameter:: ihu=1025      ! "Huge" integer parameter
 real(dp),parameter:: hu=huge(hu)/2 ! "Huge" real parameter
-real(dp),parameter:: eps=epsilon(eps),heps=.01,geps=1.e-10 ! Small parameters
+real(dp),parameter:: eps=epsilon(eps),heps=.01 ! Small parameters
 
 interface expm;          module procedure expm;                  end interface
 interface expmm;         module procedure expmm;                 end interface
@@ -40,6 +41,7 @@ interface coshm;         module procedure coshm;                 end interface
 interface sinhm;         module procedure sinhm;                 end interface
 interface coshmm;        module procedure coshmm;                end interface
 interface xcms;          module procedure xcms;                  end interface
+interface enbase_t;      module procedure enbase_t;              end interface
 interface bnewton;       module procedure tbnewton,ubnewton;     end interface
 interface fit_tspline;   module procedure fit_gtspline,fit_tspline
                                                                  end interface
@@ -63,8 +65,8 @@ interface set_posts;     module procedure set_posts;             end interface
 interface count_routes;  module procedure count_routes;          end interface
 interface list_routes;   module procedure list_routes;           end interface
 interface next_route;    module procedure next_route;            end interface
-interface slalom_spline; module procedure slalom_tspline,slalom_uspline
-                                                                 end interface
+interface slalom_tspline;module procedure slalom_tspline;        end interface
+interface slalom_uspline;module procedure slalom_uspline;        end interface
 interface convertd;      module procedure convertd;              end interface
 interface convertd_back; module procedure convertd_back;         end interface
 
@@ -172,13 +174,31 @@ else
 endif
 end function xcms
 
+!==============================================================================
+function enbase_t(tspan,hspan)result(r)!                             [enbase_t]
+!==============================================================================
+! For a nondimensional time span, tspan, but a dimensional height
+! span, hspan, return the baseline minimum possible tensioned spline
+! energy integrated over the central span plus the two wings.
+! If the hspan vanishes, return a nominal unit energy.
+! The energy is quadratic in hspan, which can therefore be of either sign,
+! but tspan must be strictly positive for a meaningful positive energy.
+!==============================================================================
+real(dp),intent(in ):: tspan,hspan
+real(dp)            :: r
 !=============================================================================
-subroutine tbnewton(nh,m,bigT,halfgate,ts,hs,tp,p,q, te,dhdt,FF)!    [bnewton]
+if(tspan<u0)stop 'In enbase_t; thspan must be positive'
+if(hspan==u0)then; r=u1; return; endif
+r=hspan**2/expmm(-tspan)*o2
+end function enbase_t
+
+!=============================================================================
+subroutine tbnewton(nh,m,bigT,halfgate,hgts,hs,hgtp,p,q, te,dhdt,FF)! [bnewton]
 !=============================================================================
 ! Perform a "bounded Newton" iteration to estimate the vertical velocity,
 ! dh/dt, as the trajectory passes through the nh "gates", each at height
-! hs(i) and centered at time ts(i) with the halfwidth of the gate equal to
-! halfgate. The characteristic timescale of the fitted spline is bigT.
+! hs(i) and centered at time hgts(i)*halfgate with the halfwidth of the gate 
+! equal to halfgate. The characteristic timescale of the fitted spline is bigT.
 ! the time-nodes rescaled by this bigT are at the m points tp, and the 
 ! corresponding "p" and "q" coefficients of the tensioned spline are p and q
 ! respectively. 
@@ -187,7 +207,7 @@ subroutine tbnewton(nh,m,bigT,halfgate,ts,hs,tp,p,q, te,dhdt,FF)!    [bnewton]
 ! generically by Newton's method, except that the newton increments are
 ! bounded to be within a range "gate" = 2*halfgate, so that we eliminate
 ! wild excursions when dh/dt is actually very small (or vanishes). When such
-! an excusion is detected, the returned value of dh/dt is simply that
+! an excursion is detected, the returned value of dh/dt is simply that
 ! evaluated at ts(i), and no further attempt at Newton refinement is made
 ! at this i. (The vertical motion in such cases is essentially negligible
 ! in any case, and very likely is multivalued as the trajectory wavers about
@@ -195,8 +215,10 @@ subroutine tbnewton(nh,m,bigT,halfgate,ts,hs,tp,p,q, te,dhdt,FF)!    [bnewton]
 !=============================================================================
 integer,               intent(in ):: nh,m
 real(dp),              intent(in ):: bigT,halfgate
-real(dp),dimension(nh),intent(in ):: ts,hs
-real(dp),dimension(m) ,intent(in ):: tp,p,q
+integer ,dimension(nh),intent(in ):: hgts
+real(dp),dimension(nh),intent(in ):: hs
+integer, dimension(m), intent(in ):: hgtp
+real(dp),dimension(m) ,intent(in ):: p,q
 real(dp),dimension(nh),intent(out):: dhdt, te
 logical,               intent(out):: FF
 !-----------------------------------------------------------------------------
@@ -206,9 +228,9 @@ real(dp)             :: gate,tee,he,hac,dhadt,dh,dt
 integer              :: i,it
 !=============================================================================
 gate=2*halfgate/bigT
-tr=tp/bigT
+tr=hgtp*halfgate/bigT
 do i=1,nh
-   tee=ts(i)/bigT
+   tee=hgts(i)*halfgate/bigT
    he=hs(i)
 !  Use Newton iterations to estimate the rescaled time, tee, at which the 
 !  height is he
@@ -241,14 +263,16 @@ enddo
 end subroutine tbnewton
 
 !=============================================================================
-subroutine ubnewton(nh,m,halfgate,ts,hs,tp,p,q, te,dhdt,FF)!         [bnewton]
+subroutine ubnewton(nh,m,halfgate,hgts,hs,hgtp,p,q, te,dhdt,FF)!     [bnewton]
 !=============================================================================
 ! Like tbnewton, but for the case of untensioned (i.e., cubic) splines
 !=============================================================================
 integer,               intent(in ):: nh,m
 real(dp),              intent(in ):: halfgate
-real(dp),dimension(nh),intent(in ):: ts,hs
-real(dp),dimension(m) ,intent(in ):: tp,p,q
+integer, dimension(nh),intent(in ):: hgts
+real(dp),dimension(nh),intent(in ):: hs
+integer, dimension(m), intent(in ):: hgtp
+real(dp),dimension(m) ,intent(in ):: p,q
 real(dp),dimension(nh),intent(out):: dhdt, te
 logical,               intent(out):: FF
 !-----------------------------------------------------------------------------
@@ -258,9 +282,9 @@ real(dp)             :: gate,tee,he,hac,dhadt,dh,dt
 integer              :: i,it
 !=============================================================================
 gate=2*halfgate
-tr=tp
+tr=hgtp*halfgate
 do i=1,nh
-   tee=ts(i)
+   tee=hgts(i)*halfgate
    he=hs(i)
 !  Use Newton iterations to estimate the rescaled time, tee, at which the 
 !  height is he
@@ -555,9 +579,9 @@ do i=1,n
 enddo
 end subroutine fit_guspline
 
-!============================================================================
+!=============================================================================
 subroutine fit_uspline(n,xs,p,q,j,en,FF)!                        [fit_uspline]
-!============================================================================
+!=============================================================================
 ! Solve for the coefficients, the 3rd-derivative jumps, and the energy,
 ! of the untensioned (cubic) spline passing through the n nodes at (xs,p).
 !
@@ -612,7 +636,7 @@ do i=1,n-1
 
 ! ccc is the coefficient of energy integral coupling g(i)*g(i) and g(ip)*g(ip)
    ccc=2/x
-   cpp(i)=u1/xcmsx2          ! Energy coefficient for difp(i)*difp(i)...
+   cpp(i)=u1/xcmsx2         ! Energy coefficient for difp(i)*difp(i)...
    cqp(i)=-difp(i)*x/xcmsx2 ! ..and for difp(i)*sumq(i)
    qq(i,0)=qq(i,0)+ccc; qq(ip,-1)=qq(ip,-1)+1/x; qq(ip,0)=qq(ip,0)+ccc
 enddo
@@ -983,7 +1007,7 @@ dydx=qm+qdh*sh +qxh*(xh*chm-shhm)
 end subroutine eval_usplined
 
 !=============================================================================
-subroutine eval_usplinedd(n,xs,p,q, x,y,dydx,ddydxx)!            [eval_uspline]
+subroutine eval_usplinedd(n,xs,p,q, x,y,dydx,ddydxx)!           [eval_uspline]
 !=============================================================================
 ! Like eval_uspline, but also return the derivative dy/dx
 !=============================================================================
@@ -1100,16 +1124,18 @@ y=m(ia)+a*xr+b*t2+c*t3+d*t4
 end subroutine eval_iuspline
 
 !==============================================================================
-subroutine best_tslalom(nh,mh,doru,ts,hs,halfgate,bigT, tp,hp, & ! [best_slalom]
-   qbest,yabest,enbest,modebest,maxita,maxitb,maxit,maxrts,FF)
+subroutine best_tslalom(nh,mh,doru,hgts,hs,halfgate,bigT, & !     [best_slalom]
+   hgtp,hp,qbest,yabest,enbest,modebest,maxita,maxitb,maxit,maxrts,FF)
 !==============================================================================
 ! Run through the different allowed routes between the slalom gates and
 ! select as the final solution the one whose spline has the smallest "energy".
 !==============================================================================
 integer,                 intent(in   ):: nh,mh,doru
-real(dp),dimension(nh),  intent(in   ):: ts,hs
+integer, dimension(nh),  intent(in   ):: hgts
+real(dp),dimension(nh),  intent(in   ):: hs
 real(dp),                intent(in   ):: halfgate,bigT
-real(dp),dimension(mh*2),intent(  out):: tp,hp
+integer, dimension(mh*2),intent(  out):: hgtp
+real(dp),dimension(mh*2),intent(  out):: hp
 real(dp),dimension(mh*2),intent(  out):: qbest
 real(dp),dimension(mh*2),intent(  out):: yabest
 real(dp),                intent(  out):: enbest
@@ -1117,18 +1143,31 @@ integer,dimension(mh),   intent(  out):: modebest
 integer,                 intent(inout):: maxita,maxitb,maxit,maxrts
 logical,                 intent(  out):: FF
 !-----------------------------------------------------------------------------
+integer, dimension(2,mh)  :: hgtn
 real(dp),dimension(mh*2)  :: q,ya
-real(dp),dimension(2,mh)  :: tn
 real(dp),dimension(2,2,mh):: hn
-real(dp)                  :: en
+real(dp)                  :: en,tspan,hspan,enbase,hgbigT
 integer, dimension(mh)    :: code,mode
 integer, dimension(mh*2)  :: bend
-integer                   :: i,k,m,kbest,route_count,ita,ittot
+integer                   :: i,k,m,route_count,ita,ittot
 logical, dimension(mh*2)  :: off
-logical                   :: flag
+logical                   :: flag,descending
 !==============================================================================
 m=mh*2
-call set_gates(nh,mh,doru,ts,hs,halfgate, tn,hn,code,FF)
+call set_gates(nh,mh,doru,hgts,hs, hgtn,hn,code,FF)
+! Examine gate posts of first and last slalom gate to determine whether
+! profile is predominantly descending or ascending:
+if    (hn(1,2,1)>hn(1,1,mh))then; descending=T ! definitely descending
+elseif(hn(2,2,1)<hn(2,1,mh))then; descending=F ! definitely ascending
+else ! Ambiguous profile -- decide by invoking the tie-breaker, doru:
+   descending=(doru==1)
+endif
+hgbigT=bigT/halfgate ! bigT in nondimensional halfgate units
+tspan=(hgtn(2,mh)-hgtn(1,1))/hgbigT
+if(descending)then; hspan=(hn(1,1,1)-hn(1,2,mh))! Descending case:
+else              ; hspan=(hn(2,2,mh)-hn(2,1,1))! Ascending case:
+endif
+enbase=enbase_t(tspan,hspan) ! Baseline energy by which en is rescaled
 if(FF)then
    write(41,*) 'In best_tslalom; failure flag was raised in call to set_gates'
    return
@@ -1136,44 +1175,47 @@ endif
 call count_routes(mh,code,route_count,FF)
 maxrts=max(maxrts,route_count)
 if(FF)then
-   write(41,*) 'In best_tslalom; failure flag was raised in call to count_routes'
+   write(41,*)&
+        'In best_tslalom; failure flag was raised in call to count_routes'
    return
 endif
-call list_routes(mh,code)
+if(route_count>4)call list_routes(mh,code) ! Only bother to list them when >4
 enbest=hu
 flag=T
 do k=1,ihu
    call next_route(mh,code,mode,flag)
    if(flag)then; flag=F; exit; endif
-   call set_posts(mh,mode,tn,hn,bend,tp,hp,off)
-   call slalom_tspline(m,bend,tp,hp,off,bigT, q,ya,en,ita,maxitb,ittot,FF)
+   call set_posts(mh,mode,hgtn,hn,bend,hgtp,hp,off)
+   call slalom_tspline(m,bend,hgtp,hp,off,hgbigT, &
+        q,ya,en,ita,maxitb,ittot,FF); en=en/enbase
+   maxita=max(maxita,ita)
+   maxit =max(maxit,ittot)
    if(FF)then
       write(41,*) &
            'In best_tslalom; failure flag was raised in call to slalom_tspline'
       return
    endif
-   maxita=max(maxita,ita)
-   maxit =max(maxit,ittot)
    if(en<enbest)then
       modebest=mode
       enbest  =en
       qbest   =q
       yabest  =ya
-      kbest   =k
    endif
 enddo
 end subroutine best_tslalom
 !==============================================================================
-subroutine best_uslalom(nh,mh,doru,ts,hs,halfgate, tp,hp, & !     [best_slalom]
-   qbest,yabest,enbest,modebest,maxita,maxitb,maxit,maxrts,FF)
+subroutine best_uslalom(nh,mh,doru,hgts,hs,halfgate,  & !         [best_slalom]
+     hgtp,hp,qbest,yabest,enbest,modebest,maxita,maxitb,maxit,maxrts,FF)
 !==============================================================================
 ! Like best_tslalom, except this treats the special limiting case where the
 ! spline tension vanishes
 !==============================================================================
 integer,                 intent(in   ):: nh,mh,doru
-real(dp),dimension(nh),  intent(in   ):: ts,hs
+integer, dimension(nh),  intent(in   ):: hgts
+real(dp),dimension(nh),  intent(in   ):: hs
 real(dp),                intent(in   ):: halfgate
-real(dp),dimension(mh*2),intent(  out):: tp,hp
+integer, dimension(mh*2),intent(  out):: hgtp
+real(dp),dimension(mh*2),intent(  out):: hp
 real(dp),dimension(mh*2),intent(  out):: qbest
 real(dp),dimension(mh*2),intent(  out):: yabest
 real(dp),                intent(  out):: enbest
@@ -1181,18 +1223,18 @@ integer,dimension(mh),   intent(  out):: modebest
 integer,                 intent(inout):: maxita,maxitb,maxit,maxrts
 logical,                 intent(  out):: FF
 !-----------------------------------------------------------------------------
+integer, dimension(2,mh)  :: hgtn
 real(dp),dimension(mh*2)  :: q,ya
-real(dp),dimension(2,mh)  :: tn
 real(dp),dimension(2,2,mh):: hn
 real(dp)                  :: en
 integer, dimension(mh)    :: code,mode
 integer, dimension(mh*2)  :: bend
-integer                   :: i,k,m,kbest,route_count,ita,ittot
+integer                   :: i,k,m,route_count,ita,ittot
 logical, dimension(mh*2)  :: off
 logical                   :: flag
 !==============================================================================
 m=mh*2
-call set_gates(nh,mh,doru,ts,hs,halfgate, tn,hn,code,FF)
+call set_gates(nh,mh,doru,hgts,hs, hgtn,hn,code,FF)
 if(FF)then
    write(41,*) 'In best_uslalom; failure flag was raised in call to set_gates'
    return
@@ -1200,70 +1242,70 @@ endif
 call count_routes(mh,code,route_count,FF)
 maxrts=max(maxrts,route_count)
 if(FF)then
-   write(41,*) 'In best_uslalom; failure flag was raised in call to count_routes'
+   write(41,*)&
+        'In best_uslalom; failure flag was raised in call to count_routes'
    return
 endif
-call list_routes(mh,code)
+if(route_count>4)call list_routes(mh,code)! Only bother to list them when >4
 enbest=hu
 flag=T
 do k=1,ihu
    call next_route(mh,code,mode,flag)
    if(flag)then; flag=F; exit; endif
-   call set_posts(mh,mode,tn,hn,bend,tp,hp,off)
-   call slalom_uspline(m,bend,tp,hp,off, q,ya,en,ita,maxitb,ittot,FF)
+   call set_posts(mh,mode,hgtn,hn,bend,hgtp,hp,off)
+   call slalom_uspline(m,bend,hgtp,hp,off,halfgate, q,ya,en,ita,maxitb,ittot,FF)
+   maxita=max(maxita,ita)
+   maxit =max(maxit,ittot)
    if(FF)then
       write(41,*) &
            'In best_uslalom; failure flag was raised in call to slalom_uspline'
       return
    endif
-   maxita=max(maxita,ita)
-   maxit =max(maxit,ittot)
    if(en<enbest)then
       modebest=mode
       enbest  =en
       qbest   =q
       yabest  =ya
-      kbest   =k
    endif
 enddo
 end subroutine best_uslalom
 
 !=============================================================================
-subroutine count_gates(nh,ts,halfgate,mh)!                       [count_gates]
+subroutine count_gates(nh,hgts,mh)!                                [count_gates]
 !=============================================================================
 ! Count the number of distinct "time gates" that can accommodate all the data
 ! from the given profile. This gate count is mh.
 !=============================================================================
-integer,                   intent(in ):: nh
-real(dp),dimension(nh),    intent(in ):: ts
-real(dp),                  intent(in ):: halfgate
-integer,                   intent(out):: mh
+integer,              intent(in ):: nh
+integer,dimension(nh),intent(in ):: hgts
+integer,              intent(out):: mh
 !-----------------------------------------------------------------------------
-real(dp):: tp
-integer :: i
+integer:: hgtp
+integer:: i
 !=============================================================================
-tp=-hu ! <- default "time at present"
+hgtp=hgts(1)-1 ! <- default "time at present" in units of halfgate
 mh=0
 do i=1,nh
-   if(ts(i)<=tp+geps)cycle
+   if(hgts(i)<=hgtp)cycle
 ! A new nominal time of observation:
    mh=mh+1
-   tp=ts(i)
+   hgtp=hgts(i)
 enddo
 end subroutine count_gates
 
 !=============================================================================
-subroutine set_gates(nh,mh,doru,ts,hs,halfgate, tn,hn,code,FF)!    [set_gates]
+subroutine set_gates(nh,mh,doru,hgts,hs, hgtn,hn,code,FF)!         [set_gates]
 !=============================================================================
 ! Be sure to precede this routine by a call to "count_gates" to get a
 ! consistent tally of the number of time gates, mh.
 ! Set the locations of the "gateposts" and the routing codes of allowed
 ! trajectories that thread through them.
 ! Halfgate is half the (temporal) gate width (in seconds)
-! The "inferior" gatepost is at t - halfgate, the "superior" at t + halfgate.
+! The "inferior" gatepost is at hgts - 1, the "superior" at hgts + 1.
 ! The aggregated data lead to a tally of gates not exceeding the tally of obs.
-! the gatepost times of the aggregated data are put into array tn(:,:) where
-! tn(1,:) hold the inferior, and tn(2,:) the superior gatepost times.
+! the gatepost times of the aggregated data are put into array hgtn(:,:) where
+! hgtn(1,:) hold the inferior, and hgtn(2,:) the superior gatepost times, in
+! units of halfgate.
 ! In general, it is not known a priori whether the trajectory will end up
 ! ascending or descending though a given gate, so both alternatives are
 ! accounted for, with hn(:,1,:) holding the height corresponding to tn(:,:)
@@ -1323,32 +1365,32 @@ subroutine set_gates(nh,mh,doru,ts,hs,halfgate, tn,hn,code,FF)!    [set_gates]
 ! doru=2 ==> ascending
 !=============================================================================
 integer,                   intent(in ):: nh,mh,doru
-real(dp),dimension(nh),    intent(in ):: ts,hs
-real(dp),                  intent(in ):: halfgate
-real(dp),dimension(2,  mh),intent(out):: tn
+integer, dimension(nh),    intent(in ):: hgts
+real(dp),dimension(nh),    intent(in ):: hs
+integer, dimension(2,  mh),intent(out):: hgtn
 real(dp),dimension(2,2,mh),intent(out):: hn
 integer, dimension(    mh),intent(out):: code
 logical,                   intent(out):: FF
 !-----------------------------------------------------------------------------
-real(dp):: tp,hp
-integer :: i,im,i2,i2m,imh,n,atti,attim,codeim
+real(dp):: hp
+integer :: i,im,i2,i2m,imh,n,atti,attim,codeim,hgtp
 !=============================================================================
 FF=F
 n=nh*2
-tp=-hu ! <- default "time at present"
+hgtp=hgts(1)-1 ! <- default "time at present" in units of halfgate
 imh=0
 do i=1,nh
    i2=i*2
    i2m=i2-1
    hp=hs(i)
-   if(ts(i)>tp+geps)then
+   if(hgts(i)>hgtp)then
 ! A new nominal time of observation:
       imh=imh+1
-      tp=ts(i)
-      tn(1,imh)=tp-halfgate
-      tn(2,imh)=tp+halfgate
+      hgtp=hgts(i)
+      hgtn(1,imh)=hgtp-1
+      hgtn(2,imh)=hgtp+1
       hn(:,:,imh)=hp
-   elseif(ts(i)<tp-geps) then
+   elseif(hgts(i)<hgtp) then
       FF=T
       write(41,*) 'In set_gates; data are not temporally monotonic'
       return
@@ -1373,7 +1415,7 @@ codeim=9 ! <- arbitrary nonzero number
 do i=2,mh
    atti=0 ! (default, until we learn anything more definite)
    im=i-1
-   if(tn(1,i)<=tn(2,im)+geps)then
+   if(hgtn(1,i)<=hgtn(2,im))then
 ! No intermission separates these consecutive gates, im and i:
       if(hn(2,2,im)<=hn(1,2,i))then
          atti=2 ! <-ascending attitude at common time
@@ -1387,11 +1429,11 @@ do i=2,mh
 ! Overlapping, attitude at common time neither ascending nor descending,
 ! but sense of passage through gates must alternate (code=5).
          code(i)=5
-         if(hn(2,1,im)<=hn(1,2,i))then; hn(1,2,i)=hn(2,1,im)
+         if(hn(2,1,im)<=hn(1,2,i))then; hn(1,2,i) =hn(2,1,im)
                                   else; hn(2,1,im)=hn(1,2,i)
          endif
          if(hn(2,2,im)<=hn(1,1,i))then; hn(2,2,im)=hn(1,1,i)
-                                  else; hn(1,1,i)=hn(2,2,im)
+                                  else; hn(1,1,i) =hn(2,2,im)
          endif
       endif
    else
@@ -1410,42 +1452,42 @@ enddo
 end subroutine set_gates
 
 !=============================================================================
-subroutine set_posts(mh,mode,tn,hn, bend,tp,hp,off)!               [set_posts]
+subroutine set_posts(mh,mode,hgtn,hn, bend,hgtp,hp,off)!           [set_posts]
 !=============================================================================
 ! Given a set of mh double-gates (both descending and ascending types) and
 ! the array of actual passage modes (i.e., the actual route threading
 ! the sequence of gates), set the array of actual gateposts coordinates,
-! tp and hp, and the corresponding set of signs, bend, by which these
+! hgtp and hp, and the corresponding set of signs, bend, by which these
 ! gatepost constraints, when activatived, must alter the principal
 ! changed derivative of the optimal spline taking the prescribed route.
 ! Also, flag (using logical array, "off") those gateposts that, for this
 ! particular route, are redundant owing to existence of duplication of 
-! consecutive pairs of (tp,hp) sometimes occurring when no intermission
-! separates consecutive gates.
+! consecutive pairs of (hgtp,hp) sometimes occurring when no intermission
+! separates consecutive gates. All times are in integer units of halfgate.
 !=============================================================================
 integer,                   intent(in ):: mh
 integer, dimension(    mh),intent(in ):: mode
-real(dp),dimension(2,  mh),intent(in ):: tn
+integer, dimension(2,  mh),intent(in ):: hgtn
 real(dp),dimension(2,2,mh),intent(in ):: hn
-integer, dimension(mh*2),  intent(out):: bend
-real(dp),dimension(mh*2),  intent(out):: tp,hp
+integer, dimension(mh*2),  intent(out):: bend,hgtp
+real(dp),dimension(mh*2),  intent(out):: hp
 logical, dimension(mh*2),  intent(out):: off
 !-----------------------------------------------------------------------------
-real(dp):: tprev,hprev
-integer :: i,i2,i2m,i2mm,im,modei
+real(dp):: hprev
+integer :: i,i2,i2m,i2mm,im,modei,hgtprev
 !=============================================================================
 off=F
 do i=1,mh
    im=i-1
    modei=mode(i)
    i2=i*2; i2m=i2-1; i2mm=i2-2
-   tp(i2m)=tn(1,i)
-   tp(i2 )=tn(2,i)
+   hgtp(i2m)=hgtn(1,i)
+   hgtp(i2 )=hgtn(2,i)
    hp(i2m)=hn(1,modei,i)
    hp(i2 )=hn(2,modei,i)
 ! Check whether gatepost duplications exist, or one dominates another at same t:
    if(i>1)then
-      if(tprev+geps>=tp(i2m))then
+      if(hgtprev==hgtp(i2m))then
          if(hprev==hp(i2m))off(i2m)=T
          if(mode(im)==2.and.modei==1)then
             if(hprev<=hp(i2m))then
@@ -1464,8 +1506,8 @@ do i=1,mh
    endif
    bend(i2m)=modei*2-3 ! mode=1 ==> bend=-1; mode=2 ==> bend=+1 
    bend(i2 )=-bend(i2m)! mode=1 ==> bend=+1; mode=2 ==> bend=-1 
-   tprev=tp(i2)
-   hprev=hp(i2)
+   hgtprev=hgtp(i2)
+   hprev  =hp(i2)
 enddo
 end subroutine set_posts
 
@@ -1585,12 +1627,12 @@ flag=T
 end subroutine next_route
 
 !=============================================================================
-subroutine slalom_tspline(n,bend,xn,yn,off,bigX,q, ya,en, &
-     ita,maxitb,ittot,FF)                               !      [slalom_spline]
+subroutine slalom_tspline(n,bend,hgxn,yn,off,bigX, &!         [slalom_tspline]
+     q,ya,en,ita,maxitb,ittot,FF)                               
 !=============================================================================
 ! Fit a tensioned spline, characteristic abscissa scale, bigX, between the
-! "slalom gates" defined by successive pairs of abscissae, xn, and 
-! corresponding ordinate values, yn. Even number n is the total number
+! "slalom gates" defined by successive pairs of abscissae, integer hgxn, and 
+! corresponding ordinate values, real yn. Even number n is the total number
 ! of inequality constraints, or twice the number of gates. There is no
 ! assumed conditional monotonicity for the gates, but the sense in which
 ! they are threaded is encoded in the array of signs (-1 or +1), "bend"
@@ -1606,8 +1648,8 @@ subroutine slalom_tspline(n,bend,xn,yn,off,bigX,q, ya,en, &
 ! The problem is therefore of the type: minimize a quadratic functional
 ! subject to finitely many (n) linear inequality constraints.
 !
-! The problem is first standardized by rescaling xn (to xs=xn/bigT) so that
-! the characteristic scale becomes unity. We start with a feasible spline
+! The problem is first standardized by rescaling hgxn (to real xs=xn/bigX) so 
+! that the characteristic scale becomes unity. We start with a feasible spline
 ! fitted (equality constraints) to as many of the constraints with distinct
 ! xs as we can. We "A" iterate from one such feasible, conditionally minimum-
 ! energy solution to another with a different set of equality constraints
@@ -1615,23 +1657,42 @@ subroutine slalom_tspline(n,bend,xn,yn,off,bigX,q, ya,en, &
 ! constraints at the gateposts that are "pushing" when they should be
 ! "pulling" (specifically, the sign of the discontinuity in the spline's
 ! third derivative is the opposite of what it should be at that point). Take
-! the most egregious violation and simply switch "off" that constraint to
-! initiate the "B" iteration. The energy-minimization "solution" lacking 
-! the removed constraint is in general no longer in the feasible region of
-! spline-space, but along the line segment to get there, is a conditionally-
-! least energy feasible state, energy lower than at the start of this B-step,
-! but prevented from going any further by running into a hitherto inactivative
-! constraint (ie., bumping up against a new gatepost) which we therefore
-! activate. From this point, we once again solve the spline solution, but now
-! with this additional equality constraint, and perhaps we once again obtain
-! a "solution" outside the feasible region; but we just repeat the remedy. Each
-! step of the "B" iterations, where we are adding constraints one at a time,
-! we are decreasing the energy of the spline, so the process must terminate.
-! At termination of the B iteration, we go back to the A iteration, and 
-! see whether there is any remaining constraint whose "jump" in 3rd derivative
-! is of the wrong sign, indiciating the constraint to be redundant. But finally
-! we must end with a solution that is both feasible and without redundant 
-! constraints. Then the problem is solved. 
+! ALL such violations and, first,  simply switch them "off". In general, this
+! will cause the energy of the spline to fall significantly, but the resulting
+! spline may no longer thread all the slalom gates, so we will have to ADD
+! some constraints via what we call the "B-iteration" (whereupon the energy
+! increases again, but not to point where it was when we released the 
+! constraints at this last A-iteration). In the spline's state space, the
+! first of the new cycle of B-iterations back-tracks along the line-segment
+! joining this new spline-state to the more constrained one we just departed,
+! to the point on the spline-state-space segment where the solution becomes
+! once again feasible. This involves adding just one more constraint where the
+! spine just touches the inside of a slalom gatepost where it did not touch 
+! before. This new contact is made a new constraint, the spline state is 
+! recorded as the state reached at the 1st B-iteration, and a new spline
+! solution is solved for. If, once again, the spline fails to thread the 
+! gateposts, then in the next B-iteration, we back-track once again along a
+! line segment in spline-space, but this time towards the state at the previous
+! B-iteration. Again, we add a new constraint (which adds energy, but still 
+! not so much that the energy exceeds that of the last A-iteration). We
+! continue this process until we have added just enough new constraints to
+! achieve a feasible (slalom-threading) spline. This cycle of B-iterations
+! is thus complete and, in the generic case, the energy is still smaller
+! than it was at the last A-iteration. But since the new configuration may
+! be in violation of a new set of "jump-sign" violations, we must check
+! whether another A-iteration is required -- and so on. The B-iterations
+! are nested within the loop of A-iterations. To summarize: the A-iterations
+! release the gatepost constraints where jump-sign violations occur and the
+! energy between A-iterations decreases; the B-iterations activate new
+! gatepost constraints to keep the spline between the gateposts, and the
+! energy between B iterations increases. The process terminates when the
+! jump-sign conditions are all satisfied in the generic case. However, we
+! find that, in extremely rare and special cases of numerical coincidence,
+! jump-sign condition is close enough to machine-zero to be ambiguous --
+! and this seems to occur at the very last stage of the A-iterations. To
+! allow for this very rare occurrence, we now check that the energy between
+! A-iterations really IS decreasing and, if it is ever found not to be, we
+! terminate the iteration anyway.
 !
 ! In general, when the constraint of the final solution is not active, the
 ! value y of the spline differs from the yn there; it is therefore convenient
@@ -1639,8 +1700,8 @@ subroutine slalom_tspline(n,bend,xn,yn,off,bigX,q, ya,en, &
 ! array, ya ("y actual").
 !=============================================================================
 integer,                intent(in   ):: n
-integer, dimension(n),  intent(in   ):: bend
-real(dp),dimension(n),  intent(in   ):: xn,yn
+integer, dimension(n),  intent(in   ):: bend,hgxn
+real(dp),dimension(n),  intent(in   ):: yn
 logical, dimension(n),  intent(in   ):: off
 real(dp),               intent(in   ):: bigX
 real(dp),dimension(n),  intent(  out):: q
@@ -1650,27 +1711,28 @@ integer,                intent(  out):: ita,ittot
 integer,                intent(inout):: maxitb
 logical,                intent(  out):: FF
 !-----------------------------------------------------------------------------
-integer,parameter      :: nita=40,nitb=40
+integer,parameter      :: nita=50,nitb=80
 real(dp),dimension(n)  :: xs,jump,qt,yat
-real(dp)               :: xp,sj,sjmin
-integer                :: i,j,k,itb
+real(dp)               :: sj,sjmin,ena
+integer                :: i,j,k,itb,hgxp
 logical,dimension(n)   :: on
 !=============================================================================
 FF=F
 ! For algebraic convenience, work in terms of rescaled times, xs, of 
-! constraint
-xs=xn/bigX
+! the constraints whose given times, hgxn, are in integer units of halfgate
+xs=hgxn/bigX
 
 ! Initialize the "A" iteration by fitting a feasible spline to as many
 ! "gateposts" as is possible with distinct xs. A constraint i is signified
 ! to be activated when logical array element, on(i), is true:
-xp=-hu
+hgxp=hgxn(1)-1
 do i=1,n
    if(off(i))then; on(i)=F; cycle; endif
-   on(i)=(xs(i)>xp+geps); if(on(i))xp=xs(i)
+   on(i)=(hgxn(i)>hgxp); if(on(i))hgxp=hgxn(i)
 enddo
 ittot=1
 call fit_gtspline(n,xs,yn,on,qt,jump,yat,en,FF)! <- Make the initial fit
+ena=en
 if(FF)then
    write(41,*) 'In slalom_tspline; failure flag raised in call to fit_gtspline'
    write(41,*) 'at initialization of A loop'
@@ -1682,8 +1744,9 @@ do ita=1,nita
    q=qt   ! Copy solution vector q of nodal 1st-derivatives
    ya=yat ! Copy nodal intercepts
 
-! Determine whether there exists a sign-violation in any active "jump"
-! of the 3rd derviative and, if so, single out the worst violator, j:
+! Determine whether there exists sign-violations in any active "jumps"
+! of the 3rd derviative and, if so, inactivate (on==F) the constraints
+! at those points. Also, count the number, j, of such violations.
    j=0
    k=0
    sjmin=0
@@ -1705,7 +1768,8 @@ do ita=1,nita
    do itb=1,nitb
       call fit_gtspline(n,xs,yn,on,qt,jump,yat,en,FF)
       if(FF)then
-         write(41,*) 'In slalom_tspline; failure flag raised in call to fit_gtspline'
+         write(41,*)&
+              'In slalom_tspline; failure flag raised in call to fit_gtspline'
          write(41,*) 'at B loop, iterations ita,itb = ',ita,itb
          return
       endif
@@ -1738,7 +1802,7 @@ do ita=1,nita
       ya=ya+sjmin*(yat-ya)
       q=q+sjmin*(qt-q)
       on(j)=T
-   enddo
+   enddo ! itb loop
    maxitb=max(maxitb,itb)
    if(itb>nitb) then
       FF=T
@@ -1747,7 +1811,12 @@ do ita=1,nita
    end if
    q=qt
    ya=yat
-enddo
+   if(en>=ena)then
+      write(41,*) 'In slalom_tspline; energy failed to decrease'
+      exit 
+   endif
+   ena=en
+enddo ! ita loop
 if(ita>nita)then
    FF=T
    write(41,*) 'In slalom_tspline; exceeding the allocation of A iterations'
@@ -1756,18 +1825,20 @@ endif
 end subroutine slalom_tspline
 
 !=============================================================================
-subroutine slalom_uspline(n,bend,xn,yn,off,q, ya,en,                         &
-     ita,maxitb,ittot,FF)                                !      [slalom_spline]
+subroutine slalom_uspline(n,bend,hgxn,yn,off,halfgate,&!      [slalom_uspline]
+     q, ya,en,ita,maxitb,ittot,FF)       
 !=============================================================================
 ! Like slalom_tspline, except this treats the special case where the spline
 ! is untensioned, and therefore the characteristic scale in x become infinite,
 ! and the spline becomes piecewise cubic instead of involving hyperbolic
-! (or exponential) function.
+! (or exponential) function. In other respects, the logic follows that of
+! subroutine slalom_tsline.
 !=============================================================================
 integer,                intent(in   ):: n
-integer, dimension(n),  intent(in   ):: bend
-real(dp),dimension(n),  intent(in   ):: xn,yn
+integer, dimension(n),  intent(in   ):: bend,hgxn
+real(dp),dimension(n),  intent(in   ):: yn
 logical, dimension(n),  intent(in   ):: off
+real(dp),               intent(in   ):: halfgate
 real(dp),dimension(n),  intent(  out):: q
 real(dp),dimension(n),  intent(  out):: ya
 real(dp),               intent(  out):: en
@@ -1775,28 +1846,29 @@ integer,                intent(  out):: ita,ittot
 integer,                intent(inout):: maxitb
 logical,                intent(  out):: FF
 !-----------------------------------------------------------------------------
-integer,parameter      :: nita=40,nitb=40
-real(dp),dimension(n)  :: jump,qt,yat
-real(dp)               :: xp,sj,sjmin,ena
-integer                :: i,j,k,itb
+integer,parameter      :: nita=50,nitb=80
+real(dp),dimension(n)  :: xs,jump,qt,yat
+real(dp)               :: sj,sjmin,ena
+integer                :: i,j,k,itb,hgxp
 logical,dimension(n)   :: on
 !=============================================================================
 ! Initialize the "A" iteration by fitting a feasible spline to as many
 ! "gateposts" as is possible with distinct xn. A constraint i is signified
 ! to be activated when logical array element, on(i), is true:
 FF=F
-xp=-hu
+xs=hgxn*halfgate
+hgxp=hgxn(1)-1
 do i=1,n
    if(off(i))then
       on(i)=F
       cycle
    endif
-   on(i)=(xn(i)>xp+geps)
-   if(on(i))xp=xn(i)
+   on(i)=(hgxn(i)>hgxp)
+   if(on(i))hgxp=hgxn(i)
 enddo
 ittot=1
-ena=hu
-call fit_guspline(n,xn,yn,on,qt,jump,yat,en,FF)! <- Make the initial fit
+call fit_guspline(n,xs,yn,on,qt,jump,yat,en,FF)! <- Make the initial fit
+ena=en
 if(FF)then
    write(41,*) 'In slalom_uspline; failure flag raised in call to fit_guspline'
    write(41,*) 'at initialization of A loop'
@@ -1808,8 +1880,9 @@ do ita=1,nita
    q=qt   ! Copy solution vector q of nodal 1st-derivatives
    ya=yat ! Copy nodal intercepts
 
-! Determine whether there exists a sign-violation in any active "jump"
-! of the 3rd derviative and, if so, single out the worst violator, j:
+! Determine whether there exists sign-violations in any active "jumps"
+! of the 3rd derviative and, if so, inactivate (on==F) the constraints
+! at those points. Also, count the number, j, of such violations.
    j=0
    k=0
    sjmin=0
@@ -1824,16 +1897,15 @@ do ita=1,nita
       endif
    enddo
    if(j==0)exit !<-Proper conditions for a solution are met
-   if(en>=ena)exit
    if(k==0)on(j)=T ! <- must leave at least one constraint "on"
-   ena=en
 
 ! Begin a new "B" iteration that adds as many new constraints as needed
 ! to keep the new conditional minimum energy spline in the feasible region:
    do itb=1,nitb
-      call fit_guspline(n,xn,yn,on,qt,jump,yat,en,FF)
+      call fit_guspline(n,xs,yn,on,qt,jump,yat,en,FF)
       if(FF)then
-         write(41,*) 'In slalom_uspline; failure flag raised in call to fit_guspline'
+         write(41,*)&
+              'In slalom_uspline; failure flag raised in call to fit_guspline'
          write(41,*) 'at B loop, iterations ita,itb = ',ita,itb
          return
       endif
@@ -1875,6 +1947,11 @@ do ita=1,nita
    end if
    q=qt
    ya=yat
+   if(en>=ena)then
+      write(41,*) 'In slalom_uspline; energy failed to decrease'
+      exit
+   endif
+   ena=en
 enddo
 if(ita>nita)then
    FF=T
@@ -1884,35 +1961,39 @@ endif
 end subroutine slalom_uspline
 
 !=============================================================================
-subroutine convertd(n,halfgate,hdata,tdata,phof,                             &
-     doru,idx,hs,ts,descending,FF)!                                 [convertd]
+subroutine convertd(n,halfgate,tdata,hdata,phof,&!                  [convertd]
+     doru,idx,hgts,hs,descending,FF)
+!=============================================================================
+! tdata (in single precision real hours) is discretized into bins of size
+! gate=2*halfgate (in units of seconds) and expressed as even integer units
+! hgts of halfgate that correspond to the mid-time of each bin. (The two
+! limits of each time-bin are odd integers in halfgate units.)
 !=============================================================================
 integer,              intent(in ):: n
 real(dp),             intent(in ):: halfgate
-real,    dimension(n),intent(in ):: hdata
-real,    dimension(n),intent(in ):: tdata
+real,    dimension(n),intent(in ):: tdata,hdata
 integer, dimension(n),intent(in ):: phof
 integer,              intent(out):: doru
-integer, dimension(n),intent(out):: idx
+integer, dimension(n),intent(out):: idx,hgts
 real(dp),dimension(n),intent(out):: hs
-real(dp),dimension(n),intent(out):: ts
 logical,              intent(out):: descending
 logical,              intent(out):: FF
 !------------------------------------------------------------------------------
-integer :: i,j,ii,upsign
-real(dp):: s,gate
+integer,parameter:: hour=3600 ! 1 hour converted to S.I. units
+integer          :: i,j,ii,upsign,hgs
+real(dp)         :: s,gate
 !=============================================================================
 FF=F
 if(size(hdata)/=n)stop 'In convertd; inconsistent dimensions of hdata'
 if(size(tdata)/=n)stop 'In convertd; inconsistent dimensions of tdata'
 if(size(hs)/=n)stop 'In convertd; inconsistent dimensions of hs'
-if(size(ts)/=n)stop 'In convertd; inconsistent dimensions of ts'
+if(size(hgts)/=n)stop 'In convertd; inconsistent dimensions of hgts'
 hs=hdata
 ! convert to whole number of seconds rounded to the nearest gate=2*halfgate:
 upsign=0
 gate=halfgate*2
 do i=1,n
-   ts(i)=nint(tdata(i)*3600/gate)*gate
+   hgts(i)=2*nint(tdata(i)*hour/gate)! 
    if(phof(i)==5)upsign=1  ! Ascending flight
    if(phof(i)==6)upsign=-1 ! Descending flight
 enddo
@@ -1923,11 +2004,11 @@ else
    doru=1
 endif
 if(n==1)return
-if(ts(1)>ts(n))then
+if(hgts(1)>hgts(n))then ! Reverse the order:
    do i=1,n/2
       j=n+1-i
-      s=ts(i); ts(i)=ts(j); ts(j)=s ! Swap ts
-      s=hs(i); hs(i)=hs(j); hs(j)=s ! Swap hs
+      hgs=hgts(i); hgts(i)=hgts(j); hgts(j)=hgs ! Swap integer hgts
+      s  =hs(i)  ; hs(i)  =hs(j)  ; hs(j)  =s   ! and swap real hs
    enddo
 endif
 if(upsign==1)then
@@ -1947,16 +2028,18 @@ do i=1,n
 end do
 do i=2,n
    do ii=1,i-1
-      if (ts(i)<ts(ii).or.(ts(i)==ts(ii).and.upsign*(hs(i)-hs(ii))<u0)) then  
-         s=ts(i);  ts(i)=ts(ii);   ts(ii)=s   ! Swap ts
-         s=hs(i);  hs(i)=hs(ii);   hs(ii)=s   ! Swap hs
-         j=idx(i); idx(i)=idx(ii); idx(ii)=j  ! swap idx
+      if (hgts(i)<hgts(ii).or. &
+           (hgts(i)==hgts(ii).and.upsign*(hs(i)-hs(ii))<u0)) then  
+         hgs=hgts(i);  hgts(i)=hgts(ii);   hgts(ii)=hgs   ! Swap integer hgts
+         s  =hs(i);    hs(i)  =hs(ii);     hs(ii)  =s     ! and swap real hs
+         j=idx(i);    idx(i)  =idx(ii);   idx(ii)  =j     ! and swap index idx
       end if
    end do
 end do
 do i=2,n
-   if(ts(i)<ts(i-1)) then
-      write(41,*) 'In convertd; time sequence not monotonic', i, ts(i),ts(i-1)
+   if(hgts(i)<hgts(i-1)) then
+      write(41,*)&
+           'In convertd; time sequence not monotonic', i, hgts(i),hgts(i-1)
       FF=T
       return
    end if
@@ -1968,31 +2051,32 @@ enddo
 end subroutine convertd
 
 !=============================================================================
-subroutine convertd_back(n,wdata,tdata,ws,ts,idx,descending)!  [convertd_back]
+subroutine convertd_back(n,halfgate,wdata,tdata, &!            [convertd_back]
+     ws,hgts,idx,descending)
 !=============================================================================
 integer,              intent(in ):: n
-integer, dimension(n),intent(in ):: idx
+real(dp),             intent(in ):: halfgate
+integer, dimension(n),intent(in ):: hgts,idx
 real(dp),dimension(n),intent(in ):: ws
-real(dp),dimension(n),intent(in ):: ts
 logical,              intent(in ):: descending
 real,dimension(n),    intent(out):: wdata
 real,dimension(n),    intent(out):: tdata
 !------------------------------------------------------------------------------
-integer          :: i,j,ii
-real(dp)         :: s
-real,dimension(n):: wn
-real,dimension(n):: tn
+integer             :: i,j,ii
+real(dp)            :: s
+real,   dimension(n):: wn
+integer,dimension(n):: hgtn
 !=============================================================================
 if(size(wdata)/=n)stop 'In convertd; inconsistent dimensions of wdata'
 if(size(tdata)/=n)stop 'In convertd; inconsistent dimensions of tdata'
 if(size(ws)/=n)stop 'In convertd; inconsistent dimensions of ws'
-if(size(ts)/=n)stop 'In convertd; inconsistent dimensions of ts'
+if(size(hgts)/=n)stop 'In convertd; inconsistent dimensions of hgts'
 
 do i = 1, n
-   ii = idx(i); tn(ii) = ts(i);  wn(ii) = ws(i)
+   ii = idx(i); hgtn(ii) = hgts(i);  wn(ii) = ws(i)
 end do
 
-wdata=wn; tdata=tn
+wdata=wn; tdata=hgtn*halfgate
 if (descending.or.n==1) return
 do i=1,n/2
    j=n+1-i
