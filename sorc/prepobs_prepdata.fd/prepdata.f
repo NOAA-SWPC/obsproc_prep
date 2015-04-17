@@ -1,7 +1,7 @@
 C$$$  MAIN PROGRAM DOCUMENTATION BLOCK
 C
 C MAIN PROGRAM: PREPOBS_PREPDATA
-C   PRGMMR: KEYSER                ORG: NP22   DATE: 2015-04-10
+C   PRGMMR: KEYSER                ORG: NP22   DATE: 2015-04-16
 C
 C ABSTRACT: PREPARES DATA FOR USE IN ANALYSES FOR THE NDAS, NAM, GDAS,
 C   GFS, RAP (RAPID REFRESH), RTMA, AND URMA NETWORKS.  ALL ANALYSES
@@ -1132,6 +1132,23 @@ C     moisture on any level, for any report type, with dewpoint
 C     temperature on that level > TDMAX will be flagged with QM=15 in
 C     subr. FIZZ01 and encoded in the PREPBUFR file if it is not
 C     already flagged as bad).
+C 2015-04-16  D. A. Keyser -- Updated land/sea check in subr. LNDCHK
+C     for N.H. surface marine reports.  Now has option (under certain
+C     conditions) to check 16 points around obs lat/lon location {4
+C     inner points as before (which is still an option) plus also now
+C     12 points in next, outer ring}.  If any one of the 16 points is
+C     over water, the obs is deemed over water. On the mask boundary
+C     (i.e., Prime Meridian), check reverts back to only surrounding 4
+C     points since 1 or more mask points are not stored in outer 12
+C     point ring in this case.  Several additional mask points in key
+C     geographical locations known to be over water are also converted
+C     from over land to over water (after being read in). It is known
+C     that many valid N.H. marine ship and buoy reports at the
+C     coastline are being flagged as over land (and not used by the
+C     analysis) due to their imprecise lat/lon. This change will allow
+C     these to now be used by the analysis, but it will still flag
+C     reports with invalid lat or lon (when it results in them being
+C     well inland).
 C
 C USAGE:
 C   INPUT FILES:
@@ -2853,7 +2870,7 @@ C  IN INTERFACE WITH SUBROUTINE IW3UNPBF
      $ FLACMS,IACFTH,SUBSKP,JPGPSD,GWINDO,RASS,TWINDO,JPWDSD,IWWNDO,
      $ FLDMFR,WRMISS,SKGP45,JPASCD,IAWNDO,npkrpt
       NAMELIST/PARM/IUNIT
-      CALL W3TAGB('PREPOBS_PREPDATA',2015,0100,0061,'NP22')
+      CALL W3TAGB('PREPOBS_PREPDATA',2015,0106,0061,'NP22')
 C DETERMINE MACHINE WORD LENGTH (BYTES) FOR BOTH INTEGERS AND REALS
       CALL WORDLENGTH(LWI,LWR)
       PRINT 2213, LWI,LWR
@@ -2896,7 +2913,7 @@ C    CARDS FILE, JUST AFTER NAMELIST TASK, BY THE MAKE_PREPBUFR SCRIPT)
          PRINT 321, NET(1)
       END IF
   321 FORMAT(/37X,'WELCOME TO THE UNIVERSAL ',A14,' DATA PREPROCESSOR'/
-     $ 48X,'WCOSS VERSION CREATED 10 APR 2015'/)
+     $ 48X,'WCOSS VERSION CREATED 16 APR 2015'/)
       PRINT 322, (IUNIT(I),I=1,8),IUNIT(16),IUNIT(17)
   322 FORMAT(//53X,'TABLE OF UNIT NUMBERS'/31X,
      $ 'INPUTS IN UNIT NUMBERS 11-50 - OUTPUTS IN UNIT NUMBERS 51-90'//
@@ -4366,9 +4383,9 @@ C         IF MET SUCH RPTS ARE GIVEN PREPBUFR TABLE VALUE = 15
 C-----------------------------------------------------------------------
 C OTHERWISE, CALL SUBR. LNDCHK, SEE IF RPT SATISFIES OVER LAND CRITERIA
       IF(NINT(RDATA(1)*100.).LT.0)  THEN
-         CALL LNDCHK(RDATA(1),RDATA(2),1,GDSH,145,37,0.5,ILAND)
+         CALL LNDCHK(RDATA(1),RDATA(2),1,4,1,GDSH,145,37,0.5,ILAND)
       ELSE
-         CALL LNDCHK(RDATA(1),RDATA(2),1,GDNH,362,91,0.5,ILAND)
+         CALL LNDCHK(RDATA(1),RDATA(2),1,4,1,GDNH,362,91,0.5,ILAND)
       END IF
       IF(ILAND.EQ.0)  GO TO 1490
 C REPORT SATISFIES OVER LAND CRITERIA
@@ -5243,14 +5260,15 @@ cdak $    'LON=',F8.2,'E, RTYP',I4,' - OUTSIDE TIME WINDOW')
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    LNDCHK
-C   PRGMMR: D. A. KEYSER     ORG: W/NMC22    DATE: 2013-02-14
+C   PRGMMR: D. A. KEYSER     ORG: W/NMC22    DATE: 2015-04-16
 C
-C ABSTRACT: CHECKS THE FOUR GRID POINTS SURROUNDING A REPORT.  BASED
-C   ON THE TYPE OF CHECK WILL FLAG THE REPORT WITH "ILAND=1" IF ANY
-C   ONE (ICHK=2) OR IF ALL FOUR (ICHK=1) SURROUNDING GRID POINTS EXCEED
-C   A SPECIFIED CRITICAL VALUE.  FOR REPORTS IN THE N. HEMISPHERE
-C   THE GRID IS 1 DEGREE LAT/LON; FOR REPORTS IN THE S. HEMISPHERE
-C   THE GRID IS 2.5 DEGREE LAT/LON.
+C ABSTRACT: CHECKS THE FOUR OR SIXTEEN (BASED ON INPUT ARGUMENT "NPTS")
+C   GRID POINTS SURROUNDING A REPORT.  BASED ON THE TYPE OF CHECK WILL
+C   FLAG THE REPORT WITH "ILAND=1" IF ANY ONE (ICHK=2) OR IF ALL FOUR OR
+C   SIXTEEN (ICHK=1) SURROUNDING GRID POINTS EXCEED A SPECIFIED CRITICAL
+C   VALUE.  FOR REPORTS IN THE N. HEMISPHERE THE GRID IS 1 DEGREE
+C   LAT/LON; FOR REPORTS IN THE S. HEMISPHERE THE GRID IS 2.5 DEGREE
+C   LAT/LON.
 C
 C PROGRAM HISTORY LOG:
 C 1989-02-02  D. A. KEYSER (W/NMC22)
@@ -5266,15 +5284,46 @@ C    LOCATION), THIS ALSO CAUSED AN ARRAY OVERFLOW SINCE KYJ COULD BE
 C    CALCULATED AS 38, 1 GREATER THAN THE LIMIT; FIXED S.H. BUGS WHICH
 C    CAUSED AN OVERFLOW IN KXI FOR ELON > 359.98 AND AN OVERFLOW IN KYJ
 C    FOR LAT > -0.01 
+C 2015-04-16  D. A. KEYSER -- Added new input argument ITYC to indicate
+C    whether the check being done is land/sea (=1) or geographical
+C    (inside vs. outside U.S. mainland/Gulf of Mexico/Southern Ontario,
+C    =2).  Added new input agrument NPTS to indicate whether the values
+C    in the immediate surrounding 4 grid points (=4) or these plus the
+C    next ring of 12 grid points (=16) should be tested against the
+C    critical value.
+C         Updated land/sea check for N.H. surface marine reports.  Now
+C    has option (under certain conditions) to check 16 points around
+C    obs lat/lon location {4 inner points as before (which is still an
+C    option) plus also now 12 points in next, outer ring}.  If any one
+C    of the 16 points is over water, the obs is deemed over water. On
+C    the mask boundary (i.e., Prime Meridian), check reverts back to
+C    only surrounding 4 points since 1 or more mask points are not
+C    stored in outer 12 point ring in this case.  Several additional
+C    mask points in key geographical locations known to be over water
+C    are also converted from over land to over water (after being read
+C    in).
+C    
 C
-C USAGE:    CALL LNDCHK(YLAT,ELON,ICHK,GRID,NX,NY,CRIT,ILAND)
+C USAGE:    CALL LNDCHK(YLAT,ELON,ITYC,NPTS,ICHK,GRID,NX,NY,CRIT,ILAND)
 C   INPUT ARGUMENT LIST:
 C     YLAT     - LATITUDE OF DATA REPORT  (DEG. N+,S-)
 C     ELON     - LONGITUDE OF DATA REPORT (0.0 TO 359.99 DEG. E)
-C     ICHK     - TYPE OF CHECK (=1 ALL SURROUNDING GRID PTS MUST EXCEED
-C              - CRITICAL VALUE; =2 ONLY A SINGLE SURROUNDING GRID PT
-C              - NEED EXCEED CRITICAL VALUE) - IF SATISFIED, OUTPUT
-C              - ARGUMENT "ILAND" SET TO 1; OTHERWISE "ILAND" SET TO 0
+C     ITYC     - INDICATES WHAT IS BEING CHECKED:
+C                  =1  - LAND vs. SEA
+C                  =2  - GEOGRAPHICAL (INSIDE vs. OUTSIDE U.S. MAINLAND/
+C                        GULF OF MEXICO/SOUTHERN ONTARIO)
+C     NPTS     - NUMBER OF GRID POINTS SURROUNDING REPORT TO BE CHECKED
+C              - {SHOULD BE EITHER 4 OR 16 (I.E., 2 ROWS OUT FROM
+C              - REPORT), IF SOMETHING ELSE DEFAULTS TO 4}
+C              - {NOTE: IF NPTS PASSED IN AS 16 AND ANY GRID POINT 2
+C              - ROWS OUT NOT STORED (I.E., ON BOUNDARY) -- OR -- ITYC
+C              - IS NOT 1 -- OR -- REPORT IS IN S.H., THEN ONLY THE 4
+C              - SURROUNDING GRID POINTS ARE CHECKED}
+C     ICHK     - TYPE OF CHECK (=1 ALL 4 OR 16 SURROUNDING GRID PTS MUST
+C              - EXCEED CRITICAL VALUE; =2 ONLY 1 OF THE 4 OR 16
+C              - SURROUNDING GRID PTS NEED EXCEED CRITICAL VALUE) - IF
+C              - SATISFIED, OUTPUT ARGUMENT "ILAND" SET TO 1; OTHERWISE
+C              - "ILAND" SET TO 0
 C     GRID     - NX X NY GRID (EITHER 1 DEG IN N.H. OR 2.5 DEG IN S.H.)
 C     NX       - NUMBER OF X-DIRECTION POINTS (COLUMNS) IN "GRID"
 C     NY       - NUMBER OF Y-DIRECTION POINTS (ROWS) IN "GRID"
@@ -5292,7 +5341,7 @@ C   LANGUAGE: FORTRAN 90
 C   MACHINE:  NCEP WCOSS
 C
 C$$$
-      SUBROUTINE LNDCHK(YLAT,ELON,ICHK,GRID,NX,NY,CRIT,ILAND)
+      SUBROUTINE LNDCHK(YLAT,ELON,ITYC,NPTS,ICHK,GRID,NX,NY,CRIT,ILAND)
       REAL  GRID(NX,NY)
       ILAND = 0
       ELONG = ELON + 0.0051
@@ -5309,18 +5358,63 @@ C$$$
 C IF RIGHT ON NORTH POLE, CONSIDER REPORT TO BE OVER WATER
          IF(KYJ.EQ.91)  RETURN
       END IF
+
+C If NPTS passed in as 16 but any one of the following is true:
+C       - report is in S.H.,
+C       - any grid point 2 rows out not stored (i.e., on boundary),
+C       - ITYC is 2 (geographical test)
+C  then only the 4 surrounding grid points are checked
+C -----------------------------------------------------------------
+      if(npts.eq.16 .and.
+     $   nint(ylat*100.).ge.0 .and.
+     $   ITYC.eq.1 .and.
+     $   (kxi.ge.  2 .and. kxi.le. nx-2) .and.
+     $   (kyj.ge.  2 .and. kyj.le. ny-2)) then
+C-----------------------------------------------------------------------
+C    CHECK SIXTEEN GRID POINTS SURROUNDING REPORT -- TWO METHODS
+C-----------------------------------------------------------------------
+         grid(286,46) = 0. !set mask pt. near St. Lawrence Seaway to sea
+         grid(289,48) = 0. !set mask pt. near St. Lawrence Seaway to sea
+         grid(291,49) = 0. !set mask pt. near St. Lawrence Seaway to sea
+         grid(262,69) = 0  !set grid pt. near Canadian NW Territ. to sea
+         grid(357,54) = 0. !set grid pt. near Irish Sea to sea
+         grid( 56,26) = 0. !set grid pt. near Persian Gulf to sea
+         if(ichk.eq.1)  then
+C CHECK 1 ---> ALL SURROUNDING PTS MUST BE OVER LAND (MOST RESTRICTIVE)
+         if(min(grid(kxi-1,kyj-1),grid(kxi  ,kyj-1),
+     $          grid(kxi+1,kyj-1),grid(kxi+2,kyj-1),
+     $          grid(kxi-1,kyj  ),grid(kxi  ,kyj  ),
+     $          grid(kxi+1,kyj  ),grid(kxi+2,kyj  ),
+     $          grid(kxi-1,kyj+1),grid(kxi  ,kyj+1),
+     $          grid(kxi+1,kyj+1),grid(kxi+2,kyj+1),
+     $          grid(kxi-1,kyj+2),grid(kxi  ,kyj+2),
+     $          grid(kxi+1,kyj+2),grid(kxi+2,kyj+2)).gt.crit) iland=1
+         ELSE
+C CHECK 2 ---> ONLY 1 SURROUNDING PT NEED BE OVER LAND (LEAST RESTRCTVE)
+         if(max(grid(kxi-1,kyj-1),grid(kxi  ,kyj-1),
+     $          grid(kxi+1,kyj-1),grid(kxi+2,kyj-1),
+     $          grid(kxi-1,kyj  ),grid(kxi  ,kyj  ),
+     $          grid(kxi+1,kyj  ),grid(kxi+2,kyj  ),
+     $          grid(kxi-1,kyj+1),grid(kxi  ,kyj+1),
+     $          grid(kxi+1,kyj+1),grid(kxi+2,kyj+1),
+     $          grid(kxi-1,kyj+2),grid(kxi  ,kyj+2),
+     $          grid(kxi+1,kyj+2),grid(kxi+2,kyj+2)).gt.crit) iland=1
+         END IF
+      else
 C-----------------------------------------------------------------------
 C      CHECK FOUR GRID POINTS SURROUNDING REPORT -- TWO METHODS
 C-----------------------------------------------------------------------
-      IF(ICHK.EQ.1)  THEN
+         IF(ICHK.EQ.1)  THEN
 C CHECK 1 ---> ALL SURROUNDING PTS MUST BE OVER LAND (MOST RESTRICTIVE)
-         IF(GRID(KXI,KYJ).GT.CRIT.AND.GRID(KXI+1,KYJ).GT.CRIT.AND.
-     $    GRID(KXI,KYJ+1).GT.CRIT.AND.GRID(KXI+1,KYJ+1).GT.CRIT) ILAND=1
-      ELSE
+            IF(MIN(GRID(KXI,KYJ  ),GRID(KXI+1,KYJ  ),
+     $             GRID(KXI,KYJ+1),GRID(KXI+1,KYJ+1)).GT.CRIT) ILAND=1
+         ELSE
 C CHECK 2 ---> ONLY 1 SURROUNDING PT NEED BE OVER LAND (LEAST RESTRCTVE)
-         IF(GRID(KXI,KYJ).GT.CRIT.OR.GRID(KXI+1,KYJ).GT.CRIT.OR.
-     $    GRID(KXI,KYJ+1).GT.CRIT.OR.GRID(KXI+1,KYJ+1).GT.CRIT)  ILAND=1
-      END IF
+            IF(MAX(GRID(KXI,KYJ  ),GRID(KXI+1,KYJ  ),
+     $             GRID(KXI,KYJ+1),GRID(KXI+1,KYJ+1)).GT.CRIT) ILAND=1
+         END IF
+C-----------------------------------------------------------------------
+      end if
       RETURN
       END
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
@@ -11058,9 +11152,9 @@ C TEST FOR OVERLAND SATWND REPORTS
          IF(.NOT.SWNLND(IBAND,NSW,IPD))  THEN
 C CALL SUBR. LNDCHK TO SEE IF RPT SATISFIES OVER LAND CRITERIA
             IF(NINT(RDATA(1)*100.).LT.0)  THEN
-               CALL LNDCHK(RDATA(1),RDATA(2),2,GDSH,145,37,0.5,ILAND)
+              CALL LNDCHK(RDATA(1),RDATA(2),1,4,2,GDSH,145,37,0.5,ILAND)
             ELSE
-               CALL LNDCHK(RDATA(1),RDATA(2),2,GDNH,362,91,0.5,ILAND)
+              CALL LNDCHK(RDATA(1),RDATA(2),1,4,2,GDNH,362,91,0.5,ILAND)
             END IF
             IF(ILAND.NE.0)  THEN
 C RPT SATISFIES OVER LAND CRITERIA PROCESS BUT FLAG ALL VARIABLES W/
@@ -11116,7 +11210,7 @@ C     DETERMINE AIRCRAFT GEOGRAPHICAL LOCATION, IUS (=1-OUTSIDE US
 C    MAINLND/G. MEXICO/SO. ONTARIO - PRESET!; =2-INSIDE THIS REGION)
 C-----------------------------------------------------------------------
          IF(NINT(RDATA(1)*100.).GE.0)  THEN
-            CALL LNDCHK(RDATA(1),RDATA(2),2,GDUS,362,91,0.5,ILAND)
+            CALL LNDCHK(RDATA(1),RDATA(2),2,4,2,GDUS,362,91,0.5,ILAND)
             IF(ILAND.NE.0)  IUS = 2
          END IF
 C-----------------------------------------------------------------------
@@ -11139,9 +11233,9 @@ C TEST FOR OVERLAND AIRCRAFT REPORTS
          IF(.NOT.AIRLND(IBNDA,NAC))  THEN
 C CALL SUBR. LNDCHK TO SEE IF RPT SATISFIES OVER LAND CRITERIA
             IF(NINT(RDATA(1)*100.).LT.0)  THEN
-               CALL LNDCHK(RDATA(1),RDATA(2),2,GDSH,145,37,0.5,ILAND)
+              CALL LNDCHK(RDATA(1),RDATA(2),1,4,2,GDSH,145,37,0.5,ILAND)
             ELSE
-               CALL LNDCHK(RDATA(1),RDATA(2),2,GDNH,362,91,0.5,ILAND)
+              CALL LNDCHK(RDATA(1),RDATA(2),1,4,2,GDNH,362,91,0.5,ILAND)
             END IF
             IF(ILAND.NE.0)  THEN
 C RPT SATISFIES OVER LAND CRITERIA PROCESS BUT FLAG ALL VARIABLES W/
@@ -13604,9 +13698,9 @@ C IDENTIFY OVERLAND/OCEANIC SWITCH ---> MS (=1 OVERLAND; =2 OCEANIC)
 C.......................................................................
       MS = 2
       IF(NINT(RDATA(1)*100.).LT.0)  THEN
-         CALL LNDCHK(RDATA(1),RDATA(2),2,GDSH,145,37,0.5,ILAND)
+         CALL LNDCHK(RDATA(1),RDATA(2),1,4,2,GDSH,145,37,0.5,ILAND)
       ELSE
-         CALL LNDCHK(RDATA(1),RDATA(2),2,GDNH,362,91,0.5,ILAND)
+         CALL LNDCHK(RDATA(1),RDATA(2),1,4,2,GDNH,362,91,0.5,ILAND)
       END IF
       IF(ILAND.NE.0)  MS = 1
 C.......................................................................
@@ -14306,7 +14400,7 @@ C+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    SFCDTA
-C   PRGMMR: MELCHIOR         ORG: NP22       DATE: 2014-04-25
+C   PRGMMR: KEYSER           ORG: NP22       DATE: 2015-04-16
 C
 C ABSTRACT: PERFORMS SEVERAL FUNCTIONS: UNPACKS SURFACE RPTS (IW3UNPBF
 C   FORMAT) ONE AT A TIME, PERFORMING SEVERAL CHECKS SUCH AS WHETHER
@@ -14547,6 +14641,9 @@ C     encodes direction, speed, u-comp or v-comp.
 C          - Report type 183 now stores moisture quality mark no lower
 C     than 3 (suspect) (before type 183 stored observed moisture
 C     quality mark read from the ADPSFC dump file).
+C 2015-04-16  D. A. Keyser -- Call to subr. LNDCHK now uses new 16
+C     point check for determining if marine reports in the N.H. are
+C     over land or sea.
 C
 C USAGE:    CALL SFCDTA
 C   INPUT FILES:
@@ -14874,9 +14971,10 @@ C EXCLUDE PMSL BOGUS REPORTS OVER GREENLAND FROM TEST
      $ NINT(RDATA(2)*100.).LE.34000)  GO TO 1490
 C OTHERWISE, CALL SUBR. LNDCHK, SEE IF RPT SATISFIES OVER LAND CRITERIA
       IF(NINT(RDATA(1)*100.).LT.0)  THEN
-         CALL LNDCHK(RDATA(1),RDATA(2),1,GDSH,145,37,0.5,ILAND)
+         CALL LNDCHK(RDATA(1),RDATA(2),1,4,1,GDSH,145,37,0.5,ILAND)
       ELSE
-         CALL LNDCHK(RDATA(1),RDATA(2),1,GDNH,362,91,0.5,ILAND)
+ccccc    CALL LNDCHK(RDATA(1),RDATA(2),1, 4,1,GDNH,362,91,0.5,ILAND)
+         CALL LNDCHK(RDATA(1),RDATA(2),1,16,1,GDNH,362,91,0.5,ILAND)
       END IF
       IF(ILAND.EQ.0)  GO TO 1490
 C REPORT SATISFIES OVER LAND CRITERIA PROCESS BUT FLAG ALL VARIABLES W/
