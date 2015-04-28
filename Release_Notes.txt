@@ -46,7 +46,7 @@ files:
    obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
-   obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3tovseds.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3tovsmnd.f
    obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
@@ -219,6 +219,19 @@ files:
                   will allow these to now be used by the analysis, but it will
                   still flag reports with invalid lat or lon (when it results
                   in them being well inland).
+       - Fixed bug in GOES total cloud cover (TOCC) encoding in subr. GOESDG.
+         Now populates CLTOP(1,2) with TOCC value directly from RDATA2(25)
+         passed from W3UNPKB7 (had looked for it in cat 8 c.f. 258 passed in
+         from W3UNPKB7 in RDATA array but this was changed long ago to hold
+         cloud amount and not total cloud cover, and the former is missing in
+         GOES cloud reports). RDATA2 is expanded to size 25 in W3UNPKB7 in
+         order to store TOCC, and this is accounted for here.
+         BENEFIT: PREPBUFR report type 151 (GOES cloud reports, now store a non-
+                  missing TOCC value.  This information may eventually be used
+                  in the RTMA/URMA).
+      w3unpkb7.f (subroutine):
+       - RDATA2 is expanded to size 25 in order to store total cloud cover
+         (TOCC) (present in dumps of GOES cloud reports).
       iw3unpbf.f (subroutine):
        - Added logic to handle new NASA/VIIRS (NPP) POES winds in tank NC005090
          (e.g., recognizes that they now exist, counts of reports with flagged
@@ -268,7 +281,7 @@ files:
  ---------------------------------------
    This must be implemented either simultaneously with or after the
    implementation of:
-      v2.4.2 of obsproc_satingest.
+      v2.5.1 of obsproc_satingest.
    This must be implemented simultaneously with the implementations of:
       v2.0.4 of obsproc_cdas,
       v3.2.1 of obsproc_dump,
@@ -277,8 +290,8 @@ files:
       v2.1.1 of obsprod_global,
       v2.0.3 of obsproc_nam,
       v2.0.3 of obsproc_rap,
- ???? v2.0.4 of obsproc_rtma,
- ???? v2.0.4 of obsproc_urma,
+      v2.0.4 of obsproc_rtma,
+      v2.0.4 of obsproc_urma,
       v1.2.0 of obsproc_shared/bufr_dumplist.
 
    There are no jobs in obsproc_prep.  Jobs executing this version of
