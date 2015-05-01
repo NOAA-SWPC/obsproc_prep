@@ -1,6 +1,6 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-obsproc_prep release 3.5.0 --> released ??? ??, 201?
-                           --> implemented ??? ??, 201?
+obsproc_prep release 3.5.0 --> released May 1, 2015
+                           --> implemented ??? ??, 2015
 
 files:
    obsproc_prep/fix/prepobs_cqc_statbge
@@ -289,9 +289,11 @@ files:
       v2.0.1 of obsproc_dump_post,
       v2.1.1 of obsprod_global,
       v2.0.3 of obsproc_nam,
+      v2.1.0 of obsproc_prep_post,
       v2.0.3 of obsproc_rap,
       v2.0.4 of obsproc_rtma,
       v2.0.4 of obsproc_urma,
+      v1.1.0 of radar_reflectivity_ref2grb,
       v1.2.0 of obsproc_shared/bufr_dumplist.
 
    There are no jobs in obsproc_prep.  Jobs executing this version of
