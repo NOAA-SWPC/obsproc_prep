@@ -1,6 +1,6 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 obsproc_prep release 3.5.0 --> released May 1, 2015
-                           --> implemented ??? ??, 2015
+                           --> implemented Aug 10, 2015
 
 files:
    obsproc_prep/fix/prepobs_cqc_statbge
@@ -176,7 +176,7 @@ files:
        - Output argument "CBULL" returned from IW3UNPBF for unpacked reports
          (character*11 string containing WMO bulletin header and originator -
          filled only for aircraft types right now).
-       - Encodes new, unique report subtype (TSP) values into PREPBUFR file for
+       - Encodes new, unique report subtype (TSB) values into PREPBUFR file for
          AIRCAR types based on WMO bulletin header/originator now returned from
          call to IW3UNPBF (see just above) (1-U.S. MDCRS, 2-Mexican MDCRS,
          3-ADS-C MDCRS, 99-default/unknown).
@@ -251,7 +251,7 @@ files:
          originator had been stored in characters 1-4 of header reserve
          character word 1 and bulletin header was not stored.)
          BENEFIT: This information may be included in PREPBUFR files someday.
-                  It is used to tag MDCRS types in report subtype (TSP) which
+                  It is used to tag MDCRS types in report subtype (TSB) which
                   is encoded into PREPBUFR.
 
 
@@ -308,6 +308,7 @@ files:
 
  Special Instructions:
  ---------------------
+   This is part of OBSPROC.v5.0.0.
    This must be implemented simultaneously with the implementation of
    v2.1.1 of obsproc_global.
 
@@ -463,6 +464,7 @@ files:
 
  Special Instructions:
  ---------------------
+   This is part of OBSPROC.v4.1.0.
    This must be implemented simultaneously with the implementations of:
       v2.0.3 of obsproc_cdas,
       v2.4.0 of obsproc_satingest.
@@ -594,6 +596,7 @@ files:
 
  Special Instructions:
  ---------------------
+   This is part of OBSPROC.v4.0.1.
    This must be implemented simultaneously with the implementation of the 
    CMAC model verification package released in Fall 2014.
 
@@ -843,6 +846,7 @@ files:
 
  Special Instructions:
  ---------------------
+   This is part of OBSPROC.v4.0.0.
    This must be implemented simultaneously with the implementations of:
       v1.2.1 of obsproc_dump_monitor,
       v2.0.2 of obsproc_global, obsproc_nam, obsproc_rap, obsproc_rtma,
@@ -1044,6 +1048,7 @@ files:
 
  Special Instructions:
  ---------------------
+   This is part of OBSPROC.v3.1.0.
    This must be implemented simultaneously with the implementations of
    obsproc_global.v2.0.1, obsproc_nam.v2.0.1, obsproc_rap.v2.0.1,
    obsproc_rtma.v2.0.1 and obsproc_urma.v2.0.1, and simultaneously with the
@@ -1465,6 +1470,7 @@ files:
 
  Special Instructions:
  ---------------------
+   This is part of OBSPROC.v3.0.0.
    This must be implemented simultaneously with the implementations of
    obsproc_dump_monitor.v1.2.0, obsproc_global.v2.0.0, obsproc_nam.v2.0.0,
    obsproc_rap.v2.0.0, obsproc_rtma.v2.0.0, obsproc_urma.v2.0.0,
