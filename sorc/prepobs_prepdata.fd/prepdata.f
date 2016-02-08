@@ -1157,6 +1157,16 @@ C     used by the analysis) due to their imprecise lat/lon. This change
 C     will allow these to now be used by the analysis, but it will
 C     still flag reports with invalid lat or lon (when it results in
 C     them being well inland).
+C 2016-01-28 JWhiting -- Updated subr W3FIZZ to generate values for new 
+C     CEILING mnemonic. This new field is created from cloud base 
+C     (HOCB) content when available, for the lowest cloud layer that 
+C     has a cloud amount (CLAM) that is "either Broken (6-9 tenths sky 
+c     cover) or Overcast (10 tenths cover)", or is listed as fog 
+C     conditions (CLAM=9 or 10); Otherwise, CEILING is set to missing.
+C     For clear conditions (less than broken and non-fog), the CEILING 
+C     is set to an "infinite" high value (arbitrarily chosen as 20000m).
+C     Also, added a printout of the BUFRLIB version in use (though a 
+C     BVERS() subroutine call)
 C
 C USAGE:
 C   INPUT FILES:
@@ -2671,6 +2681,7 @@ C  IN INTERFACE WITH SUBROUTINE IW3UNPBF
       REAL(8)  BMISS,GETBMISS
       INTEGER  KTYPE(NUMTYP-1),NTYPE(NUMTYP-1),JITSM(NUMTYP),
      $ JITSW(NUMTYP),IDATA(MAXOBS),IDAT(8)
+      character*8   cvstr
       COMMON/WORD/LWI,LWR
       COMMON/LNDSEA/GDSH(145,37),GDUS(362,91),GDNH(362,91)
       COMMON/GRID/IGRD,JGRD,POLA,NORTH,ALONVT,POLEI,POLEJ,XMESHL,YNLIM,
@@ -2922,7 +2933,10 @@ C    CARDS FILE, JUST AFTER NAMELIST TASK, BY THE MAKE_PREPBUFR SCRIPT)
          PRINT 321, NET(1)
       END IF
   321 FORMAT(/37X,'WELCOME TO THE UNIVERSAL ',A14,' DATA PREPROCESSOR'/
-     $ 48X,'WCOSS VERSION CREATED 16 APR 2015'/)
+     $ 48X,'WCOSS VERSION CREATED 28 Jan 2016')
+      call bvers(cvstr)
+      print 3211, cvstr
+ 3211 FORMAT(48X,'--BUFRLIB VERSION USED = v',a,/)
       PRINT 322, (IUNIT(I),I=1,8),IUNIT(16),IUNIT(17)
   322 FORMAT(//53X,'TABLE OF UNIT NUMBERS'/31X,
      $ 'INPUTS IN UNIT NUMBERS 11-50 - OUTPUTS IN UNIT NUMBERS 51-90'//
@@ -17162,6 +17176,8 @@ C     always encoded in "WQM" even when, for surface reports, "UOB" and
 C     "VOB" were missing but either wind dir or speed was not.  Now,
 C     the entire "W__EVENT" sequence "[UOB VOB WQM WPC WRC]" is skipped
 C     for surface reports when "UOB" and "VOB" are both missing.
+C 2016-01-28 JWhiting - Added generation of new CEILING field in METAR 
+C     reports, derived from existing CLAM & HOCB values.
 C
 C USAGE:    CALL W3FIZZ(IER)
 C   OUTPUT ARGUMENT LIST:
@@ -17217,6 +17233,7 @@ C  TABLE-A MESSAGE TYPES
       COMMON/APDNSW/APPEND
       COMMON/DIRECT/OBS3(5,MXBLVL,7),OBS2(NUMOBS2),NOBS3(7),RDATA2(25)
 
+      COMMON /BUFRLIB_MISSING/BMISS
 
       common /bitbuf/ maxbyt,ibit,ibay(12500),mbyt(32),mbay(12500,32)
       character*8  subset_d_last
@@ -17226,6 +17243,8 @@ C  TABLE-A MESSAGE TYPES
 
 
       LOGICAL  SINGLE(IBTBLA),PREVEN,APPEND,WRMISS
+
+      LOGICAL  db_ceiling
 
       DIMENSION  KTYP(100:299),AERS(12)
 
@@ -17240,6 +17259,8 @@ C  TABLE-A MESSAGE TYPES
      $ QMS_8(MQMSWD,MXBLVL),PGM_8(MPGMWD,MXBLVL),RSN_8(MPGMWD,MXBLVL),
      $ BTO_8(2,MXBLVL),RAD_8(5),AERS_8(12),OBS2_8(NUMOBS2),
      $ OBS3_8(5,MXBLVL,7),RPRV_8(2),RACID_8,RDATA2_8(25)
+
+      REAL(8) cldamt_8, cldbas_8
 
       EQUIVALENCE (CHDR,HDR_8(1)),(CPRV,RPRV_8),(CACID,RACID_8)
 
@@ -17786,6 +17807,88 @@ C STORE VARIABLES THAT ARE IN SINGLE-LVL OBS2 & MULTI-LVL OBS3 ARRAYS
      $                                             NOBS3(2),IRET,'PRWE')
             IF(NOBS3(3).GT.0) CALL UFBINT(IUNITP,OBS3_8(1,1,3),5,
      $                         NOBS3(3),IRET,'VSSO CLAM CLTP HOCB HOCT')
+
+
+C Process CEILING data
+c-----------
+C  for METAR reports only, use cloud amount (CLAM) and cloud base (HOCB) 
+c  values to populate CEILING.
+
+c - method: Find lowest cloud layer that has an amount that is 
+c    "either Broken (6-9 tenths sky cover) or Overcast (10 tenths cover)"
+c    otherwise, set CEILING to missing.
+
+c    for fog conditions (CLAM values of 9 or 10), use corresponding HOCB 
+c     as CEILING.
+
+c   if ob exists w/ less than broken (0 to 5 tenths) and non-fog conditions, 
+c    fill CEILING w/ arbitrarily high value (currently 20000m).
+c-----------
+
+c  check for at least 1 cloud layer (nobs(3)>0) in METAR reports (TYP=512)
+      if(nobs3(3).gt.0 .and. int(hdr_8(7)).eq.512) then
+
+c-- debug of ceiling: available cloud amount & cloud base values
+c---  DATA HEADR1/'SID  XOB YOB DHR NUL TYP T29 TSB ITP ELV SQN SIRC '/
+c---  OBS3_8(5,MXBLVL,7)
+      db_ceiling=.false.  ! set to .true. to debug
+      if ( db_ceiling ) then
+        write(*,'(a,1x,a8,$)') 'db: ',stnid
+        write(*,'(3(1x,f6.2),$)') (hdr_8(i),i=2,4)
+        write(*,'(2(1x,i5),$)') (int(hdr_8(i)),i=6,7)
+        write(*,'(2x,a,i2)') "n= ",nobs3(3)
+
+        do i=1,nobs3(3)
+          write(*,'(a,4x,i2,1x,":",3(2x,i3),2(3x,i5))') 'db: ',i,
+     $      (idint(obs3_8(j,i,3)),j=1,3),
+     $      (idint(obs3_8(j,i,3)),j=4,5)
+        enddo ! i=1,nobs3(3)
+       endif ! db_ceiling
+c--
+
+c - loop thru available cloud layers, low to high
+        ndx_amt=0
+        ndx_bas=0
+        do i=1,nobs3(3)
+          cldamt_8=obs3_8(2,i,3)
+          cldbas_8=obs3_8(4,i,3)
+
+c - if cld amount missing or indiscernable, skip this level/layer
+          if ( ibfms(cldamt_8).eq.1 ) cycle                ! CLAM missing
+          if ( cldamt_8.eq.15. ) cycle               ! CLAM indiscernable
+
+          ndx_amt=ndx_amt+1
+ 
+c - if cld base missing, skip this level/layer
+          if ( ibfms(cldbas_8).eq.1 ) cycle                ! HOCB missing
+
+c - check for sufficient cloud amount in this layer, break out of loop if found
+          if ( idnint(cldamt_8).eq.12 .or.
+     $       ( cldamt_8.ge.5. .and. cldamt_8.le.10. ) ) then  ! >5/10 or fog
+            ndx_bas=i
+            exit
+          endif ! if broken or betw 6-10 tenths cover
+
+        enddo ! i=1,nobs3(3)
+
+c - specify infinite or missing ceiling values
+        if ( ndx_amt.ne.0 ) then                  ! some clouds found
+          if ( ndx_bas.eq.0 ) cldbas_8=20000.d0   ! no dense cloud found, 
+c                                                 !  ceiling infinite (20k)
+        else ! ndx_amt not 0
+          cldbas_8=bmiss
+
+        endif ! ndx_amt not 0
+
+c - write out ceiling value
+          if (db_ceiling) 
+     &      write(*,'(a,1x,i5)') 'db: ceil= ', idint(cldbas_8)
+          call UFBINT(iunitp,cldbas_8,1,1,iret,'CEILING')
+
+      endif ! nobs3(3)>0 & hdr_8(7)=512 (metar)
+c - end of CEILING processing
+      
+
             IF(NOBS3(4).GT.0) CALL UFBINT(IUNITP,OBS3_8(1,1,4),5,
      $                      NOBS3(4),IRET,'.DTHMXTM MXTM .DTHMITM MITM')
             IF(NOBS3(5).GT.0) CALL UFBINT(IUNITP,OBS3_8(1,1,5),5,

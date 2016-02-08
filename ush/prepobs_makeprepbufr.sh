@@ -6,7 +6,7 @@
 # Script name:         prepobs_makeprepbufr.sh
 # Script description:  Prepares & quality controls PREPBUFR file
 #
-# Author:        Keyser             Org: NP22         Date: 2014-07-23
+# Author:       Whiting             Org: EMC          Date: 2016-02-05
 #
 # Abstract: This script creates the PREPBUFR file containing observational data
 #   assimilated by all versions of NCEP analyses.  It points to BUFR
@@ -179,7 +179,7 @@
 #      used, usually the latest); and imports new environment variable
 #      $HOMEobsproc_network which points to directory path for network-specific
 #      prep subdirectories under version control (in production this is normally
-#      /nwprod/obsproc_NETWORK.vX.Y.Z where NETWORK is, e.g., global, namp, rap,
+#      ${NWROOT}/obsproc_NETWORK.vX.Y.Z where NETWORK is, e.g., global, namp, rap,
 #      rtma, urma, and X.Y.Z is version number being used, usually the latest) -
 #      these replace /nw${envir} in order to point to files moved from 
 #      horizontal to vertical directory structure.
@@ -195,6 +195,9 @@
 #      dictionary, /nw${envir}/decoders/decod_shared/dictionaries, rather than
 #      old horizontal structure location, /nw${envir}/dictionaries (the latter
 #      will be removed in September 2014).
+# 2016-02-05 JWhiting -- removed specific coding of root directories, replacing 
+#      them with standard parameters (NWROOT and COMROOT); replaced exact 
+#      specification of ndate utility w/ NDATE parameter. 
 #     
 #
 # Usage:  prepobs_makeprepbufr.sh yyyymmddhh
@@ -202,7 +205,7 @@
 #   Input script positional parameters:
 #     1             String indicating the center date/time for the PREPBUFR
 #                   processing <yyyymmddhh> - if missing, then this time
-#                   is obtained from the /com/date/$cycle file
+#                   is obtained from the ${COMROOT}/date/$cycle file
 #
 #   Imported Shell Variables:
 #
@@ -235,7 +238,7 @@
 #     COMSP         String indicating the directory/filename path to input BUFR
 #                   observational data dumps, tropical cyclone location
 #                   (tcvitals) files, global sigma guess files, and status
-#                   files (e.g., "/com/gfs/prod/gdas.20060612/gdas1.t12z.")
+#                   files (e.g., "$COMROOT/gfs/prod/gdas.20060612/gdas1.t12z.")
 #     DBNROOT       String indicating directory path to bin/dbn_alert file
 #                   location
 #                   NOTE : This is required ONLY if the imported shell variable
@@ -246,12 +249,12 @@
 #     $HOMEobsproc_prep    - string indicating directory path to generic prep
 #                            subdirectories under version control
 #                            (in production this is normally
-#                            /nwprod/obsproc_prep.vX.Y.Z where X.Y.Z is
+#                            ${NWROOT}/obsproc_prep.vX.Y.Z where X.Y.Z is
 #                            version number being used, usually the latest)
 #     $HOMEobsproc_network - string indicating directory path to network-
 #                            specific prep subdirectories under version control
 #                            (in production this is normally
-#                            /nwprod/obsproc_NETWORK.vX.Y.Z where NETWORK is,
+#                            ${NWROOT}/obsproc_NETWORK.vX.Y.Z where NETWORK is,
 #                            e.g., global, nam, rap, rtma, urma, and X.Y.Z is
 #                            version number being used, usually the latest)
 #
@@ -565,12 +568,12 @@
 #                    PREPBUFR file generated in this script by PREPOBS_PREPDATA
 #                    (normally this would be used when PREPDATA=NO)
 #                         @ - if the PREPBUFR_IN target file is obtained from
-#                             /com/*/prod/*.YYYYMMDD/*.tCCz.prepbufr_pre-qc,
+#                             ${COMROOT}/*/prod/*.YYYYMMDD/*.tCCz.prepbufr_pre-qc,
 #                             then for all runs on and after 12Z 25 Jan 2005,
 #                             SYNDATA should be NO because the target files
 #                             will already contain synthetic bogus data;
 #                             if the PREPBUFR_IN target file is obtained from
-#                             /com/*/prod/*.YYYYMMDD/*.tCCz.prepbufr_pre-qc,
+#                             ${COMROOT}/*/prod/*.YYYYMMDD/*.tCCz.prepbufr_pre-qc,
 #                             then for all runs prior to 12Z 25 Jan 2005,
 #                             SYNDATA should be YES because the target files
 #                             will not have contain synthetic bogus data.
@@ -650,7 +653,7 @@
 #                  $USHVQC/prepobs_cqcvad.sh
 #                  $USHAQC/prepobs_prepacqc.sh
 #                  $USHOIQC/prepobs_oiqcbufr.sh
-#                  $utilexec/ndate
+#                  $NDATE  (from prod_util module)
 #                  $DATA/postmsg
 #                  $DATA/prep_step {here and by referenced script(s)}
 #                  $DATA/err_exit
@@ -701,7 +704,7 @@
 #     >0 - some problem encountered
 #
 # Attributes:
-#   Language: Korn shell under linux
+#   Language: Korn (bash) shell under linux
 #   Machine:  NCEP WCOSS
 #
 ####
@@ -721,7 +724,7 @@ qid=$$
 #  ---------------------------------------------------
 
 if [ $# -ne 1 ] ; then
-   cp /com/date/$cycle ncepdate
+   cp ${COMROOT}/date/$cycle ncepdate
    err0=$?
    CDATE10=`cut -c7-16 ncepdate`
 else 
@@ -862,8 +865,6 @@ DICTPREP=${DICTPREP:-/nw${envir}/decoders/decod_shared/dictionaries}
 EXECSYND=${EXECSYND:-${HOMEobsproc_prep}/exec}
 PARMSYND=${PARMSYND:-${HOMEobsproc_network}/parm}
 FIXSYND=${FIXSYND:-${HOMEobsproc_prep}/fix}
-
-utilexec=${utilexec:-/nwprod/util/exec}
 
 GETGUESS=${GETGUESS:-YES}
 
@@ -1222,7 +1223,7 @@ echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
                set -x
             fi
             $USHGETGES/getges.sh -e $envir_getges -n $network_getges \
-              -f $fhr -v `$utilexec/ndate $dhr $CDATE10` > \
+              -f $fhr -v `${NDATE} $dhr $CDATE10` > \
               sgesprep${sfx}_pathname
             errges=$?
             if test $errges -ne 0
@@ -1336,7 +1337,7 @@ set -u
 #  problem: status file not found - indicates some or all data dumps were not
 #           found (produced) for requested time ...
 #           If highest level directory pointing to input BUFR observational
-#            data dumps is /com then EXIT (assumes all data dumps are required)
+#           data dumps is $COMROOT then EXIT (assumes all data dumps are required)
 #           Otherwise, just echo a diagnostic (assumes only some data dumps are
 #           required)
 #  ----------------------------------------------------------------------------
@@ -1350,7 +1351,7 @@ echo "Some or all BUFR data dumps were not found for requested time ... "
 echo
             set -x
 
-            if [ "$first5_comsp" = '/com/' -a \
+            if [ "$first5_comsp" = "$(echo ${COMROOT}/ | cut -c5)" -a \
                  "$first9_tstsp" = '/tmp/null' ]; then
                set +x
 echo

@@ -1,8 +1,160 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+obsproc_prep release 3.6.0 --> released Feb 8, 2016
+                           --> implemented  ?  ??, 2016
+
+files:
+   obsproc_prep/fix/prepobs_anow.bufrtable
+   obsproc_prep/fix/prepobs_cqc_statbge
+   obsproc_prep/fix/prepobs_landc
+ M obsproc_prep/fix/prepobs_prep.bufrtable
+   obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
+   obsproc_prep/fix/syndat_weight
+   obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
+   obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
+   obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
+   obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
+   obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
+   obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
+   obsproc_prep/sorc/prepobs_listheaders.fd/makefile
+   obsproc_prep/sorc/prepobs_monoprepbufr.fd/makefile
+   obsproc_prep/sorc/prepobs_monoprepbufr.fd/monoprepbufr.f90
+   obsproc_prep/sorc/prepobs_mpcopybufr.fd/makefile
+   obsproc_prep/sorc/prepobs_mpcopybufr.fd/mpcopybufr.f90
+   obsproc_prep/sorc/prepobs_oiqcbufr.fd/makefile
+   obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
+   obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
+   obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
+   obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/pietc.f90
+   obsproc_prep/sorc/prepobs_prepacqc.fd/pkind.f90
+   obsproc_prep/sorc/prepobs_prepacqc.fd/pmat.f90
+   obsproc_prep/sorc/prepobs_prepacqc.fd/pmat2.f90
+   obsproc_prep/sorc/prepobs_prepacqc.fd/pmat3.f90
+   obsproc_prep/sorc/prepobs_prepacqc.fd/prepacqc.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/pspl.f90
+   obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_mer.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
+   obsproc_prep/sorc/prepobs_prepanow.fd/makefile
+   obsproc_prep/sorc/prepobs_prepanow.fd/prepanow.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
+   obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/makefile
+ M obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
+   obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
+   obsproc_prep/sorc/prepobs_prevents.fd/makefile
+   obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
+   obsproc_prep/sorc/prepobs_profcqc.fd/makefile
+   obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
+   obsproc_prep/sorc/syndat_syndata.fd/makefile
+   obsproc_prep/sorc/syndat_syndata.fd/syndata.f
+   obsproc_prep/sorc/build.sh
+   obsproc_prep/sorc/clean.sh
+   obsproc_prep/sorc/install.sh
+ M obsproc_prep/sorc/load_libs.rc
+   obsproc_prep/sorc/README.build
+ M obsproc_prep/sorc/setlibs.rc
+   obsproc_prep/ush/prepobs_cqcbufr.sh
+   obsproc_prep/ush/prepobs_cqcvad.sh
+ M obsproc_prep/ush/prepobs_makeprepbufr.sh
+   obsproc_prep/ush/prepobs_oiqcbufr.sh
+   obsproc_prep/ush/prepobs_prepacqc.sh
+   obsproc_prep/ush/prepobs_prevents.sh
+   obsproc_prep/ush/prepobs_profcqc.sh
+   obsproc_prep/ush/prepobs_syndata.sh
+
+( M - modified)
+
+
+ USH script changes:
+   prepobs_makeprepbufr.sh:
+    - Use NCO-established variables to point to root directories for main
+      software components and input/output directories in order to run on
+      WCOSS Phase 1 or Phase 2.
+    - Use NCO-established variables to point to prod utilities.
+
+ Source code changes:
+   load_libs.rc and setlibs.rc in sorc directory:
+    - Increment the bufrlib version from v10.2.5 to v11.0.1.
+   setlibs.rc in sorc directory:
+    - Point to /nwprod2 copy of all libs managed by NCO.
+   prepobs_prepdata.fd/prepdata.f (main program):
+    - Encodes new cloud ceiling (CEILING) values into PREPBUFR file for 
+      in ADPSFC message types; this new field is derived from existing 
+      cloud amount (CLAM) and height of cloud base (HOCB) data in METAR 
+      reports (TYP=512).  
+      BENEFIT: Provides single location for data supporting cloud ceiling
+               ANALYSIS IN RTMA/URMA NETWORKS.
+
+ Fixed file changes:
+   prepobs_prep.bufrtable:
+    - Added support for cloud ceiling information in ADPSFC METAR reports:
+      new Table D sequence CLOU3SEQ and new Table B mnemonic CEILING.
+
+
+ Output changes:
+ ---------------
+  (For specific network changes see " Output changes" in Release Notes for that
+   network, if that network executes this version of obsproc_prep.)
+
+
+ Libraries:
+ ----------
+   w3nco   2.0.6 (all)
+   bufr   11.0.1 (all)
+   w3emc   2.2.0 (prepobs_cqcbufr, prepobs_prepacpf, prepobs_prepacqc,
+                  prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   bacio   2.0.1 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   sp      2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   sigio   1.0.1 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+
+   * all libs are WCOSS phase2 disk (/nwprod2/*) versions
+
+
+ Build Instructions:
+ -------------------
+   - See sorc/README.build
+
+
+ Preimplementation Testing Requirements:
+ ---------------------------------------
+   There are no jobs in obsproc_prep.  Jobs executing this version of
+   obsproc_prep will be tested.
+
+
+ Dissemination:
+ --------------
+   See information about dissemination in the release notes for
+   obsproc_<NETWORK> packages which execute this version of obsproc_prep.
+
+
+ Special Instructions:
+ ---------------------
+   This is part of OBSPROC.v6.1.0.
+   This must be implemented before or simultaneously with the implementation
+   of rtma.v2.4.2 and urma.v2.4.2.
+
+   Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
+   needed.
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 obsproc_prep release 3.5.0 --> released May 1, 2015
                            --> implemented Aug 10, 2015
 
 files:
+   obsproc_prep/fix/prepobs_anow.bufrtable
    obsproc_prep/fix/prepobs_cqc_statbge
    obsproc_prep/fix/prepobs_landc
    obsproc_prep/fix/prepobs_prep.bufrtable
@@ -39,6 +191,8 @@ files:
  M obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_mer.f
    obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
    obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
+   obsproc_prep/sorc/prepobs_prepanow.fd/makefile
+   obsproc_prep/sorc/prepobs_prepanow.fd/prepanow.f
    obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
  M obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
    obsproc_prep/sorc/prepobs_prepdata.fd/makefile
@@ -47,8 +201,8 @@ files:
    obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
  M obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
-   obsproc_prep/sorc/prepobs_prepdata.fd/w3tovseds.f
-   obsproc_prep/sorc/prepobs_prepdata.fd/w3tovsmnd.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
    obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
    obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
    obsproc_prep/sorc/prepobs_prevents.fd/makefile
@@ -77,7 +231,7 @@ files:
 
 
  USH script changes:
-   prepobs_prepacqc.sh
+   prepobs_prepacqc.sh:
     - Export FORT41 (Fortran unit number 41) as vvel_info.acft_profiles.txt;
       file will hold printout from vertical velocity rate calculation
       information for QC'd merged aircraft reports written to profiles.
@@ -320,10 +474,10 @@ obsproc_prep release 3.4.0 --> released Dec 4, 2014
                            --> implemented Dec 15, 2014
 
 files:
+   obsproc_prep/fix/prepobs_anow.bufrtable
    obsproc_prep/fix/prepobs_cqc_statbge
    obsproc_prep/fix/prepobs_landc
    obsproc_prep/fix/prepobs_prep.bufrtable
-   obsproc_prep/fix/prepobs_prepanow.bufrtable
    obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
    obsproc_prep/fix/syndat_weight
    obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
@@ -477,10 +631,10 @@ obsproc_prep release 3.3.0 --> released Oct 23, 2014
                            --> implemented Nov 4, 2014
 
 files:
+ M obsproc_prep/fix/prepobs_anow.bufrtable
    obsproc_prep/fix/prepobs_cqc_statbge
    obsproc_prep/fix/prepobs_landc
    obsproc_prep/fix/prepobs_prep.bufrtable
- M obsproc_prep/fix/prepobs_prepanow.bufrtable
    obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
    obsproc_prep/fix/syndat_weight
    obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
@@ -556,7 +710,7 @@ files:
        - Added logic to handle particulate matter processing.
 
  Fixed file changes:
-   prepobs_prepanow.bufrtable:
+   prepobs_anow.bufrtable:
     - Added support for Particulate Matter (PM) reports:  Table A entry
       (ANOWPM), PM sequence (APMSEQ), PM event sequence (APMEVN) and PM
       mnemonic (COPOPM).
@@ -675,7 +829,7 @@ files:
 
 
  USH script changes:
-   prepobs_prepacqc.sh
+   prepobs_prepacqc.sh:
     - If status code returned from running of prepobs_prepacqc is 4 (meaning no
       input aircraft reports of any type read in, see below), send a diagnostic
       message to the joblog file.  Also in this case, retain the original input

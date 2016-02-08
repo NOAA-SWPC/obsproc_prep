@@ -72,6 +72,7 @@
 | PRSLEVLA | 348040 | AIRCRAFT (AIRCFT/AIRCAR) PRESSURE LEVEL SEQUENCE         |
 | LATCORSQ | 348041 | LATITUDE CORRECTION SEQUENCE                             |
 | LONCORSQ | 348042 | LONGITUDE CORRECTION SEQUENCE                            |
+| CLOU3SEQ | 348043 | OBSERVED CLOUD SEQUENCE # 3 (CEILING)                    |
 *                                                                              |
 *                                                                              |
 * THE FOLLOWING ARE TABLE D ENTRIES FOR SEQUENCES IN REPORT HEADER             |
@@ -452,6 +453,8 @@
 | CTPOE    | 020250 | CLOUD TOP PRESSURE OBSERVATION ERROR                     |
 | CTPAN    | 020251 | ANALYZED CLOUD TOP PRESSURE VALUE                        |
 |          |        |                                                          |
+| CEILING  | 020204 | CLOUD CEILING (DERIVATIVE OF HOCB - HGT OF CLOUD BASE)   |
+|          |        |                                                          |
 | LKCS     | 021104 | LIKELIHOOD COMPUTED FOR SOLUTION (ASCAT REPORTS ONLY)    |
 | WVCQ     | 021155 | WIND VECTOR CELL QUALITY (ASCAT REPORTS ONLY)            |
 | BSCD     | 021156 | BACKSCATTER DISTANCE (ASCAT REPORTS ONLY)                |
@@ -586,6 +589,7 @@
 | ADPSFC   |        <TOPC_SEQ>  {PREWXSEQ}  {CLOUDSEQ}  {TMXMNSEQ}  {SWELLSEQ} |
 | ADPSFC   |        <VISB1SEQ>  <PSTWXSEQ>  <PKWNDSEQ>  <GUST1SEQ>  <TPRECSEQ> |
 | ADPSFC   |        <SUNSHSEQ>  <CLOU2SEQ>  <SNOW_SEQ>  <WAVE_SEQ>  <PTENDSEQ> |
+| ADPSFC   |        <CLOU3SEQ>                                                 |
 |          |                                                                   |
 | SFCSHP   | HEADR   CAT        <P___INFO>  <Q___INFO>  <T___INFO>  <Z___INFO> |
 | SFCSHP   |        <W___INFO>  [W2_EVENT]  <PMSL_SEQ>  <SST_INFO>  <PREWXSEQ> |
@@ -690,6 +694,7 @@
 | TURB3SEQ | DGOT       HBOT    HTOT                                           |
 | LATCORSQ | YORG       YCOR                                                   |
 | LONCORSQ | XORG       XCOR                                                   |
+| CLOU3SEQ | CEILING                                                           |
 |          |                                                                   |
 | P__EVENT |               POB                 PQM    PPC    PRC               |
 | Q__EVENT |               QOB                 QQM    QPC    QRC               |
@@ -974,6 +979,8 @@
 | CTPFC    |   -1 |           0 |  14 | PASCALS                  |-------------|
 | CTPOE    |   -1 |           0 |  10 | PASCALS                  |-------------|
 | CTPAN    |   -1 |           0 |  14 | PASCALS                  |-------------|
+|          |      |             |     |                          |-------------|
+| CEILING  |   -1 |         -40 |  11 | METER                    |-------------|
 |          |      |             |     |                          |-------------|
 | LKCS     |    3 |      -30000 |  15 | NUMERIC                  |-------------|
 | WVCQ     |    0 |           0 |  24 | FLAG TABLE               |-------------|
