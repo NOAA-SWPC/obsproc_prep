@@ -89,7 +89,13 @@ files:
    load_libs.rc and setlibs.rc in sorc directory:
     - Increment the bufrlib version from v10.2.5 to v11.0.1.
    setlibs.rc in sorc directory:
-    - Point to /nwprod2 copy of all libs managed by NCO.
+    - Point to /nwprod2 copy of all libs managed by NCO except for sigio.
+   (Note: prepobs_prepdata hangs in the call to gblevents if compiled with
+          /nwprod2 build of sigio.v2.0.1 and the current build of w3emc.v2.2.0.
+          The latter was compiled with sigio.v1.0.1.  Thus we will stick with
+          /nwprod build of sigio.v1.0.1 for codes that call gblevents until
+          w3emc lib is updated to use the newer sigio lib, or gblevents is
+          moved to another library, or such.)
    prepobs_prepdata.fd/prepdata.f (main program):
     - Encodes new cloud ceiling (CEILING) values into PREPBUFR file for 
       in ADPSFC message types; this new field is derived from existing 
@@ -120,7 +126,7 @@ files:
    sp      2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
    sigio   1.0.1 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
 
-   * all libs are WCOSS phase2 disk (/nwprod2/*) versions
+   * all libs except sigio are WCOSS phase2 disk (/nwprod2/*) versions
 
 
  Build Instructions:
@@ -144,7 +150,7 @@ files:
  ---------------------
    This is part of OBSPROC.v6.1.0.
    This must be implemented before or simultaneously with the implementation
-   of rtma.v2.4.2 and urma.v2.4.2.
+   of rtma.v2.4.3 and urma.v2.4.3.
 
    Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
    needed.
