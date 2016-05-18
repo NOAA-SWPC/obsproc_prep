@@ -1,5 +1,6 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 obsproc_prep release 3.6.0 --> released Feb 8, 2016
+                               updated May 18, 2016
                            --> implemented  ?  ??, 2016
 
 files:
@@ -87,7 +88,7 @@ files:
 
  Source code changes:
    load_libs.rc and setlibs.rc in sorc directory:
-    - Increment the bufrlib version from v10.2.5 to v11.0.1.
+    - Increment the bufrlib version from v10.2.5 to v11.1.0.
    setlibs.rc in sorc directory:
     - Point to /nwprod2 copy of all libs managed by NCO except for sigio.
    (Note: prepobs_prepdata hangs in the call to gblevents if compiled with
@@ -119,7 +120,7 @@ files:
  Libraries:
  ----------
    w3nco   2.0.6 (all)
-   bufr   11.0.1 (all)
+   bufr   11.1.0 (all) (previously 10.2.5)
    w3emc   2.2.0 (prepobs_cqcbufr, prepobs_prepacpf, prepobs_prepacqc,
                   prepobs_prepdata, prepobs_prevents, syndat_syndata)
    bacio   2.0.1 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
