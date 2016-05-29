@@ -1,4 +1,96 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+obsproc_prep release X.Y.Z --> released ??? ??, 2016
+                           --> implemented  ?  ??, 2016
+
+files:
+   obsproc_prep/fix/prepobs_anow.bufrtable
+   obsproc_prep/fix/prepobs_cqc_statbge
+   obsproc_prep/fix/prepobs_landc
+   obsproc_prep/fix/prepobs_prep.bufrtable
+   obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
+   obsproc_prep/fix/syndat_weight
+ M obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
+   obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
+   obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
+   obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
+   obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
+   obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
+   obsproc_prep/sorc/prepobs_listheaders.fd/makefile
+   obsproc_prep/sorc/prepobs_monoprepbufr.fd/makefile
+   obsproc_prep/sorc/prepobs_monoprepbufr.fd/monoprepbufr.f90
+   obsproc_prep/sorc/prepobs_mpcopybufr.fd/makefile
+   obsproc_prep/sorc/prepobs_mpcopybufr.fd/mpcopybufr.f90
+   obsproc_prep/sorc/prepobs_oiqcbufr.fd/makefile
+   obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
+   obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
+   obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
+   obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/pietc.f90
+   obsproc_prep/sorc/prepobs_prepacqc.fd/pkind.f90
+   obsproc_prep/sorc/prepobs_prepacqc.fd/pmat.f90
+   obsproc_prep/sorc/prepobs_prepacqc.fd/pmat2.f90
+   obsproc_prep/sorc/prepobs_prepacqc.fd/pmat3.f90
+   obsproc_prep/sorc/prepobs_prepacqc.fd/prepacqc.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/pspl.f90
+   obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_mer.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
+   obsproc_prep/sorc/prepobs_prepanow.fd/makefile
+   obsproc_prep/sorc/prepobs_prepanow.fd/prepanow.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
+   obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/makefile
+   obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
+   obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
+   obsproc_prep/sorc/prepobs_prevents.fd/makefile
+   obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
+   obsproc_prep/sorc/prepobs_profcqc.fd/makefile
+   obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
+   obsproc_prep/sorc/syndat_syndata.fd/makefile
+   obsproc_prep/sorc/syndat_syndata.fd/syndata.f
+   obsproc_prep/sorc/build.sh
+   obsproc_prep/sorc/clean.sh
+   obsproc_prep/sorc/install.sh
+   obsproc_prep/sorc/load_libs.rc
+   obsproc_prep/sorc/README.build
+   obsproc_prep/sorc/setlibs.rc
+   obsproc_prep/ush/prepobs_cqcbufr.sh
+   obsproc_prep/ush/prepobs_cqcvad.sh
+   obsproc_prep/ush/prepobs_makeprepbufr.sh
+   obsproc_prep/ush/prepobs_oiqcbufr.sh
+   obsproc_prep/ush/prepobs_prepacqc.sh
+   obsproc_prep/ush/prepobs_prevents.sh
+   obsproc_prep/ush/prepobs_profcqc.sh
+   obsproc_prep/ush/prepobs_syndata.sh
+
+( M - modified)
+
+
+ Source code changes:
+   prepobs_cqcbufr.fd/cqcbufr.f (main program):
+    - Corrected an integer overflow issue which prevented the temporal
+      check from running in the CDAS network (the only network where it
+      currently would run).
+      BENEFIT: This QC check now runs in the CDAS PREP2 jobs.
+
+
+  <  incomplete  >
+
+
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 obsproc_prep release 3.6.0 --> released Feb 8, 2016
                                updated May 18, 2016
                            --> implemented  ?  ??, 2016
@@ -82,8 +174,17 @@ files:
  USH script changes:
    prepobs_makeprepbufr.sh:
     - Use NCO-established variables to point to root directories for main
-      software components and input/output directories in order to run on
-      WCOSS Phase 1 or Phase 2.
+      software components and input/output directories in order to run on WCOSS
+      Phase 1 or Phase 2:
+       - $COMROOT which replaces hardwire to "/com".
+       - $NWROOT which replaces hardwire to "/nwprod" (in comments only).
+    - Use NCO-established variables (presumably obtained from modules) to point
+      to prod utilities:
+       - $NDATE from module prod_util (default or specified version, loaded in
+         each network which executes this script in this version of
+         obsproc_prep) which replaces executable ndate in non-versioned,
+         horizontal structure utility directory path defined by imported
+         variable $utilexec.
     - Use NCO-established variables to point to prod utilities.
 
  Source code changes:
@@ -91,15 +192,15 @@ files:
     - Increment the bufrlib version from v10.2.5 to v11.1.0.
    setlibs.rc in sorc directory:
     - Point to /nwprod2 copy of all libs managed by NCO except for sigio.
-   (Note: prepobs_prepdata hangs in the call to gblevents if compiled with
-          /nwprod2 build of sigio.v2.0.1 and the current build of w3emc.v2.2.0.
-          The latter was compiled with sigio.v1.0.1.  Thus we will stick with
-          /nwprod build of sigio.v1.0.1 for codes that call gblevents until
-          w3emc lib is updated to use the newer sigio lib, or gblevents is
-          moved to another library, or such.)
+   (Note: prepobs_prepdata and syndat_syndata hang in the call to gblevents if
+          compiled with /nwprod2 build of sigio.v2.0.1 and the current build of
+          w3emc.v2.2.0.  The latter was compiled with sigio.v1.0.1.  Thus we
+          will stick with /nwprod build of sigio.v1.0.1 for codes that call
+          gblevents until w3emc lib is updated to use the newer sigio lib, or
+          gblevents is moved to another library, or such.)
    prepobs_prepdata.fd/prepdata.f (main program):
     - Encodes new cloud ceiling (CEILING) values into PREPBUFR file for 
-      in ADPSFC message types; this new field is derived from existing 
+      ADPSFC message types; this new field is derived from existing
       cloud amount (CLAM) and height of cloud base (HOCB) data in METAR 
       reports (TYP=512).  
       BENEFIT: Provides single location for data supporting cloud ceiling
@@ -1178,7 +1279,7 @@ files:
 
  Output changes:
  ---------------
-   No changes.
+   No changes.  --> need to add the more robust PREPACQC to network changes!!!!!!!!!!!!!!!!
 
 
  Compute Resource Information:

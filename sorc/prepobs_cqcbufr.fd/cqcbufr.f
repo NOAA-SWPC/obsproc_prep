@@ -1,7 +1,7 @@
 C$$$  MAIN PROGRAM DOCUMENTATION BLOCK
 C
 C MAIN PROGRAM: PREPOBS_CQCBUFR
-C   PRGMMR: KEYSER           ORG: NP22        DATE: 2013-02-05
+C   PRGMMR: KEYSER           ORG: NP22        DATE: 2016-05-18
 C
 C ABSTRACT: Perform complex quality control of rawinsonde heights
 C   and temperatures.  Errors are detected and many corrected.
@@ -224,6 +224,9 @@ C     missing (BMISS) to 10E8 rather than 10E10 to avoid integer
 C     overflow (also done for IMISS); rename all REAL(8) variables as
 C     *_8; use formatted print statements where previously unformatted
 C     print was > 80 characters.
+C 2016-05-18  D. Keyser   Corrected an integer overflow issue in subroutine
+C     INPUT2 which prevented the temporal check from running in the CDAS
+C     network (the only network where it currently would run).
 C
 C USAGE:
 C   INPUT FILES:
@@ -323,7 +326,7 @@ C$$$
       NAMELIST /NAMLST/ TEST, DOVTMP, USESQN, DOHOR, DOTMP, DOT40,
      &                  WRT23
 
-      CALL W3TAGB('PREPOBS_CQCBUFR',2013,0036,0067,'NP22')
+      CALL W3TAGB('PREPOBS_CQCBUFR',2016,0139,0067,'NP22')
 
       TEST   = .TRUE.          ! Set .T. for tests to give more print
                         !!!  #### BE CAREFUL ##### in subr. POBERR,
@@ -339,7 +342,7 @@ C$$$
       SINGLE = .FALSE.
       IF(.NOT.SINGLE) READ(5,NAMLST)
       WRITE(6,700) TEST, DOVTMP, USESQN, DOHOR, DOTMP, DOT40, WRT23
-  700 FORMAT(/' WELCOME TO PREPOBS_CQCBUFR, LAST UPDATED 2013-02-05'/
+  700 FORMAT(/' WELCOME TO PREPOBS_CQCBUFR, LAST UPDATED 2016-05-18'/
      & '     SWITCHES: TEST =',L2,'  DOVTMP =',L2,'  USESQN =',L2,
      & '  DOHOR =',L2,'  DOTMP =',L2,'  DOT40 =',L2,'  WRT23 =',L2/)
 
@@ -7739,12 +7742,15 @@ C**********************************************************************
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C                .      .    .                                       .
 C SUBPROGRAM:    INPUT2      READ INPUT FOR ALL STATIONS FOR TMP CHK
-C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1998-01-30
+C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2016-05-18
 C
 C ABSTRACT: Read input for all stations for temporal check.
 C
 C PROGRAM HISTORY LOG:
 C 1997-03-18  W. Collins  Original author.
+C 2016-05-18  D. Keyser   Corrected an integer overflow issue which prevented
+C     the temporal check from running in the CDAS network (the only network
+C     where it currently would run).
 C
 C USAGE:    CALL INPUT2
 C
@@ -7853,7 +7859,7 @@ C  -------------------------------------------------
         IDAT(7) = 0
         IDAT(8) = 0
         CALL W3MOVDAT(RINC,IDAT,JDAT)
-        KDATE = JDAT(5)+100.*(JDAT(3)+100.*(JDAT(2)+100.*JDAT(1)))
+        KDATE = JDAT(1)*1000000 + JDAT(2)*10000 + JDAT(3)*100 + JDAT(5)
         IF(IDATE.NE.KDATE) GOTO 200
 
 C  READ AND STORE ALL MATCHING DATA FROM THIS TIME
