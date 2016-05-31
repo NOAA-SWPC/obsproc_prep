@@ -59,8 +59,8 @@ files:
    obsproc_prep/sorc/prepobs_profcqc.fd/makefile
    obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
    obsproc_prep/sorc/syndat_syndata.fd/makefile
-   obsproc_prep/sorc/syndat_syndata.fd/syndata.f
-   obsproc_prep/sorc/build.sh
+ M obsproc_prep/sorc/syndat_syndata.fd/syndata.f
+ M obsproc_prep/sorc/build.sh
    obsproc_prep/sorc/clean.sh
    obsproc_prep/sorc/install.sh
    obsproc_prep/sorc/load_libs.rc
@@ -84,6 +84,13 @@ files:
       check from running in the CDAS network (the only network where it
       currently would run).
       BENEFIT: This QC check now runs in the CDAS PREP2 jobs.
+   syndat_syndata.fd/syndata.f:  
+    - Address uninitialized variables and reinstate weight calculation.
+   build.sh:
+    - Purge currently loaded modules and load specific compiler modules to
+      increase liklihood of consistent builds.
+    - Switch from using setlibs.rc to load_libs.rc (which loads library
+      modules).
 
 
   <  incomplete  >

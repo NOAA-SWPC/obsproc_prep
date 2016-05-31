@@ -1,7 +1,7 @@
 C$$$  MAIN PROGRAM DOCUMENTATION BLOCK
 C
 C MAIN PROGRAM: SYNDAT_SYNDATA
-C   PRGMMR: KEYSER           ORG: NP22        DATE: 2014-09-05
+C   PRGMMR: KEYSER           ORG: NP22        DATE: 2016-05-18
 C
 C ABSTRACT: PERFORMS FOUR DISTINCT FUNCTIONS.  THE FIRST IS TO
 C   GENERATE TYPE 110/210 TROPICAL CYCLONE BOGUS REPORTS IN THE
@@ -165,6 +165,9 @@ C        OWNCOM.  HOWEVER, THE TRAP FOR LDXDIM HAD TO BE FIXED AS IT
 C        WAS PREVIOUSLY INVOKED ONLY WHEN THE LIMIT WAS EXCEEDED BY 1,
 C        TOO LATE FOR ARRAY OVERFLOW (AND PROGRAM TERMINATION WHEN
 C        DEBUGGING IS TURNED ON AT RUN TIME).
+C 2016-05-18  S. J. LORD
+C        ADDRESSED UNINITIALIZED VARIABLES IN SUBR. TEMWT AND MAKVOR.
+C        ADDITIONALLY REINSTATED WEIGHT CALCULATION IN SUBR. TEMWT.
 C
 C
 C USAGE:
@@ -510,7 +513,7 @@ C                    WIND ARE CREATED)
 
 C  PRESET AND UPDATE SOME OPTIONS AND READ IN DATE/TIME
 
-      CALL W3TAGB('SYNDAT_SYNDATA',2014,0262,0061,'NP22')
+      CALL W3TAGB('SYNDAT_SYNDATA',2016,0139,1200,'NP22')
 
       MWAVEZ   = MWAVE
       PTOPAZ   = PTOPAL
@@ -545,7 +548,7 @@ C  PRESET AND UPDATE SOME OPTIONS AND READ IN DATE/TIME
      6         20X,'****   MNIBOG=',L1,' RUNID=',A,9X,  '****'/
      7         20X,'*****************************************'/
      8         20X,'*****************************************'//
-     9         ' ===> VERSION -- 05 Sep 2014'//)
+     9         ' ===> VERSION -- 18 May 2016'//)
 
 C  On WCOSS should always set BUFRLIB missing (BMISS) to 10E8 to avoid
 C   overflow when either an INTEGER*4 variable is set to BMISS or a
@@ -779,7 +782,9 @@ C    LOCATION
             CALL TEMPLT(ISHAPE,DELAVG,STMLAT(KST),STMLON(KST),
      1                  RMXSTM(KST),MAXPTS,MZZ,NZZ,RLATMN,RLATMX,RLONMN,
      2                  RLONMX,RLATP,RLONP,NPTS)
-            CALL TEMWT(RLATP,RLONP,WTP,NPTS)
+C SJL 4/12/16 added arguments in lower case
+            CALL TEMWT(stmlat(kst),stmlon(kst),rmxstm(kst),RLATP,RLONP,
+     1                 WTP,delavg,NPTS)
 
 C  CALCULATE AVERAGE OF FILTERED ENVIRONMENTAL WIND OVER TEMPLATE POINTS
 
@@ -3290,14 +3295,17 @@ CC 49 FORMAT('...STORING JPT,RLATC,RLONC,RLATZ,RLONZ',/,5X,I5,4F11.4)
 
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C                .      .    .                                       .
-C SUBPROGRAM:    ????????    ?????????????????????????????????????????
-C   PRGMMR: S. J. LORD       ORG: NP22       DATE: ????-??-??
+C SUBPROGRAM:    TEMWT       ?????????????????????????????????????????
+C   PRGMMR: S. J. LORD       ORG: STI        DATE: 2016-05-18
 C
 C ABSTRACT: ??????????????????????????????????????????????????????????
 C   ??????????????????????????????????????????????????????????????????
 C
 C PROGRAM HISTORY LOG:
-C ????-??-??  S. J. LORD
+C 2016-05-18  S. J. LORD
+C        Added arguments (delta,rlatc,rlonc,rmaxtp), data statement,
+C        hypot calculation, and reinstated weight calculation.
+C        Uninitialized variables addressed.
 C
 C USAGE:    CALL ????????(????)
 C   INPUT ARGUMENT LIST:
@@ -3320,14 +3328,19 @@ C   MACHINE:  NCEP WCOSS
 C
 C$$$
 
-      SUBROUTINE TEMWT(RLATP,RLONP,WTP,JPTSMX)
+C SJL 4/13/16 added arguments in lower case
+      SUBROUTINE TEMWT(rlatc,rlonc,rmaxtp,RLATP,RLONP,WTP,delta,JPTSMX)
 
       SAVE
 
       DIMENSION RLATP(JPTSMX),RLONP(JPTSMX),WTP(JPTSMX)
 
       REAL(8)  DISTSP_8
+C SJL 4/13/16 (3 lines)
+      DATA SQRT2/1.41421/,DEGLAT/111.17E3/
 
+      HYPOT=DELTA*SQRT2*0.5*DEGLAT
+      RMAXM=RMAXTP*1000.
       DO 100 NP=1,JPTSMX
       RD=DISTSP_8(RLATC,RLONC,RLATP(NP),RLONP(NP))
 
@@ -3336,7 +3349,9 @@ C$$$
       ELSE
 c fixit??
 cc dak 7/3/05    WTP(NP)=1.0-(RD-RMAXM)/HYPOT
-      wtp(np)=1.0  ! dak 7/3/05: HYPOT was never defined!!
+C      wtp(np)=1.0  ! dak 7/3/05: HYPOT was never defined!!
+C SJL 4/13/16 reinstate weight calculation
+      WTP(NP)=1.0-(RD-RMAXM)/HYPOT
       ENDIF
 c && 4 comments
 CC    WRITE(6,99) JPTSMX,NP,RLATC,RLONC,RLATP(NP),RLONP(NP),WTP(NP)
@@ -6632,7 +6647,7 @@ C
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C                .      .    .                                       .
 C SUBPROGRAM:    MAKVOR      CONTROLS BOGUS VORTEX CONSTRUCTION
-C   PRGMMR: S. J. LORD       ORG: NP22       DATE: 1991-10-21
+C   PRGMMR: S. J. LORD       ORG: NP22       DATE: 2016-05-18
 C
 C ABSTRACT: CONTROLS BOGUS VORTEX CONSTRUCTION.  COMPOSITES
 C   OBSERVATIONS FOR COMPARISON WITH BOGUS VORTEX.
@@ -6640,6 +6655,8 @@ C
 C PROGRAM HISTORY LOG:
 C 1991-06-06  S. J. LORD
 C 1991-10-21  S. J. LORD  MADE DELMMV INPUT ARGUMENT
+C 2016-05-18  S. J. LORD  Defined dayoff=0.0 (was previously
+C        unititialized).  This is passed into subr. SETTRK.
 C
 C USAGE:    CALL PGM-NAME(INARG1, INARG2, WRKARG, OUTARG1, ... )
 C   INPUT ARGUMENT LIST:
@@ -6822,6 +6839,8 @@ C
       WINDOW=0.25
       DAYMX0=DAY00+WINDOW
       DAYMN0=DAY00-WINDOW
+C SJL 4/13/16
+      dayoff=0.0
 C
 C     DETERMINE THE VORTEX SIZE: SEE COMMENTS BELOW
 C
