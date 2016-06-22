@@ -1,5 +1,5 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-obsproc_prep release X.Y.Z --> released ??? ??, 2016
+obsproc_prep release 3.7.0 --> released ??? ??, 2016
                            --> implemented  ?  ??, 2016
 
 files:
@@ -68,7 +68,7 @@ files:
    obsproc_prep/sorc/setlibs.rc
    obsproc_prep/ush/prepobs_cqcbufr.sh
    obsproc_prep/ush/prepobs_cqcvad.sh
-   obsproc_prep/ush/prepobs_makeprepbufr.sh
+ M obsproc_prep/ush/prepobs_makeprepbufr.sh
    obsproc_prep/ush/prepobs_oiqcbufr.sh
    obsproc_prep/ush/prepobs_prepacqc.sh
    obsproc_prep/ush/prepobs_prevents.sh
@@ -78,13 +78,21 @@ files:
 ( M - modified)
 
 
+ USH script changes:
+   prepobs_makeprepbufr.sh:
+    - Use getges.sh where prepended-path PATH from module util_shared (default
+      or specified version, execute `which getges.sh` to determine exact
+      location) replaces horizontal structure utility directory path previously
+      defined by imported variable $USHGETGES which is now removed.  Echo full
+      path to getges.sh to stdout.  Updates to Docblock.
+
  Source code changes:
    prepobs_cqcbufr.fd/cqcbufr.f (main program):
     - Corrected an integer overflow issue which prevented the temporal
       check from running in the CDAS network (the only network where it
       currently would run).
       BENEFIT: This QC check now runs in the CDAS PREP2 jobs.
-   syndat_syndata.fd/syndata.f:  
+   syndat_syndata.fd/syndata.f:
     - Address uninitialized variables and reinstate weight calculation.
    build.sh:
     - Purge currently loaded modules and load specific compiler modules to
@@ -93,13 +101,39 @@ files:
       modules).
 
 
-  <  incomplete  >
+ < incomplete >
 
 
+ Special Instructions:
+ ---------------------
+   This is part of OBSPROC.v?.?.?.
+   This must be implemented simultaneously with the implementations of:
+      v2.1.0 of obsproc_cdas,
+      v2.0.0 of obsproc_dump_monitor,
+      v2.2.0 of obsproc_dump_post,
+      v2.3.0 of obsproc_global,
+      v2.2.0 of obsproc_nam,
+      v2.3.0 of obsproc_prep_post,
+      v2.2.0 of obsproc_rap,
+      v2.2.0 of obsproc_rtma,
+      v2.2.0 of obsproc_urma.
+
+
+ < incomplete >
+
+
+  if for some reason this must be implemented prior to RTMA/URMA upgrade (see
+  Special Instructions in 3.6.0 below), it can bypass 3.6.0.
+
+
+ < incomplete  >
+
+
+   Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
+   needed.
 
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-obsproc_prep release 3.6.0 --> released Feb 8, 2016
-                               updated May 18, 2016
+obsproc_prep release 3.6.0 --> released Feb 8, 2016, updated May 18, 2016
                            --> implemented  ?  ??, 2016
 
 files:
@@ -192,7 +226,6 @@ files:
          obsproc_prep) which replaces executable ndate in non-versioned,
          horizontal structure utility directory path defined by imported
          variable $utilexec.
-    - Use NCO-established variables to point to prod utilities.
 
  Source code changes:
    load_libs.rc and setlibs.rc in sorc directory:
@@ -257,7 +290,7 @@ files:
 
  Special Instructions:
  ---------------------
-   This is part of OBSPROC.v6.1.0.
+   This is part of OBSPROC.v6.1.0c.
    This must be implemented before or simultaneously with the implementation
    of rtma.v2.4.3 and urma.v2.4.3.
 

@@ -6,7 +6,7 @@
 # Script name:         prepobs_makeprepbufr.sh
 # Script description:  Prepares & quality controls PREPBUFR file
 #
-# Author:       Whiting             Org: EMC          Date: 2016-02-05
+# Author:       Keyser              Org: EMC          Date: 2016-06-16
 #
 # Abstract: This script creates the PREPBUFR file containing observational data
 #   assimilated by all versions of NCEP analyses.  It points to BUFR
@@ -198,6 +198,12 @@
 # 2016-02-05 JWhiting -- removed specific coding of root directories, replacing 
 #      them with standard parameters (NWROOT and COMROOT); replaced exact 
 #      specification of ndate utility w/ NDATE parameter. 
+# 2016-06-16 D.A. Keyser -- Use getges.sh where prepended-path PATH from module
+#      util_shared (default or specified version, execute `which getges.sh` to
+#      determine exact location) replaces horizontal structure utility
+#      directory path previously defined by imported variable $USHGETGES which
+#      is now removed.  Echo full path to getges.sh to stdout.  Updates to
+#      Docblock.
 #     
 #
 # Usage:  prepobs_makeprepbufr.sh yyyymmddhh
@@ -274,13 +280,15 @@
 #                   or 'test')
 #                   Default is "prod"
 #     envir_getges  String indicating environment under which GETGES utility
-#                   ush runs (see documentation in $USHGETGES/getges.sh for
-#                   more information)
+#                   ush runs (see documentation in getges.sh for more
+#                   information) (execute `which getges.sh` to determine
+#                   location of getges.sh)
 #                   Default is "$envir"
 #     network_getges
 #                   String indicating job network under which GETGES utility
-#                   ush runs (see documentation in $USHGETGES/getges.sh for
-#                   more information)
+#                   ush runs (see documentation in getges.sh for more
+#                   information)  (execute `which getges.sh` to determine
+#                   location of getges.sh)
 #                   Default is "global" unless the center PREPBUFR processing
 #                   date/time is not a multiple of 3-hrs, then the default is
 #                   "gfs"
@@ -322,9 +330,6 @@
 #                   (on the same task) for the PREPBUFR processing (= "YES" -
 #                   run background shells; anything else - do not run
 #                   background shells)
-#     USHGETGES     String indicating directory path for GETGES utility ush
-#                   file
-#                   Default is "/nw${envir}/util/ush"
 #     USHSYND       String indicating directory path for SYNDATA ush file
 #                   Default is "${HOMEobsproc_prep}/ush"
 #     USHPREV       String indicating directory path for PREVENTS ush file
@@ -357,9 +362,6 @@
 #     FIXSYND       String indicating directory path for SYNTHETIC data fix-
 #                   field files
 #                   Default is "${HOMEobsproc_prep}/fix"
-#     utilexec      String indicating directory path for utility program
-#                   executables
-#                   Default is "/nwprod/util/exec"
 #     GETGUESS      String: if = "YES" will encode first guess (background)
 #                   values interpolated by the program PREPOBS_PREPDATA to
 #                   observation locations in the PREPBUFR file for use by the
@@ -645,7 +647,9 @@
 #   Modules and files referenced:
 #     herefiles  : $DATA/MP_PREPDATA
 #                  $DATA/MERGE_MSGS
-#     scripts    : $USHGETGES/getges.sh
+#     scripts    : getges.sh (prepended path loaded in util_shared module,
+#                             execute `which getges.sh` to determine exact
+#                             location)
 #                  $USHSYND/prepobs_syndata.sh
 #                  $USHPREV/prepobs_prevents.sh
 #                  $USHCQC/prepobs_cqcbufr.sh
@@ -848,7 +852,6 @@ echo
 # fi for PREPDATA != YES
 fi
 
-USHGETGES=${USHGETGES:-/nw${envir}/util/ush}
 USHSYND=${USHSYND:-${HOMEobsproc_prep}/ush}
 USHPREV=${USHPREV:-${HOMEobsproc_prep}/ush}
 USHCQC=${USHCQC:-${HOMEobsproc_prep}/ush}
@@ -998,8 +1001,9 @@ echo "                     PREPBUFR processing date/time"
 echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
             echo
             set -x
-            $USHGETGES/getges.sh -e $envir_getges -n $network_getges \
-             -v $CDATE10 -t $stype $sges
+set +x; echo -e "\n---> path to getges.sh below is: `which getges.sh`"; set -x
+            getges.sh -e $envir_getges -n $network_getges -v $CDATE10 \
+             -t $stype $sges
             errges=$?
             if test $errges -ne 0; then
 #  problem obtaining global sigma first guess so exit
@@ -1222,9 +1226,9 @@ echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
                echo
                set -x
             fi
-            $USHGETGES/getges.sh -e $envir_getges -n $network_getges \
-              -f $fhr -v `${NDATE} $dhr $CDATE10` > \
-              sgesprep${sfx}_pathname
+set +x; echo -e "\n---> path to getges.sh below is: `which getges.sh`"; set -x
+            getges.sh -e $envir_getges -n $network_getges -f $fhr \
+             -v `${NDATE} $dhr $CDATE10` > sgesprep${sfx}_pathname
             errges=$?
             if test $errges -ne 0
             then
