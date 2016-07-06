@@ -290,7 +290,7 @@ files:
 
  Special Instructions:
  ---------------------
-   This is part of OBSPROC.v6.1.0c.
+   This is part of OBSPROC.v6.2.0b.
    This must be implemented before or simultaneously with the implementation
    of rtma.v2.4.3 and urma.v2.4.3.
 
