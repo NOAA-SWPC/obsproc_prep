@@ -6,7 +6,7 @@
 # Script name:         prepobs_makeprepbufr.sh
 # Script description:  Prepares & quality controls PREPBUFR file
 #
-# Author:       Keyser              Org: EMC          Date: 2016-06-16
+# Author:       Keyser              Org: EMC          Date: 2016-07-12
 #
 # Abstract: This script creates the PREPBUFR file containing observational data
 #   assimilated by all versions of NCEP analyses.  It points to BUFR
@@ -198,12 +198,13 @@
 # 2016-02-05 JWhiting -- removed specific coding of root directories, replacing 
 #      them with standard parameters (NWROOT and COMROOT); replaced exact 
 #      specification of ndate utility w/ NDATE parameter. 
-# 2016-06-16 D.A. Keyser -- Use getges.sh where prepended-path PATH from module
-#      util_shared (default or specified version, execute `which getges.sh` to
-#      determine exact location) replaces horizontal structure utility
-#      directory path previously defined by imported variable $USHGETGES which
-#      is now removed.  Echo full path to getges.sh to stdout.  Updates to
-#      Docblock.
+# 2016-07-12  D.C. Stokes -- Reinstated poe option to run multiple instances
+#      of the PREPDATA processing script in parallel. New variable $launcher 
+#      defines the parallel scripting launch mechanism (description below).
+#      Added logic to create scaled down versions of err_chk and err_exit 
+#      scripts if they don't exist in the working directory and eliminated 
+#      similar blocks of logic that had been repeated throughout the script.
+#      Updated USHGETGES default to pick up more recent versions of getges.sh.
 #     
 #
 # Usage:  prepobs_makeprepbufr.sh yyyymmddhh
@@ -271,24 +272,23 @@
 #                   the NWS/TOC (= "YES" - invoke alert; anything else - do not
 #                   invoke alert)
 #                   Default is "NO"
-#     NPROCS        Number of poe tasks to use (must be .GE. $NSPLIT)
+#     NPROCS        Number of poe tasks to use for mpmd (must be .GE. $NSPLIT)
 #                   NOTE : This is applicable ONLY if the imported shell
-#                          variable POE is not "NO" (see below) and the
+#                          variable POE is not "NO" (see below) and variable 
+#                          launcher is not "cfp" (see below) and the
 #                          imported shell variable PREPDATA=YES (see below)
+#                   For LSF jobs, the count of hosts listed in string $LSB_HOSTS
+#                   will be used to set NPROCS (overriding any imported value).
 #                   Default is "$NSPLIT"
 #     envir         String indicating environment under which job runs ('prod'
 #                   or 'test')
 #                   Default is "prod"
 #     envir_getges  String indicating environment under which GETGES utility
-#                   ush runs (see documentation in getges.sh for more
-#                   information) (execute `which getges.sh` to determine
-#                   location of getges.sh)
+#                   ush runs (see getges.sh docblock for more information)
 #                   Default is "$envir"
 #     network_getges
 #                   String indicating job network under which GETGES utility
-#                   ush runs (see documentation in getges.sh for more
-#                   information)  (execute `which getges.sh` to determine
-#                   location of getges.sh)
+#                   ush runs (see getges.sh docblock for more information)
 #                   Default is "global" unless the center PREPBUFR processing
 #                   date/time is not a multiple of 3-hrs, then the default is
 #                   "gfs"
@@ -321,11 +321,12 @@
 #                   parallel) (= "NO" - do not invoke invoke poe; anything else
 #                   - invoke poe)
 #                   Default is "YES"
-#     POE_OPTS      String indicating options to use with poe command
-#                   Default is "-pgmmodel mpmd -ilevel 2 -labelio yes \
-#                   -stdoutmode ordered"
-#                   NOTE : This is applicable only if the imported shell
-#                          variable POE is not "NO"
+#     launcher      Parallel scripting launch tool. Settings are in place for
+#                   mpirun.lsf and cfp but a different tool can be specified.
+#                   NOTE : This is applicable ONLY if the imported shell
+#                          variable POE is not "NO" and the imported shell
+#                          variable PREPDATA=YES (see below)
+#                   Default is "mpirun.lsf"
 #     BACK          String indicating whether or not to run background shells
 #                   (on the same task) for the PREPBUFR processing (= "YES" -
 #                   run background shells; anything else - do not run
@@ -585,6 +586,15 @@
 #                    Q.C. programs
 #     jlogfile      String indicating path to joblog file
 #
+#     These do not have be exported to this script.
+#
+#     UTILSHAREDROOT  String pointing to some version of util_shared directory
+#                      (may have been set by util_shared environment module)
+#
+#     USHGETGES     String indicating directory path for GETGES utility script.
+#                   If not set, first default is $UTILSHAREDROOT/ush.  If that 
+#                    option is not viable, will see if getges.sh is in path.
+#                   
 #     These do not have to be exported to this script.  If they are, they will
 #      be passed on to the script $USHCQC/prepobs_cqcbufr.sh. They are not used
 #      by this script.
@@ -647,9 +657,7 @@
 #   Modules and files referenced:
 #     herefiles  : $DATA/MP_PREPDATA
 #                  $DATA/MERGE_MSGS
-#     scripts    : getges.sh (prepended path loaded in util_shared module,
-#                             execute `which getges.sh` to determine exact
-#                             location)
+#     scripts    : $USHGETGES/getges.sh
 #                  $USHSYND/prepobs_syndata.sh
 #                  $USHPREV/prepobs_prevents.sh
 #                  $USHCQC/prepobs_cqcbufr.sh
@@ -667,9 +675,7 @@
 #        NOTE 2: The last three scripts above are NOT REQUIRED utilities.
 #                If $DATA/prep_step not found, a scaled down version of it is
 #                executed in-line.  If $DATA/err_exit or $DATA/err_chk are not
-#                found and a fatal error has occurred, then the script calling
-#                it will kill itself and exit with a 555 return code causing
-#                all parent scripts to be killed.
+#                found, scaled down versions are created.
 #
 #     programs   :
 #          PREPOBS_MPCOPYBUFR   - executable: $MPCOPYX
@@ -708,7 +714,7 @@
 #     >0 - some problem encountered
 #
 # Attributes:
-#   Language: Korn (bash) shell under linux
+#   Language: Korn shell under linux
 #   Machine:  NCEP WCOSS
 #
 ####
@@ -723,6 +729,41 @@ cd $DATA
 
 qid=$$
 
+#####################################################
+#####################################################
+# create error check and exit utilities if necessary.
+# (as may be the case for some developer runs)
+#####################################################
+
+if [ ! -x $DATA/err_exit ]; then
+cat <<\EOFerrexit > $DATA/err_exit
+   set -x
+   if [ -n "$LSB_JOBID" ]; then
+      bkill $LSB_JOBID
+      sleep 60
+      date
+   else
+      set -e
+      kill -n 9 $qid
+   fi
+   exit 7    # for extra measure
+EOFerrexit
+chmod 775 $DATA/err_exit
+fi
+
+if [ ! -x $DATA/err_chk ]; then
+cat <<\EOFerrchk > $DATA/err_chk
+   set -x
+   if [ "$err" != '0' ]; then
+      $DATA/err_exit
+   fi
+   [ $? != 0 ] && exit 8  # for extra measure
+EOFerrchk
+chmod 775 $DATA/err_chk
+fi
+
+#####################################################
+#####################################################
 
 #  obtain the center date/time for PREPBUFR processing
 #  ---------------------------------------------------
@@ -750,14 +791,8 @@ then
    echo "ABNORMAL EXIT!!!!!!!!!!!"
    echo
    set -x
-   if [ -s $DATA/err_exit ]; then
-      $DATA/err_exit
-   else
-######kill -9 ${qid} # need a WCOSS alternative to this even tho commented out
-                     #  in ops
-      exit 555
-   fi
-   exit 9
+   $DATA/err_exit
+   [ $? != 0 ] && exit 555  # for extra measure
 fi
 
 cyc=`echo $CDATE10|cut -c9-10`
@@ -808,44 +843,39 @@ else
       set +x
 echo
 echo "YOU have set both POE and BACK to YES - choose one or the other!!"
-echo "Recommend exporting POE=YES and BACK=NO"
+echo "Defaults are POE=YES and BACK=NO, as is preferable for WCOSS."
 echo
       set -x
       exit 99
    fi
-###################################################################
-###### temporary logic for runs on WCOSS ##########################
-###################################################################
-   if [ "$POE" = 'YES' ];then
-      set +x
-echo
-echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-echo "  ===> WARNING: \"POE\" SET TO \"NO\" AS IT IS NOT YET AVAILABLE HERE"
-echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-echo
-      set -x
-      POE=NO
-      if [ "$BACK" != 'NO' ]; then
-         BACK=YES
-         set +x
-echo
-echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-echo "  ===> WARNING: \"BACK\" SET TO \"YES\" TO RUN $NSPLIT BACKGROUND SHELLS"
-echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-echo
-         set -x
-      fi
-   fi
-###################################################################
-###################################################################
-###################################################################
    BACK=${BACK:-NO}
    PARALLEL=NO
    [ "$POE" != 'NO' -o "$BACK" = 'YES' ]  &&  PARALLEL=YES
    if [ "$POE" != 'NO' ] ; then
-      NPROCS=${NPROCS:-$NSPLIT}
-      POE_OPTS=${POE_OPTS:-"-pgmmodel mpmd -ilevel 2 -labelio yes \
--stdoutmode ordered"}
+      launcher=${launcher:-mpirun.lsf}
+      if [ "$launcher" != 'cfp' ]; then 
+         if [ -n "$LSB_HOSTS" ]; then
+            NPROCS=$(echo $LSB_HOSTS|wc -w)
+            set +x; echo "Setting NPROCS based on LSB_HOSTS count"; set -x
+         else
+            NPROCS=${NPROCS:-$NSPLIT}
+         fi
+         if [ $NPROCS -lt $NSPLIT ]; then 
+            set +x
+echo "********************************************************************"
+echo "                   P  R  O  B  L  E  M   !   !   !                  "
+echo "********************************************************************"
+echo "        NPROCS=$NPROCS IS NOT SUFFICIENT FOR NSPLIT=$NSPLIT         "     
+echo "        NPROCS must be greater than NSPLIT when using a             "     
+echo "          parallel processing launcher other than cfp               "     
+echo "********************************************************************"
+            set -x
+            msg="***FATAL ERROR:  Insufficient NPROCS for NSPLIT=$NSPLIT"
+            [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+            $DATA/err_exit
+            [ $? != 0 ] && exit 555  # for extra measure
+         fi
+      fi
    elif [ "$BACK" = 'YES' ] ; then
       NPROCS=$NSPLIT
    fi
@@ -870,6 +900,20 @@ PARMSYND=${PARMSYND:-${HOMEobsproc_network}/parm}
 FIXSYND=${FIXSYND:-${HOMEobsproc_prep}/fix}
 
 GETGUESS=${GETGUESS:-YES}
+if [ "$GETGUESS" = 'YES' ]; then
+   set +u
+   if [ -z "$USHGETGES" ]; then
+      if [ -n "${UTILSHAREDROOT}" ]; then
+         USHGETGES=${UTILSHAREDROOT}/ush
+      else
+         # last ditch effort... search the current path for getges.sh but no
+         #  error here if not found since it might not actually be needed
+         which_getges=$(which getges.sh)
+         [ $? -eq 0 ] && USHGETGES=$(dirname $which_getges)
+      fi
+   fi
+   set -u
+fi
 
 PREPDATA=${PREPDATA:-YES}
 
@@ -1001,9 +1045,8 @@ echo "                     PREPBUFR processing date/time"
 echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
             echo
             set -x
-set +x; echo -e "\n---> path to getges.sh below is: `which getges.sh`"; set -x
-            getges.sh -e $envir_getges -n $network_getges -v $CDATE10 \
-             -t $stype $sges
+            $USHGETGES/getges.sh -e $envir_getges -n $network_getges \
+             -v $CDATE10 -t $stype $sges
             errges=$?
             if test $errges -ne 0; then
 #  problem obtaining global sigma first guess so exit
@@ -1014,14 +1057,8 @@ relative to center PREPBUFR date/time;"
                echo "ABNORMAL EXIT!!!!!!!!!!!"
                echo
                set -x
-               if [ -s $DATA/err_exit ]; then
-                  $DATA/err_exit
-               else
-##################kill -9 ${qid} # need a WCOSS alternative to this even tho
-                                 #  commented out in ops
-                  exit 555
-               fi
-               exit 9
+               $DATA/err_exit
+               [ $? != 0 ] && exit 555  # for extra measure
             fi
             set +x
             echo
@@ -1072,14 +1109,8 @@ populated by earlier tropical cyclone relocation processing"
       echo "ABNORMAL EXIT!!!!!!!!!!!"
       echo
       set -x
-      if [ -s $DATA/err_exit ]; then
-         $DATA/err_exit
-      else
-#########kill -9 ${qid} # need a WCOSS alternative to this even tho commented
-                        #  out in ops
-         exit 555
-      fi
-      exit 9
+      $DATA/err_exit
+      [ $? != 0 ] && exit 555  # for extra measure
    done
    mv tcvitals.relocate.$tmmark tcvitals
    if [ $relo_rec = yes ]; then  # come here if relocation ran and processed
@@ -1226,9 +1257,8 @@ echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
                echo
                set -x
             fi
-set +x; echo -e "\n---> path to getges.sh below is: `which getges.sh`"; set -x
-            getges.sh -e $envir_getges -n $network_getges -f $fhr \
-             -v `${NDATE} $dhr $CDATE10` > sgesprep${sfx}_pathname
+            $USHGETGES/getges.sh -e $envir_getges -n $network_getges \
+             -f $fhr -v `${NDATE} $dhr $CDATE10` > sgesprep${sfx}_pathname
             errges=$?
             if test $errges -ne 0
             then
@@ -1243,14 +1273,8 @@ center PREPBUFR date/time;"
 echo "ABNORMAL EXIT!!!!!!!!!!!"
                   echo
                   set -x
-                  if [ -s $DATA/err_exit ]; then
-                     $DATA/err_exit
-                  else
-#####################kill -9 ${qid} # need a WCOSS alternative to this even tho
-                                    #  commented out in ops
-                     exit 555
-                  fi
-                  exit 9
+                  $DATA/err_exit
+                  [ $? != 0 ] && exit 555  # for extra measure
                else
 echo "problem obtaining global sigma guess valid at the nearest cycle time "
                   if [ "$sfx" != 'A' ]; then
@@ -1362,14 +1386,8 @@ echo
 echo "ABNORMAL EXIT!!!!!!!!!!!"
 echo
                set -x
-               if [ -s $DATA/err_exit ]; then
-                  $DATA/err_exit
-               else
-##################kill -9 ${qid} # need a WCOSS alternative to this even tho
-                                 #  commented out in ops
-                  exit 555
-               fi
-               exit 9
+               $DATA/err_exit
+               [ $? != 0 ] && exit 555  # for extra measure
             fi
          fi
       fi
@@ -1395,14 +1413,8 @@ echo "ADPSFC and/or ADPUPA BUFR data dump was not produced for requested"
 echo " time (but is in BUFRLIST); ABNORMAL EXIT!!!!!!!!!!!"
 echo
          set -x
-         if [ -s $DATA/err_exit ]; then
-            $DATA/err_exit
-         else
-############kill -9 ${qid} # need a WCOSS alternative to this even tho
-                           #  commented out in ops
-            exit 555
-         fi
-         exit 9
+         $DATA/err_exit
+         [ $? != 0 ] && exit 555  # for extra measure
       fi
 
    fi
@@ -1517,11 +1529,7 @@ cat <<\EOFmpp > MP_PREPDATA
 # -----------------------------------------------------------------------------
 #
 # Positional parameters passed in:
-#   1 - Stream index ($multi):
-#             For POE not equal to "NO": Task number for this MPI run
-#                                         (0 to $NPROCS-1)
-#             For BACK equal to "YES":   Background thread number
-#                                         (0 to $NSPLIT-1)
+#   1 - Stream index ($multi) (0 to $NSPLIT-1)
 #
 # Imported variables that must be passed in:
 #   DATA     - path to working directory
@@ -1804,30 +1812,56 @@ set -x
 #   into a poe command file (for poe/mpi) - or - fire off each MP_PREPDATA
 #   thread as a background process
 #  -----------------------------------------------------------------------
-      multi=-1
-      while [ $((multi+=1)) -lt $NPROCS ] ; do
-         if [ "$POE" != 'NO' ]; then
-            if [ $multi -lt $NSPLIT ] ; then
-               echo "$DATA/MP_PREPDATA $multi "|tee -a $DATA/prep_exec.cmd
-            else
+      if [ "$POE" != 'NO' ]; then
+         multi=-1
+         while [ $((multi+=1)) -lt $NSPLIT ] ; do
+            echo "ksh $DATA/MP_PREPDATA $multi "|tee -a $DATA/prep_exec.cmd
+         done
+         if [ "$launcher" != cfp ]; then  # fill in empty tasks
+            multi=$((multi-=1))  #need to go back one
+            while [ $((multi+=1)) -lt $NPROCS ] ; do
                echo "echo do-nothing" >> $DATA/prep_exec.cmd
-            fi
-         elif [ $BACK = 'YES' ] ; then
-            set +x
-            $DATA/MP_PREPDATA $multi &
-            echo
-            echo $DATA/MP_PREPDATA $multi submitted in background
-            echo
-            set -x
+            done
          fi
-      done
+      elif [ $BACK = 'YES' ] ; then
+         multi=-1
+         while [ $((multi+=1)) -lt $NSPLIT ] ; do
+           set +x
+           $DATA/MP_PREPDATA $multi &
+           echo
+           echo $DATA/MP_PREPDATA $multi submitted in background
+           echo
+           set -x
+         done
+      fi
 
-#  In the parallel environment, next either execute the poe command (for poe/
+#  In the parallel environment, next either execute the poe wrapper (for poe/
 #   mpi) (do not execute a time command with poe!) - or - wait for all
 #   background processes to complete
 #  --------------------------------------------------------------------------
       if [ "$POE" != 'NO' ]; then
-         /usr/bin/poe -cmdfile prep_exec.cmd $POE_OPTS
+         if [ "$launcher" = mpirun.lsf ]; then
+            export MP_CMDFILE=$DATA/prep_exec.cmd
+            export MP_PGMMODEL=mpmd
+            export MP_PULSE=0
+            export MP_DEBUG_NOTIMEOUT=yes
+            export MP_LABELIO=yes
+            export MP_STDOUTMODE=ordered
+            mpirun.lsf
+            export err=$?; $DATA/err_chk
+            [ $? != 0 ] && exit 555  # for extra measure
+         elif [ "$launcher" = cfp ]; then
+            export MP_CSS_INTERRUPT=yes
+            export MP_LABELIO=yes
+            export MP_STDOUTMODE=ordered
+            mpirun.lsf cfp $DATA/prep_exec.cmd
+            export err=$?; $DATA/err_chk
+            [ $? != 0 ] && exit 555  # for extra measure
+         else  # unknown launcher and options (eg, for use on R&D system) 
+            $launcher
+            export err=$?; $DATA/err_chk
+            [ $? != 0 ] && exit 555  # for extra measure
+          fi
       elif [ $BACK = 'YES' ] ; then
          wait
       fi
@@ -1919,14 +1953,8 @@ echo
    done
 
    if [ "$errSTATUS" -gt '0' ]; then
-      if [ -s $DATA/err_exit ]; then
-         $DATA/err_exit
-      else
-#########kill -9 ${qid} # need a WCOSS alternative to this even tho commented
-                        #  out in ops
-         exit 555
-      fi
-      exit 9
+      $DATA/err_exit
+      [ $? != 0 ] && exit 555  # for extra measure
    fi
 
    [ "$errPREPDATA" -eq '4' -a "$four_check" = 'no' ]  && errPREPDATA=0
@@ -1954,17 +1982,8 @@ echo
 
    pgm=`basename  $PRPX`
    touch errfile
-   if [ -s $DATA/err_chk ]; then
-      $DATA/err_chk
-   else
-      if test "$err" -gt '0'
-      then
-#########kill -9 ${qid} # need a WCOSS alternative to this even tho commented
-                        #  out in ops
-         exit 555
-      fi
-   fi
-   [ "$err" -gt '0' ]  &&  exit 9
+   $DATA/err_chk
+   [ $? != 0 ] && exit 555  # for extra measure
 
    if [ "$PARALLEL" = 'YES' ]; then
 
@@ -2110,17 +2129,8 @@ echo
 echo "The foreground exit status for PREPOBS_MONOPREPBUFR is " $err
 echo
 set -x
-if [ -s $DATA/err_chk ]; then
-   $DATA/err_chk
-else
-   if test "$err" -gt '0'
-   then
-######kill -9 ${qid} # need a WCOSS alternative to this even tho commented out
-                     #  in ops
-      exit 555
-   fi
-fi
-[ "$err" -gt '0' ]  &&  exit 9
+$DATA/err_chk
+[ $? != 0 ] && exit 555  # for extra measure
 
 exit 0
 EOFmrg
@@ -2141,14 +2151,8 @@ set -x
       if test $errsc -ne 0
       then
 #  problem with merge script
-         if [ -s $DATA/err_exit ]; then
-            $DATA/err_exit
-         else
-############kill -9 ${qid} # need a WCOSS alternative to this even tho
-                           #  commented out in ops
-            exit 555
-         fi
-         exit 9
+         $DATA/err_exit
+         [ $? != 0 ] && exit 555  # for extra measure
       fi
    else
 

@@ -80,11 +80,25 @@ files:
 
  USH script changes:
    prepobs_makeprepbufr.sh:
-    - Use getges.sh where prepended-path PATH from module util_shared (default
-      or specified version, execute `which getges.sh` to determine exact
-      location) replaces horizontal structure utility directory path previously
-      defined by imported variable $USHGETGES which is now removed.  Echo full
-      path to getges.sh to stdout.  Updates to Docblock.
+    - Added logic to use IBM's Parallel Environment to run concurrent instances
+      of PREPDATA processing.  The default launching mechanism is mpirun.lsf. 
+      The WCOSS command file processor utility can be requested by passing in 
+      "launcher=cfp", but cfp must exist in the execution path.  (This can be 
+      accomplished on WCOSS IBMs by loading the cfp module).  A user can also
+      specify their own command string through variable $launcher if necessary.
+      Logic for background threads was preserved as it might be a good choice
+      on some R&D systems, however one must now specifically set BACK=YES to 
+      employ this option.
+      BENEFIT: Reduce use of background threads on WCOSS.
+    - Added logic to create scaled down versions of err_chk and err_exit 
+      scripts if they don't exist in the working directory and eliminated
+      similar blocks of logic that had been repeated throughout the script.
+    - Replaced deprecated horizontal structure directory default for variable
+      $USHGETGES with currently acceptable options (if needed).  The first
+      option is "$UTILSHAREDROOT/ush", where it is expected that UTILSHAREDROOT
+      would have been set by loading a compatible version of the util_shared
+      environment module. The second would be to parse it from the result of 
+      `which getges.sh`.
 
  Source code changes:
    prepobs_cqcbufr.fd/cqcbufr.f (main program):
