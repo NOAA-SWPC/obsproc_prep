@@ -757,7 +757,6 @@ cat <<\EOFerrchk > $DATA/err_chk
    if [ "$err" != '0' ]; then
       $DATA/err_exit
    fi
-   [ $? != 0 ] && exit 8  # for extra measure
 EOFerrchk
 chmod 775 $DATA/err_chk
 fi
