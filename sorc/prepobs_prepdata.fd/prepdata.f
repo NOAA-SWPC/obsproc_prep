@@ -1,7 +1,7 @@
 C$$$  MAIN PROGRAM DOCUMENTATION BLOCK
 C
 C MAIN PROGRAM: PREPOBS_PREPDATA
-C   PRGMMR: KEYSER                ORG: NP22   DATE: 2015-04-16
+C   PRGMMR: Whiting/Keyser        ORG: EMC    DATE: 2016-08-15
 C
 C ABSTRACT: PREPARES DATA FOR USE IN ANALYSES FOR THE NDAS, NAM, GDAS,
 C   GFS, RAP (RAPID REFRESH), RTMA, AND URMA NETWORKS.  ALL ANALYSES
@@ -1122,7 +1122,7 @@ C         - Corrected bug which was not encoding it properly for AIRCAR
 C           type when SQN was > 99998.
 C         - Now encoded as missing rather than 99999 for types which do
 C           not store SQN.
-C 2015-04-08  D. A. Keyser -- Encodes new, unique report subtype (TSP)
+C 2015-04-08  D. A. Keyser -- Encodes new, unique report subtype (TSB)
 C     values into PREPBUFR file for AIRCAR types based on WMO bulletin
 C     header/originator (1-U.S. MDCRS, 2-Mexican MDCRS, 3-ADS-C MDCRS,
 C     99-default/unknown)
@@ -1167,6 +1167,39 @@ C     For clear conditions (less than broken and non-fog), the CEILING
 C     is set to an "infinite" high value (arbitrarily chosen as 20000m).
 C     Also, added a printout of the BUFRLIB version in use (though a 
 C     BVERS() subroutine call)
+C 2016-08-15 JWhiting -- Updated to enable new GNSS/GPS-Met data feed 
+C     (message type NC012004 in dump file "gpsipw") with precip. water
+C     & zenith total delay content:
+C       Added new LDTA namelist switch SKGNSS (stored in existing common
+C        block /GPSWCH/) to control the ability to toss new GNSS/GPS-Met
+C        reports (i.e., those with subset NC012004) if they are NOT from
+C        the U.S.-provider (ENI) {tosses when SKGNSS = T (default)};
+C       In subr GETGPSIPW: 
+C         Set existing LDTA namelist switch SKGP45 to apply to reports
+C          with subset NC012003 (old GSD-supplied GPS) only.
+C         Added trap to toss reports w/ precipitable water value zero
+C          regardless of GPS data stream (new or old).
+C         Added logic to toss reports with subset NC012004 (new U.S.
+C          ENI- and foreign GNSS-supplied GPS) if they are from a non-
+C          ENI provider (i.e., characters 5-8 of report id not being
+C          "GPSS") as GSI may not be able to handle these properly at
+C          this time (controlled by SKGNSS).
+C       In subr FIZZ01: 
+C         For all GPS data streams (i.e., NC012003-004), store zenith
+C         total delay (m) and its error (m), along with hardwired
+C         azimuth (0.0 deg) and elevation (90.0 deg) angles into holding
+C         arrays for subsequent output.
+C       In subr. W3FIZZ: 
+C         For all GPS data streams (i.e., NC012003-004), encode into
+C         PREPBUFR file zenith total delay (when present) and its error,
+C         represented by "atmospheric path delay in satellite signal"
+C         (m) (mnemonic APDS) and "error in atmospheric path delay in
+C         satellite signal" (m) (mnemonic APDE), resp., in association
+C         with hardwired azimuth angle (mnemonic BEARAZ) of 0.0 (deg)
+C         and hardwired elevation angle (mnemonic ELEV) of 90.0 (deg).
+C 2016-08-15  D. A. Keyser -- In subr. FILLX, add zenith total delay and
+C     its error to listings for GPS-IPW/ZTD reports in report type 153.
+C
 C
 C USAGE:
 C   INPUT FILES:
@@ -1265,7 +1298,7 @@ C
 C      **  GROUP "II" -- OTHER SATELLITE BUFR DATA DUMP FILE **
 C       (WHERE II IS IUNIT(9) IN NAMELIST "&PARM"  DESCRIPTION BELOW)
 C     UNIT II   - 'GPSIPW' BUFR DUMP FILE (GPS INTEGRATED PRECIPITABLE
-C                   WATER)
+C                   WATER/ZENITH TOTAL DELAY)
 C     UNIT II+1 - ** RESERVED FOR FUTURE USE **
 C     UNIT II+2 - ** RESERVED FOR FUTURE USE **
 C
@@ -2131,17 +2164,27 @@ CC
 C  N O T E -- THE FOLLOWING 6-WORD ARRAYS REFER TO 6 LATITUDE BANDS
 C              (90S-70S,70S-20S,20S-0,0-20N,20N-70N,70N-90N)
 CC
-C    JPGPSD - GPS-IPW DATA TYPE SWITCH -
+C    JPGPSD - GPS-IPW/TZD DATA TYPE SWITCH -
 C       =    0  PROCESS THIS TYPE
 C       = 9999  EXCLUDE THIS TYPE          (DEFAULT - JPGPSD(6)/6*9999/)
 CC
-C    GWINDO - TIME WINDOW (+/-) FOR GPS-IPW REPORTS (IN HUNDREDTHS OF
-C              AN HR) - (MAX IS +/- 12 HRS)               (DEFAULT=300.)
+C    GWINDO - TIME WINDOW (+/-) FOR GPS-IPW/TZD REPORTS (IN HUNDREDTHS
+C              OF AN HR) - (MAX IS +/- 12 HRS)            (DEFAULT=300.)
 C    SKGP45 - SKIP ALL GPS-IPW REPORTS WITH REPORT TIME MINUTES GREATER
 C             THAN 30 (xx:45 REPORTS CONSIDERED TO BE OF POORER QUALITY
 C             THAN xx:15 REPORTS)
+C             --> This applies ONLY to older GSD-supplied GPS-IPW rpts
+C                 (i.e., in subset NC012003 of "gpsipw" dump file)
 C              SKGP45 =.TRUE.  ---> YES                        (DEFAULT)
 C              SKGP45 =.FALSE. ---> NO
+C    SKGNSS - LOGICAL SWITCH TO CONTROL SKIPPING OF Ground-based global
+C             Navigation Satellite System (GNSS) REPORTS THAT ARE FROM
+C             PROVIDERS OTHER THAN U.S. BASED Earth Networks, Inc. (ENI)
+C             (currently determined by characters 5-8 of report id)
+C             --> This applies ONLY to newer WMO BUFR GPS-IPW/ZTD rpts
+C                 (i.e., in subset NC012004 of "gpsipw" dump file)
+C              SKGNSS =.TRUE.  ---> ENABLE RPT SKIPPING        (DEFAULT)
+C              SKGNSS =.FALSE. ---> DISABLE RPT SKIPPING
 CC
 C GET LIMITS FOR EXTRACTING NON-SAT. UPPER-AIR DATA IN CAT 1-5:
 C    (SEE SWITCH "KTOP" FOR SATELLITE RETRIEVAL LIMITS)
@@ -2677,7 +2720,7 @@ C  IN INTERFACE WITH SUBROUTINE IW3UNPBF
      $ SWNLND,MARLND,PG4243,SPCIAL,FILLZ,FILLT,FILLW,FILLM,KTEMP,TR80KM,
      $ PRFLER,TOVBFR,RECSLM,GOESPW,GOESCT,VADWIN,TOVRAD,TOVRTV,
      $ PFRALT,AIFNOW,FLDMGS,FLDMAF,FLDMFR,FLACMS,GOESRD,PREVEN,APPEND,
-     $ SUBSKP,RASS,WRMISS,SKGP45,npkrpt
+     $ SUBSKP,RASS,WRMISS,SKGP45,npkrpt,SKGNSS
       REAL(8)  BMISS,GETBMISS
       INTEGER  KTYPE(NUMTYP-1),NTYPE(NUMTYP-1),JITSM(NUMTYP),
      $ JITSW(NUMTYP),IDATA(MAXOBS),IDAT(8)
@@ -2729,7 +2772,7 @@ C  IN INTERFACE WITH SUBROUTINE IW3UNPBF
       COMMON/RADANC/RTRAD(35),GRAD(18),IGCHN(18),SOZANG,SAZANG,OZONE,
      $ SKINT,CLDAMT,TOVRAD,TOVRTV,GOESRD(2)
       COMMON/GPSWCH/JPGPSD(6),GWINDO,KNTGPS,KSKPGP,KMSGGP,KBDYGP,KTIMGP,
-     $ KMISGP,KT45GP,SKGP45
+     $ KMISGP,KT45GP,SKGP45,SKGNSS,KTGNSS
       COMMON/CLDTOP/CLTOP(2,3)
       COMMON/PREVSW/PREVEN
       COMMON/APDNSW/APPEND
@@ -2840,7 +2883,7 @@ C  IN INTERFACE WITH SUBROUTINE IW3UNPBF
      $  'MOISTR: SSM-I RAIN RATE RETRIEVAL       ',  ! 150
      $  'SATSND: GOES CLOUD TOP RETRIEVAL        ',  ! 151
      $  'MOISTR: SSM-I PRECIP. WATER RETRIEVAL   ',  ! 152
-     $  'MOISTR: GPS INTEGRATED PRECIP. WATER    ',  ! 153
+     $  'MOISTR: GPS INTEGR. PWATR/ZENITH TOT DLY',  ! 153
      $  2*'-- EMPTY --                             ',! 154-5
      $  'MOISTR: GOES PR. WATER RETR-LAND/CLEAR  ',  ! 156
      $  'MOISTR: GOES PR. WATER RETR-LAND/CLOUDY ',  ! 157
@@ -2888,9 +2931,9 @@ C  IN INTERFACE WITH SUBROUTINE IW3UNPBF
      $ VWINDO,TOVRAD,TOVRTV,PFRALT,IEWNDO,JPERSD,AIFNOW,FLDMGS,FLDMAF,
      $ GOESRD,IVADFL,IVADSP,ISATLS,DWINDO,JPQKSD,IQWNDO,GOESCT,APPEND,
      $ FLACMS,IACFTH,SUBSKP,JPGPSD,GWINDO,RASS,TWINDO,JPWDSD,IWWNDO,
-     $ FLDMFR,WRMISS,SKGP45,JPASCD,IAWNDO,npkrpt
+     $ FLDMFR,WRMISS,SKGP45,JPASCD,IAWNDO,npkrpt,SKGNSS
       NAMELIST/PARM/IUNIT
-      CALL W3TAGB('PREPOBS_PREPDATA',2015,0106,0061,'NP22')
+      CALL W3TAGB('PREPOBS_PREPDATA',2016,0228,0070,'NP22')
 C DETERMINE MACHINE WORD LENGTH (BYTES) FOR BOTH INTEGERS AND REALS
       CALL WORDLENGTH(LWI,LWR)
       PRINT 2213, LWI,LWR
@@ -2933,7 +2976,7 @@ C    CARDS FILE, JUST AFTER NAMELIST TASK, BY THE MAKE_PREPBUFR SCRIPT)
          PRINT 321, NET(1)
       END IF
   321 FORMAT(/37X,'WELCOME TO THE UNIVERSAL ',A14,' DATA PREPROCESSOR'/
-     $ 48X,'WCOSS VERSION CREATED 28 Jan 2016')
+     $ 48X,'WCOSS VERSION CREATED 15 Aug 2016')
       call bvers(cvstr)
       print 3211, cvstr
  3211 FORMAT(48X,'--BUFRLIB VERSION USED = v',a,/)
@@ -3296,18 +3339,20 @@ C  THAT LAST INCOMPLETE BUFR MESSAGE SHOULD BE WRITTEN OUT
       IF(MIN(JPGPSD(1),JPGPSD(2),JPGPSD(3),JPGPSD(4),JPGPSD(5),
      $ JPGPSD(6)).EQ.0)  THEN
          PRINT 3976
- 3976    FORMAT(//56X,'>>> GPS-IPW DATA <<<')
+ 3976    FORMAT(//54X,'>>> GPS-IPW/ZTD DATA <<<')
          KOTHGP = KSKPGP - KMISGP - KMSGGP - KBDYGP - KTIMGP - KT45GP
+     $                   - KTGNSS
          PRINT 4977, KNTGPS,KSKPGP,KMISGP,KMSGGP,KBDYGP,KTIMGP,KT45GP,
-     $    KOTHGP
+     $    KTGNSS,KOTHGP
  4977    FORMAT(/,35X,
-     $   'NUMBER OF UNPACKED GPS-IPW REPORTS PROCESSED     = ',I8,/,35X,
+     $   'NUMBER OF UNPACKED GPS-IPW/ZTD REPORTS PROCESSED = ',I8,/,35X,
      $   'TOTAL NO. OF UNPACKED REPORTS SKIPPED            = ',I8,/,35X,
      $   '   -- NUMBER WITH MISSING TOTAL PRECIP. WATER    = ',I8,/,35X,
      $   '   -- NUMBER WITH MISSING LATITUDE OR LONGITUDE  = ',I8,/,35X,
      $   '   -- NUMBER OUTSIDE DATA EXTRACTION BOUNDARY    = ',I8,/,35X,
      $   '   -- NUMBER OUTSIDE TIME INTERVAL               = ',I8,/,35X,
      $   '   -- NUMBER WITH REPORT TIME MINUTES > 30       = ',I8,/,35X,
+     $   '   -- NUMBER THAT ARE NOT PROVIDED BY ENI        = ',I8,/,35X,
      $   '   -- NUMBER SKIPPED FOR OTHER REASONS           = ',I8)
       END IF
       PRINT 299
@@ -3613,7 +3658,7 @@ C  LEVELS THAT CAN BE PROCESSED AND ENCODED INTO BUFR MESSAGES
      $ KSKPGI,KNDCGI,KNOPGI,KMSGGI,KBDYGI,KTIMGI(3),KLNDGI(3),KSEAGI(3),
      $ KNTGIC,KNOCTP
       COMMON/GPSWCH/JPGPSD(6),GWINDO,KNTGPS,KSKPGP,KMSGGP,KBDYGP,KTIMGP,
-     $ KMISGP,KT45GP,SKGP45
+     $ KMISGP,KT45GP,SKGP45,SKGNSS,KTGNSS
       COMMON/RADANC/RTRAD(35),GRAD(18),IGCHN(18),SOZANG,SAZANG,OZONE,
      $ SKINT,CLDAMT,TOVRAD,TOVRTV,GOESRD(2)
       COMMON/PARM3/RECCON,RWINDO,UWINDO,RECSLM,FLRECO,VWINDO,VADWIN,
@@ -4607,11 +4652,12 @@ C  SUBR. GETSCATT WILL LATER INIT. ONLY FIRST LEVEL FOR EACH RPT)
       END IF
 C***********************************************************************
 C      GLOBAL POSITIONING SATELLITE - INTEGRATED PRECIPITABLE WATER
-C                (GPS-IPW) DATA (DATA LEVEL CATEGORY 14)
+C                        / ZENITH TOTAL DELAY
+C                (GPS-IPW/ZTD) DATA (DATA LEVEL CATEGORY 14)
 C***********************************************************************
       IF(MIN(JPGPSD(1),JPGPSD(2),JPGPSD(3),JPGPSD(4),JPGPSD(5),
      $ JPGPSD(6)).EQ.0)  THEN
-C INITIALIZE ALL LEVELS OF MOBS ARRAY (NOTE: FOR GPS-IPW PROCESSING,
+C INITIALIZE ALL LEVELS OF MOBS ARRAY (NOTE: FOR GPS-IPW/ZTD PROCESSING,
 C  SUBR. GETGPSIPW WILL LATER INIT. ONLY FIRST LEVEL FOR EACH RPT)
          MOBS = IMISS
          CALL GETGPSIPW
@@ -4996,7 +5042,7 @@ C     MONOLITHIC "AIRCAR" DUMP FILE - THIS CAUSES PREPACQC TO FAIL IN
 C     SERIAL PREPBUFR PROCESSING RUNS, E.G. IN SDMEDIT)
 C 2015-03-11  D. A. Keyser -- SQN (sequence number) now initialized as
 C     999990 instead of 99999.
-C 2015-04-08  D. A. Keyser -- Encodes new, unique report subtype (TSP)
+C 2015-04-08  D. A. Keyser -- Encodes new, unique report subtype (TSB)
 C     values into PREPBUFR file for AIRCAR types based on WMO bulletin
 C     header/originator (1-U.S. MDCRS, 2-Mexican MDCRS, 3-ADS-C MDCRS,
 C     99-default/unknown)
@@ -5402,6 +5448,29 @@ C-----------------------------------------------------------------------
          grid(262,69) = 0  !set grid pt. near Canadian NW Territ. to sea
          grid(357,54) = 0. !set grid pt. near Irish Sea to sea
          grid( 56,26) = 0. !set grid pt. near Persian Gulf to sea
+C Future: The following lat/lon values need to be converted to sea:
+C           (based on Google Maps)
+C           49.90N   0.40E
+C           49.90N   0.10E
+C           50.60N 263.10E
+C           56.10N 357.10E
+C           56.30N 357.70E
+C           73.80N 279.50E
+C           81.30N 295.90E
+C           72.03N 338.75E
+C           49.70N 265.50E
+C           50.80N 263.30E
+C           53.20N 261.70E
+C           62.00N 245.90E
+C           56.40N 357.80E
+C           56.50N 357.90E
+C           81.40N 297.40E
+C           72.01N 338.73E
+C           65.30N 232.80E
+C           67.90N 244.90E
+C           73.80N 279.70E
+C           72.02N 338.74E
+C  after these go on, keep watching for more points to be added to sea!
          if(ichk.eq.1)  then
 C CHECK 1 ---> ALL SURROUNDING PTS MUST BE OVER LAND (MOST RESTRICTIVE)
          if(min(grid(kxi-1,kyj-1),grid(kxi  ,kyj-1),
@@ -10089,7 +10158,7 @@ C     IS SET TO REPORTED LAT/LON
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    FILLX
-C   PRGMMR: KEYSER           ORG: NP22        DATE: 2014-04-25
+C   PRGMMR: KEYSER           ORG: NP22        DATE: 2016-08-15
 C
 C ABSTRACT: SENDS EACH FILLED REPORT PASSED IN THROUGH "HDR/MOBS/
 C   IPMSL/PWAT/xRAD/REQV/CLTOP" ARRAYS TO PREPBUFR ENCODER
@@ -10187,6 +10256,8 @@ C     TABLE) FOR ACARS REPORTS
 C 2014-04-25  D. A. Keyser -- 1-dim array OBS2 returned from IW3UNPBF
 C     increased from 42 to 43 words to hold satellite zenith angle
 C     (degrees, for all SATWND types).
+C 2016-08-15  D. A. Keyser -- Add zenith total delay and its error to
+C     listings for GPS-IPW/ZTD reports in report type 153.
 C
 C USAGE:    CALL FILLX(LL,IERF)
 C   INPUT ARGUMENT LIST:
@@ -10229,7 +10300,7 @@ C$$$
       CHARACTER*10 MSLTT1,ZSLTT1,MSLTT2,ZSLTT2,MSLTB1,ZSLTB1,MSLTB2,
      $ ZSLTB2
       CHARACTER*11  CBULL
-      INTEGER  ICHN(35)
+      INTEGER  ICHN(35),IDATA(MAXOBS)
       COMMON/STRCTY/ICAT(MXLVL)
       COMMON/STRPWT/PWAT(MXTYPV,MXPWT)
       COMMON/STRMSL/IPMSL(MXTYPV)
@@ -10259,6 +10330,7 @@ C$$$
       COMMON/SFCBFR/ALTIMR,PRSS
       COMMON/DIRECT/OBS3(5,MXBLVL,7),OBS2(NUMOBS2),NOBS3(7),RDATA2(25)
       COMMON/XTRHD2/CRES1,CRES2,CBULL
+      EQUIVALENCE(IDATA,RDATA)
       DATA  ICHN/1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,
      $ 22,23,24,25,26,27,28,29,30,31,32,33,34,35/
       DATA YMISS/99998.8/,IMISS/99999/
@@ -10365,6 +10437,12 @@ C CORRECT HGHT LBL TO THICK. TO 1000 MB FOR RTOVS OR ATOVS SAT. SNDINGS
             PRINT 986, PWAT(1,1),NINT(PWAT(2,1)),PRSS
   986 FORMAT(5X,'TOTAL COLUMN PRECIP. WATER=',F7.1,' MM - Q.M. = ',I2/
      $ 5X,'SURFACE PRESSURE= ',F6.1,' MB')
+            if(idata(43).gt.0)  then
+               if(rdata(idata(44)+4).lt.ymiss) then
+                  print 987, rdata(idata(44)+4),rdata(idata(44)+5)
+  987 format(5X,'ZTD=',F8.4,' M, Error in ZTD= ',F7.4,' M')
+               end if
+            end if
          ELSE  IF(HDR(6).GT.155)  THEN
             PRINT 966, (PWAT(1,I),NINT(PWAT(2,I)),I=2,5),PRSS
   966 FORMAT(
@@ -16713,13 +16791,13 @@ C BRIEFLY SUMMARIZE
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    GETGPSIPW
-C   PRGMMR: D. A. KEYSER     ORG: NP22       DATE: 2007-09-14
+C   PRGMMR: Whiting          ORG: EMC        DATE: 2016-08-15
 C
-C ABSTRACT: DECODES GLOBAL POSITIONING SATELLITE INTEGRATED
-C   PRECIPITABLE WATER (GPS-IPW) DUMP FILE ("GPSIPW"), PROCESSING ONE
-C   REPORT AT A TIME.  ACCUMULATES COUNT FOR VALID REPORTS BEFORE
-C   CALLING SUBROUTINE TO ACTUALLY PROCESS REPORTS INTO THE REQUESTED
-C   OUTPUT FORMAT.
+C ABSTRACT: DECODES GLOBAL POSITIONING SATELLITE INTEGRATED PRECIPITABLE
+C   WATER/ZENITH TOTAL DELAY (GPS-IPW/ZTD) DUMP FILE ("GPSIPW"),
+C   PROCESSING ONE REPORT AT A TIME.  ACCUMULATES COUNT FOR VALID
+C   REPORTS BEFORE CALLING SUBROUTINE TO ACTUALLY PROCESS REPORTS INTO
+C   THE REQUESTED OUTPUT FORMAT.
 C
 C PROGRAM HISTORY LOG:
 C   UNKNOWN
@@ -16732,10 +16810,19 @@ C     "RDATA" ARRAY (IN THE HEADER)]; NEW NAMELIST SWITCH "SKGP45",
 C     WHEN TRUE SKIPS ALL GPS-IPW REPORTS WITH REPORT TIME MINUTES
 C     GREATER THAN 30 (xx:45 REPORTS CONSIDERED TO BE OF POORER QUALITY
 C     THAN xx:15 REPORTS)
+C 2016-08-15 JWhiting -- Set SKGP45 to apply to reports with subset
+C      NC012003 only;
+C     Included trap to toss reports with precipitable water value zero
+C      for all GPS data types;
+C     Added logic to toss reports with subset NC012004 if they are from
+C      a non-ENI provider (i.e., characters 5-8 of report id not being
+C      "GPSS") as GSI may not be able to handle these properly at this
+C      time. Controlled by new namelist switch SKGNSS = T (default).
 C
 C USAGE:    CALL GETGPSIPW
 C   INPUT FILES:
-C     UNIT II   - 'GPSIPW' BUFR DUMP FILE (GPS INTEGR. PRECIP. WATER)
+C     UNIT II   - 'GPSIPW' BUFR DUMP FILE (GPS INTEGR. PRECIP. WATER/
+C                  ZENITH TOTAL DELAY)
 C    (WHERE II IS UNIT NUMBER DEFINED AS IUNIT(9) IN NAMELIST "&PARM")
 C
 C   OUTPUT FILES:
@@ -16755,6 +16842,7 @@ C$$$
       PARAMETER (NUMOBS2 = 43)
       CHARACTER*8  STNID,DSNAME,SUBSET_d
       LOGICAL  SKGP45
+      LOGICAL  SKGNSS
       INTEGER  IDATA(MAXOBS),KOUNG(6),MDATE(4)
       INTEGER(8) IDSDMP_8
       REAL  PHIIPW(7)
@@ -16766,7 +16854,7 @@ C$$$
       COMMON/RPTHDR/SUBSET_d,STNID,HDR(2:MXWRDH)
       COMMON/PWSWCH/PWT(5),IQMPW
       COMMON/GPSWCH/JPGPSD(6),GWINDO,KNTGPS,KSKPGP,KMSGGP,KBDYGP,KTIMGP,
-     $ KMISGP,KT45GP,SKGP45
+     $ KMISGP,KT45GP,SKGP45,SKGNSS,KTGNSS
       COMMON/SFCBFR/ALTIMR,PRSS
       COMMON/SKPSUB/SUBSKP(0:255,0:200)
       COMMON /BUFRLIB_MISSING/BMISS
@@ -16799,7 +16887,7 @@ C***********************************************************************
 C INITIALIZE PRECIPITABLE WATER AS MISSING
       PWT = XMISS
       IRET = 0
-C CALL W3UNPKB7 TO READ/DECODE THE NEXT GPS-IPW REPORT
+C CALL W3UNPKB7 TO READ/DECODE THE NEXT GPS-IPW/ZTD REPORT
       OBS2   = BMISS  ! initialize obs2   array before reading any rpts
       OBS3   = BMISS  ! initialize obs3   array before reading any rpts
       NOBS3  = 0      ! initialize nobs3  array before reading any rpts
@@ -16832,17 +16920,20 @@ C CYCLET IS TIME THE GPS-IPW DATA IS CENTERED ON (CYCLE TIME)
          PRINT 871
   871 FORMAT(/42X,'+++  TIME WINDOW  (HRS X 100) ON REPORTS  +++'/)
          PRINT 875, GWINDO
-  875 FORMAT(42X,'GLOBAL POS. SATELLITE - INTEG. PWATER ..',F5.0/)
+  875 FORMAT(42X,'GLOBAL POS. SAT. - INTEG. PWATER/ZTD ...',F5.0/)
+      if(SKGNSS .and. SUBSET_d.eq.'NC012004') print 878
+  878 FORMAT(/34X,'+++++ SKGNSS=T - ALL NON-ENI PROVIDERS ARE TOSSED ',
+     $            '+++++'/)
          GO TO 1400
 C.......................................................................
       ELSE  IF(IRET.GT.2)  THEN
-C PROBLEM READING GPS-IPW REPORT, GO ON TO NEXT REPORT
+C PROBLEM READING GPS-IPW/ZTD REPORT, GO ON TO NEXT REPORT
          PRINT 572
-  572    FORMAT(/' * * ERROR READING GPS-IPW REPORT'/)
+  572    FORMAT(/' * * ERROR READING GPS-IPW/ZTD REPORT'/)
          GO TO 1410
 C.......................................................................
       ELSE  IF(IRET.EQ.2)  THEN
-C IF IER = 2, HAVE HIT END-OF-FILE, ALL GPS-IPW REPORTS PROCESSED 
+C IF IER = 2, HAVE HIT END-OF-FILE, ALL GPS-IPW/ZTD REPORTS PROCESSED 
          IF(IFLAG.LE.0)  THEN
             PRINT 8003, NFILE
  8003       FORMAT(/' *** ERROR RETURNING DATA SET INFORMATION IN ',
@@ -16879,11 +16970,12 @@ C                          HDR(9)-HDR(15)
 C-----------------------------------------------------------------------
       CALL RPTLBL(CYCLET)
 C-----------------------------------------------------------------------
-C IF SKGP45 = TRUE, CHECK TO SEE IF THIS REPORT SHOULD BE SKIPPED BASED
-C  ON ITS OBSERVATION TIME (ALL REPORTS WITH OBS TIME MINUTES GREATER
-C  THAN 30 ARE SKIPPED, ASSUMPTION IS THAT xx:45 REPORTS ARE CONSIDERED
-C  TO BE OF POORER QUALITY THAN xx:15 REPORTS)
-      IF(SKGP45) THEN
+C IF REPORT HAS SUBSET NC012003 AND SKGP45 = TRUE, CHECK TO SEE IF THIS
+C  REPORT SHOULD BE SKIPPED BASED ON ITS OBSERVATION TIME (ALL REPORTS
+C  WITH OBS TIME MINUTES GREATER THAN 30 ARE SKIPPED, ASSUMPTION IS THAT
+C  xx:45 REPORTS ARE CONSIDERED TO BE OF POORER QUALITY THAN xx:15
+C  REPORTS)
+      IF(SKGP45 .and. SUBSET_d.EQ.'NC012003') THEN
          IF(MOD(NINT(HDR(13)*100.),100).GT.50)  THEN
             PRINT 9997, STNID,RDATA(1),RDATA(2),HDR(13)
  9997 FORMAT(' * * TOTAL REPORT TOSSED- STNID = ',A8,' AT LAT = ',F6.2,
@@ -16893,7 +16985,21 @@ C  TO BE OF POORER QUALITY THAN xx:15 REPORTS)
             GO TO 1410
          END IF
       END IF
-C SKIP REPORT IF PRECIP. WATER IS MISSING OR NEGATIVE
+
+C IF REPORT HAS SUBSET NC012004 AND SKGNSS = TRUE, SKIP IT IF NOT FROM
+C  U.S.-BASED ENI (BASED ON CHARACTERS 5-8 OF REPORT ID NOT BEING
+C  "GPSS") - GSI MAY NOT BE ABLE TO HANDLE THESE PROPERLY AT THIS TIME
+      if(SKGNSS.and.SUBSET_d.eq.'NC012004'.and.stnid(5:8).ne.'GPSS')then
+ccccc    PRINT 9990, STNID,RDATA(1),RDATA(2),HDR(13)
+c9990 FORMAT(' * * TOTAL REPORT TOSSED- STNID = ',A8,' AT LAT = ',F6.2,
+ccccc$' N  LON = ',F7.2,' E, TIME',F11.5,'UTC -- NON-ENI PROVIDER')
+         KTGNSS = KTGNSS + 1
+         GO TO 1410
+      end if
+
+C SKIP REPORT IF PRECIP. WATER IS MISSING OR NEGATIVE, or zero
+C  (GSI may have problems; this may be updated once ZTD is used by GSI
+C   since many rpts outside U.S. seems to have missing PW but valid ZTD)
       IF(RDATA(L+3).GE.YMISS)  THEN
          PRINT 9987, STNID,RDATA(1),RDATA(2),HDR(13)
  9987 FORMAT(' * * TOTAL REPORT TOSSED- STNID = ',A8,' AT LAT = ',F6.2,
@@ -16905,7 +17011,13 @@ C SKIP REPORT IF PRECIP. WATER IS MISSING OR NEGATIVE
  9988 FORMAT(' * * TOTAL REPORT TOSSED- STNID = ',A8,' AT LAT = ',F6.2,
      $' N  LON = ',F7.2,' E, TIME',F11.5,'UTC -- INPUT PWATER NEGATIVE')
          GO TO 1410
+      ELSE  IF(RDATA(L+3).eq.0.)  THEN
+         PRINT 9989, STNID,RDATA(1),RDATA(2),HDR(13)
+ 9989 FORMAT(' * * TOTAL REPORT TOSSED- STNID = ',A8,' AT LAT = ',F6.2,
+     $' N  LON = ',F7.2,' E, TIME',F11.5,'UTC -- INPUT PWATER ZERO')
+         GO TO 1410
       END IF
+
 C-----------------------------------------------------------------------
 C        CALL SUBR. 'TIMCHK' TO CHECK IF REPORT IS W/I PROPER
 C              TIME WINDOW OF CYCLE TIME (IER =1 TOSS RPT)
@@ -16928,6 +17040,8 @@ C TPW (PWT(1) STORED HERE IN UNITS OF MM (TO 10**1 PRECISION)
 cfix? IF(RDATA(L).LT.YMISS)  PRSS = RDATA(L)
       KOUNT = KOUNT + 1
 C CALL GETPWATER TO PROCESS THE PWATER REPORT (GETS R. TYPE 153)
+C  (ZTD WILL BE ENCODED INTO PREPBUFR DIRECTLY FROM RDATA ARRAY LATER
+C   IN SUBR. FIZZ01/W3FIZZ)
       CALL GETPWATER(3,0,IERF)
       IF(IERF.NE.0)  THEN
 C PRECIPITABLE WATER REPORT NOT STORED
@@ -16959,7 +17073,7 @@ C BRIEFLY SUMMARIZE
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    W3FIZZ
-C   PRGMMR: KEYSER           ORG: NP22       DATE: 2014-07-10
+C   PRGMMR: Whiting          ORG: EMC        DATE: 2016-08-15
 C
 C ABSTRACT: INTERFACES BETWEEN A PREPROCESSED REPORT (IN "HHDR/MOBS
 C   IPMSL/PWAT/xRAD/REQV/CLTOP" ARRAYS) AND THE GENERALIZED BUFR
@@ -17178,6 +17292,13 @@ C     the entire "W__EVENT" sequence "[UOB VOB WQM WPC WRC]" is skipped
 C     for surface reports when "UOB" and "VOB" are both missing.
 C 2016-01-28 JWhiting - Added generation of new CEILING field in METAR 
 C     reports, derived from existing CLAM & HOCB values.
+C 2016-08-15 JWhiting -- For all GPS data streams (i.e., NC012003-004),
+C     encode into PREPBUFR file zenith total delay (when present) and 
+C     its error, represented by "atmospheric path delay in satellite
+C     signal" (mnemonic APDS) (m) and "error in atmospheric path delay
+C     in satellite signal" (m) (mnemonic APDE), resp., in association
+C     with hardwired azimuth angle (mnemonic BEARAZ) of 0.0 (deg) and
+C     hardwired elevation angle (mnemonic ELEV) of 90.0 (deg).
 C
 C USAGE:    CALL W3FIZZ(IER)
 C   OUTPUT ARGUMENT LIST:
@@ -17345,7 +17466,7 @@ C  MNEMONICS PASSED INTO SUBROUTINE "UFBINT".
        ! MSONET vvvvv
      $     ' NUL    ALSE NUL   NUL    NUL    NUL                   ',
        ! GPSIPW vvvvv
-     $     ' NUL    NUL  NUL   NUL    NUL    NUL                   ',
+     $     ' BEARAZ ELEV APDS  APDE   NUL    NUL                   ',
        ! RASSDA vvvvv
      $     ' NUL    NUL  NUL   NUL    NUL    NUL                   ',
        ! WDSATR vvvvv
@@ -17953,6 +18074,7 @@ c - end of CEILING processing
             IF(SUBSET(ITYP)(1:3).EQ.'AIR'.OR.SUBSET(ITYP)(1:3).EQ.'ADP'
      $    .OR. SUBSET(ITYP).EQ.'SPSSMI  '.OR.SUBSET(ITYP).EQ.'SFCSHP  '
      $    .OR. SUBSET(ITYP).EQ.'GOESND  '.OR.SUBSET(ITYP).EQ.'MSONET  '
+     $    .OR. SUBSET(ITYP).EQ.'GPSIPW  '
      $    .OR. SUBSET(ITYP).EQ.'WDSATR  ')
      $       CALL UFBINT(IUNITP,OB2_8,MOB2WD,NLV,IRET,OBSSTR2(ITYP))
             QMS_8=QMS
@@ -18068,7 +18190,7 @@ C NOTE THAT THIS REPORT (SUBSET) NOT PROCESSED DUE TO NO. LEVELS = 0
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    FIZZ01
-C   PRGMMR: KEYSER           ORG: NP22       DATE: 2014-07-10
+C   PRGMMR: Whiting          ORG: EMC        DATE: 2016-08-15
 C
 C ABSTRACT: PARSES THE "HHDR/MOBS/IPMSL/PWAT/xRAD/REQV/CLTOP" ARRAYS
 C   (HOLDING ONE PREPROCESSED REPORT) INTO THE APPROPRIATE ARRAYS
@@ -18289,6 +18411,10 @@ C     upper limit for acceptable dewpoint temperature obs (the moisture
 C     on any level, for any report type, with dewpoint temperature on
 C     that level > TDMAX will be flagged with QM=15 here and encoded in
 C     the PREPBUFR file if it is not already flagged as bad).
+C 2016-08-15 JWhiting -- For all GPS data streams (i.e., NC012003-004),
+C     store zenith total delay (m) and its error (m), along with
+C     hardwired azimuth (0.0 deg) and elevation (90.0 deg) angles into
+C     holding arrays for subsequent output.
 C
 C USAGE:    CALL FIZZ01(KI,NI,JI,SUBSET,SINGLE)
 C   INPUT ARGUMENT LIST:
@@ -18433,8 +18559,9 @@ ccdak IF(HHDR(11).LT.YMISS)  HDR(11) = HHDR(11)
 
       IF(HHDR(6).GT.151.AND.HHDR(6).LT.160)  THEN
 C***********************************************************************
-C              PRECIPITABLE WATER PROCESSING COMES HERE
-C    UNIQUE REPORTS - NOTHING ELSE WILL BE ENCODED INTO PREPBUFR FILE
+C          PRECIPITABLE WATER & ZENITH TOTAL DELAY (LATTER GPS ONLY)
+C                           PROCESSING COMES HERE
+C   UNIQUE REPORTS - NOTHING ELSE WILL BE ENCODED INTO PREPBUFR FILE
 C***********************************************************************
 C STORE PRECIPITABLE WATER OBS., TABLE VALUE, PROGRAM CODE & REASON CODE
 C DATA LEVEL CATEGORY IS STORED AS 6 (NOT DEFINED IN ICAT ARRAY)
@@ -18449,6 +18576,23 @@ C   --> SSM/I OR GPS-IPW TOTAL COLUMN
                NLV = 1
                IF(HHDR(6).EQ.153.AND.PRSS.LT.YMISS) OBS(11,1) =PRSS*100.
             END IF
+
+            IF(HHDR(6).EQ.153)  THEN
+C FOR GPS-IPW/ZTD REPORTS, STORE NON-MISSING ATMOSPHERIC PATH DELAY IN
+C  SATELLITE SIGNAL (M) AND ITS ERROR (M) (from ZTD and Error in ZTD
+C  previously read into cat 14 rdata array slots  5 & 6), ALONG WITH
+C  HARDWIRED AZIMUTH ANGLE OF 0.0 (DEG) AND ELEVATION ANGLE OF 90.0
+C  (DEG) - THESE WILL LATER BE OUTPUT IN SUBR. W3FIZZ
+               LL=idata(44)
+               if(idata(43).gt.0)  then
+                  if (rdata(LL+4).lt.ymiss) then
+                     ob2(3,1)=rdata(LL+4)                          !APDS
+                     if (rdata(LL+5).lt.ymiss) ob2(4,1)=rdata(LL+5)!APDE
+                     ob2(1,1) =  0.0                               !BEARAZ
+                     ob2(2,1) = 90.0                               !ELEV
+                  end if
+               end if
+            end if ! hhdr(6) == 153
          ELSE
 C   --> GOES SIGMA LAYER (1. TO .9, .9 TO .7, .7 TO .3, AND .3 TO 0.)
             DO IPWTYP = 2,5
@@ -18860,18 +19004,24 @@ C  GET MOISTURE FLAGGED
      $ 'LON=',F8.2,'E, RTYP',I4,' - AIRCRAFT')
                      ELSE  IF(FLAGM4)  THEN
 C IF DEWPOINT (K) .LT. TDLIM, MOISTURE FLAGGED FOR ALL DATA TYPES
-                        IF(QMS4.LE.3.OR.QMS4.GT.15) QMS4 = 15
-                        IF(SUBSET.NE.'ADPUPA  ')  PRINT 8214, STNID,
-     $                   HHDR(3),HHDR(2),NINT(HHDR(6)),OBS1*0.1,
-     $                   OBS(9,NLV)+273.16,TDLIM
+                        IF(QMS4.LE.3.OR.QMS4.GT.15) THEN
+                           QMS4 = 15
+                           IF(SUBSET.NE.'ADPUPA  ')  PRINT 8214, STNID,
+     $                      HHDR(3),HHDR(2),NINT(HHDR(6)),OBS1*0.1,
+     $                      OBS(9,NLV)+273.16,TDLIM
+                        END IF
+
  8214 FORMAT(' + + SP. HUMIDITY FLAGGED -ID=',A8,', LAT=',F7.2,'N, ',
      $ 'LON=',F8.2,'E, RTYP',I4,', PRES=',F7.2,'MB - TD (',F5.1,') < ',
      $ 'TDLIM (',F5.1,')')
                      ELSE  IF(FLAGM6)  THEN
 C IF DEWPOINT (K) .GT. TDMAX, MOISTURE FLAGGED FOR ALL DATA TYPES
-                        IF(QMS4.LE.3.OR.QMS4.GT.15) QMS4 = 15
-                        PRINT 8215, STNID,HHDR(3),HHDR(2),NINT(HHDR(6)),
-     $                   OBS1*0.1,OBS(9,NLV)+273.16,TDMAX
+                        IF(QMS4.LE.3.OR.QMS4.GT.15) THEN
+                           QMS4 = 15
+                           PRINT 8215, STNID,HHDR(3),HHDR(2),
+     $                      NINT(HHDR(6)),OBS1*0.1,OBS(9,NLV)+273.16,
+     $                      TDMAX
+                        END IF
  8215 FORMAT(' + + SP. HUMIDITY FLAGGED -ID=',A8,', LAT=',F7.2,'N, ',
      $ 'LON=',F8.2,'E, RTYP',I4,', PRES=',F7.2,'MB - TD (',F5.1,') > ',
      $ 'TDMAX (',F5.1,')')
@@ -19048,7 +19198,7 @@ C$$$
      $ JPWDSD(6),KSKPSC(4),KMSGSC(4),KBDYSC(4),KTIMSC(4),KNTSCT(4),
      $ JPASCD(6),IAWNDO(2)
       COMMON/GPSWCH/JPGPSD(6),GWINDO,KNTGPS,KSKPGP,KMSGGP,KBDYGP,KTIMGP,
-     $ KMISGP,KT45GP,SKGP45
+     $ KMISGP,KT45GP,SKGP45,SKGNSS,KTGNSS
       COMMON/RADANC/RTRAD(35),GRAD(18),IGCHN(18),SOZANG,SAZANG,OZONE,
      $ SKINT,CLDAMT,TOVRAD,TOVRTV,GOESRD(2)
       COMMON/CLDTOP/CLTOP(2,3)
@@ -19067,7 +19217,7 @@ C$$$
      $ PG4243,SPCIAL,KTEMP,TR80KM,FILLZ,FILLT,FILLW,FILLM,PRFLER,
      $ TOVBFR,RECSLM,GOESPW,VADWIN,TOVRAD,TOVRTV,PFRALT,AIFNOW,FLDMGS,
      $ FLDMAF,FLDMFR,FLACMS,GOESRD,PREVEN,SUBSKP,APPEND,
-     $ PROFILERinADPUPA,GOESCT,RASS,WRMISS,SKGP45,npkrpt
+     $ PROFILERinADPUPA,GOESCT,RASS,WRMISS,SKGP45,npkrpt,SKGNSS
       CHARACTER*8  STNPRT
       DATA TOVEDS/2*.TRUE./,GOESND/2*.FALSE./,TOVBFR/2*.FALSE./,
      $ SATMST/80*.FALSE./,MARLND/.FALSE./,RECCON/.TRUE./,
@@ -19081,6 +19231,7 @@ C$$$
      $ FLDMAF/.TRUE./,FLDMFR/.TRUE./,DROPSN/.TRUE./,
      $ SUBSKP/51456*.FALSE./,APPEND/.FALSE./,PROFILERinADPUPA/.FALSE./,
      $ RASS/.FALSE./,WRMISS/.TRUE./,SKGP45/.TRUE./,npkrpt/12*.false./
+      DATA  SKGNSS/.TRUE./
       DATA  MODPRT/500/,IGRD/73/,JGRD/37/
       DATA  PMAND/1000.,925.,850.,700.,500.,400.,300.,250.,200.,150.,
      $  100.,70., 50., 30., 20., 10.,  7.,  5.,  3.,  2.,  1.,  .4,  .1/
@@ -19140,7 +19291,8 @@ C$$$
      $      KNDCDE/3*0/,KSKPSC/4*0/,KMSGSC/4*0/,KBDYSC/4*0/,KTIMSC/4*0/,
      $      KNTSCT/4*0/,KSKNOW/6*0/,KSKSWD/10*0/,KSEATV/2*0/,KNTGIC/0/,
      $      KSEAGI/3*0/,KSKDRP/0/,KNOCTP/0/,KSKAHM/6*0/,KNTGPS/0/,
-     $      KSKPGP/0/,KMSGGP/0/,KBDYGP/0/,KTIMGP/0/,KMISGP/0/,KT45GP/0/
+     $      KSKPGP/0/,KMSGGP/0/,KBDYGP/0/,KTIMGP/0/,KMISGP/0/,KT45GP/0/,
+     $      KTGNSS/0/
       DATA  DFTLON/MXLVL*XMISS/,DFTLAT/MXLVL*XMISS/,DFTTIM/MXLVL*XMISS/,
      $      ZDRIFT/MXLVL*XMISS/,TDRIFT/MXLVL*XMISS/,
      $      TDRIFTLL/MXLVL*XMISS/,UDRIFT/MXLVL*XMISS/,

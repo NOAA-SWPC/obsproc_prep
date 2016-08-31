@@ -1,12 +1,12 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-obsproc_prep release 3.7.0 --> released ??? ??, 2016
+obsproc_prep release 3.7.0 --> released Aug 31, 2016
                            --> implemented  ?  ??, 2016
 
 files:
    obsproc_prep/fix/prepobs_anow.bufrtable
    obsproc_prep/fix/prepobs_cqc_statbge
    obsproc_prep/fix/prepobs_landc
-   obsproc_prep/fix/prepobs_prep.bufrtable
+ M obsproc_prep/fix/prepobs_prep.bufrtable
    obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
    obsproc_prep/fix/syndat_weight
  M obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
@@ -29,7 +29,7 @@ files:
    obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
    obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
    obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
-   obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
    obsproc_prep/sorc/prepobs_prepacqc.fd/pietc.f90
    obsproc_prep/sorc/prepobs_prepacqc.fd/pkind.f90
    obsproc_prep/sorc/prepobs_prepacqc.fd/pmat.f90
@@ -43,13 +43,13 @@ files:
    obsproc_prep/sorc/prepobs_prepanow.fd/makefile
    obsproc_prep/sorc/prepobs_prepanow.fd/prepanow.f
    obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
-   obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
    obsproc_prep/sorc/prepobs_prepdata.fd/makefile
-   obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
-   obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
    obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
@@ -64,7 +64,7 @@ files:
    obsproc_prep/sorc/clean.sh
    obsproc_prep/sorc/install.sh
    obsproc_prep/sorc/load_libs.rc
-   obsproc_prep/sorc/README.build
+ M obsproc_prep/sorc/README.build
    obsproc_prep/sorc/setlibs.rc
    obsproc_prep/ush/prepobs_cqcbufr.sh
    obsproc_prep/ush/prepobs_cqcvad.sh
@@ -101,26 +101,112 @@ files:
       `which getges.sh`.
 
  Source code changes:
+   build.sh in sorc directory:
+    - Purge currently loaded modules and load specific compiler modules to
+      increase liklihood of consistent builds.
+    - Switch from using setlibs.rc to load_libs.rc (which loads library
+      modules).
+   README.build in sorc directory:
+    - Added information on cleaning directories (was inadvetently omitted).
+    - Corrected some typos.
+   prepobs_prepacqc.fd/output_acqc_prof.f (subroutine):
+    - Fixed a typo in docblock.
    prepobs_cqcbufr.fd/cqcbufr.f (main program):
     - Corrected an integer overflow issue which prevented the temporal
       check from running in the CDAS network (the only network where it
       currently would run).
       BENEFIT: This QC check now runs in the CDAS PREP2 jobs.
+   prepobs_prepdata:
+      prepdata.f (main program):
+       - Updated to enable new GNSS/GPS-Met data feed (message type NC012004 in
+         dump file "gpsipw") with precip. water & zenith total delay (ZTD)
+         content. Included new namelist switch SKGNSS to control the ability to
+         toss new GNSS ground-based reports if they are NOT from the U.S.-
+         provider (ENI) [tosses when SKGNSS = T (default)].  Also tosses any
+         report with preciptable water value zero regardless of GPS data stream
+         (old or new).  For all GPS data streams, encode into PREPBUFR file ZTD
+         (when present) and its error, represented by "atmospheric path delay in
+         satellite signal" (mnemonic APDS) and "error in atmospheric path delay
+         in satellite signal" (mnemonic APDE), resp., in association with
+         hardwired azimuth angle (mnemonic BEARAZ) of 0.0 (deg) and hardwired
+         elevation angle (mnemonic ELEV) of 90.0 (deg).
+       - Fixed some typos in comments.  Added some comments not related to
+         changes above.  Cleaned up some print logic not related to changes
+         above.
+      iw3unpbf.f (subroutine):
+       - Minor comment changes.
+      w3unpkb7.f (subroutine):
+       - Updated to decode variables specific to the new WMO BUFR format for
+         GNSS ground-based data (in dump file "gpsipw" under subset "NC012004").
+      BENEFIT: The current GPS-IPW data feed (from GSD) is replaced by new WMO
+               standard BUFR feed which includes both U.S.-provided reports
+               (from ENI) and GNSS reports from international providers.  These
+               changes process the new data such that the character of the IPW
+               (precipitable water) observation set is as similar as possible to
+               the old, GPS feed. TZD will be tested for future use.
+               [Note: will still also properly decode variables in previous
+               production non-standard BUFR format GPS ground-based data (when
+               subset "NC012003" was in dump file "gpsipw").]
    syndat_syndata.fd/syndata.f:
     - Address uninitialized variables and reinstate weight calculation.
-   build.sh:
-    - Purge currently loaded modules and load specific compiler modules to
-      increase liklihood of consistent builds.
-    - Switch from using setlibs.rc to load_libs.rc (which loads library
-      modules).
+
+ Fixed file changes:
+   prepobs_prep.bufrtable:
+    - Added three new standard mnemonics to Table B: Atmospheric path delay in
+      satellite signal (APDS), Estimated error in atmospheric path delay (APDE)
+      and bearing or azimuth (BEARAZ).
+    - Added new local mnemonic to Table D: Atmospheric path delay sequence
+      (APDS_SEQ).  This is included as a 1-bit delayed relication sequence in
+      message typoe GPSIPW.  The sequence contains "BEARAZ ELEV APDS APDE"
+      (ELEV is elevation angle).
+    BENEFIT: BEARAZ, ELEV, APDS and APDE will now be encoded into GPSIPW subsets
+             in PREPBUFR file when available.  Will be tested for eventual
+             assimilation.
+    - Corrected terminology in comments and descriptions for program PREPACQC
+      running in step NRLACQC.
+    - Moved Table B mnemonic CEILING to different place in mnemonic listing to
+      maintain numerical descriptor order.
 
 
- < incomplete >
+ Output changes:
+ ---------------
+  (For specific network changes see " Output changes" in Release Notes for that
+   network, if that network executes this version of obsproc_prep.)
+
+
+ Libraries:
+ ----------
+   w3nco   2.0.6 (all)
+   bufr   11.1.0 (all) (previously 10.2.5)
+   w3emc   2.2.0 (prepobs_cqcbufr, prepobs_prepacpf, prepobs_prepacqc,
+                  prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   bacio   2.0.1 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   sp      2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   sigio   1.0.1 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+
+   * all libs except sigio are WCOSS phase2 disk (/nwprod2/*) versions
+
+
+ Build Instructions:
+ -------------------
+   - See sorc/README.build
+
+
+ Preimplementation Testing Requirements:
+ ---------------------------------------
+   There are no jobs in obsproc_dump_post.  All jobs executing this version of
+   obsproc_dump_post should be tested.
+
+
+ Dissemination:
+ --------------
+   See information about dissemination in the release notes for
+   obsproc_<NETWORK> packages which execute this version of obsproc_prep.
 
 
  Special Instructions:
  ---------------------
-   This is part of OBSPROC.v?.?.?.
+   This is part of OBSPROC.v6.4.0.
    This must be implemented simultaneously with the implementations of:
       v2.1.0 of obsproc_cdas,
       v2.0.0 of obsproc_dump_monitor,
@@ -129,26 +215,14 @@ files:
       v2.2.0 of obsproc_nam,
       v2.3.0 of obsproc_prep_post,
       v2.2.0 of obsproc_rap,
-      v2.2.0 of obsproc_rtma,
-      v2.2.0 of obsproc_urma.
-
-
- < incomplete >
-
-
-  if for some reason this must be implemented prior to RTMA/URMA upgrade (see
-  Special Instructions in 3.6.0 below), it can bypass 3.6.0.
-
-
- < incomplete  >
-
+      v1.3.0 of obsproc_shared/bufr_dumplist.
 
    Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
    needed.
 
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 obsproc_prep release 3.6.0 --> released Feb 8, 2016, updated May 18, 2016
-                           --> implemented  ?  ??, 2016
+                           --> implemented  Aug 23, 2016
 
 files:
    obsproc_prep/fix/prepobs_anow.bufrtable
@@ -401,7 +475,7 @@ files:
 
  Source code changes:
    prepobs_prepacqc:
-      prepacqc (main program):
+      prepacqc.f (main program):
        - Increased maximum number of merged reports that can be processed
          "max_reps" from 220K to 300K.
          BENEFIT: The number of merged reports currently processed routinely
@@ -410,9 +484,9 @@ files:
        - Added new namelist switches "l_mandlvl" and "tsplines" (used by
          subroutine sub2mem_mer, see below).
        - Minor corrections in Docblock, comments.
-      acftobs_qc (subroutine):
+      acftobs_qc.f (subroutine):
        - Added a print statement.
-      sub2mem_mer (subroutine):
+      sub2mem_mer.f (subroutine):
        - Modified the calculation of vertical velocity rate in profiles (if
          they are processed). Previously, could only be done via finite-
          difference method calculated for descents. Now can be done via
@@ -429,7 +503,7 @@ files:
          interpolate obs data to mandatory levels (now represented by
          l_mandlvl=T, the default).
        - Minor corrections in Docblock, comments.
-      output_acqc_noprof (subroutine):
+      output_acqc_noprof.f (subroutine):
        - Fixed a bug which, for cases where the maximum number of merged
          reports that can be processed ("max_reps") is exceeded, prevented any
          original reports above "max_reps" from being written out (without any
@@ -442,13 +516,14 @@ files:
                   since PREPBUFR processes reports from the "aircar" dump
                   followed by reports from "aircft" dump, and the vast majority
                   of reports are from the "aircar" dump).
-      output_acqc_prof (subroutine):
+      output_acqc_prof.f (subroutine):
        - Pass "l_mandlvl" and "tspline" into subroutine sub2mem_mer.
        - Minor corrections in Docblock, comments.
-      input_acqc (subroutine):
+      input_acqc.f (subroutine):
        - Minor corrections in Docblock.
        - Added a print statement.
-      pietc, pkind, pmat, pmat2, pmat3, pspl (f90 subroutines):
+      pietc.f90, pkind.f90, pmat.f90, pmat2.f90, pmat3.f90, pspl.f90
+      (subroutines):
        - New. Jim Purser's package of regular and and tensioned splines.
          [These will eventually be placed in a library since these can be
           applied in many applications. For more information about this
@@ -470,7 +545,7 @@ files:
                temporal reference data by exploiting the inherent smoothing
                property of spline functions.  
    prepobs_cqcvad:
-      cqcvad (main program):
+      cqcvad.f (main program):
        - Adjusted size definition of UW, VW, and MSK arrays to
          utilize NSTN, NTIMES, and NINC rather than explicitly stating
          the size of 3600.
@@ -707,11 +782,11 @@ files:
 
  Source code changes:
    prepobs_prepdata:
-      prepdata (main program):
+      prepdata.f (main program):
        - Removed input argument "IDATE" (central date) from call to subroutine
          W3CNVXTOVS since year {IDATE(1)} is no longer needed to obtain BUFR
          satellite ID (see changes to subroutine W3CNVXTOVS below).
-      w3xtovseds (subroutine):
+      w3xtovseds.f (subroutine):
        - Handles new satellites METOP-1 (BUFR satellite ID 3, converted to
          local satellite ID 10), NOAA-19 (BUFR satellite ID 223, converted to
          local satellite ID 9) and NPP (BUFR satellite ID 224, converted to
@@ -731,7 +806,7 @@ files:
          BENEFIT: Allows subroutine W3CNVXTOVS to obtain this value directly
                   rather than calculating it back from local/NESDIS satellite
                   ID value in word 1 of IBUFTN (see below).
-      w3cnvxtovs (subroutine):
+      w3cnvxtovs.f (subroutine):
        - Now obtains the BUFR satellite ID (for storing into output array
          IDATA) directly from value now stored in word 2 of input array IBUFTN
          (via change to subroutine W3XTOVSEDS, see above) rather than
@@ -868,7 +943,7 @@ files:
        - Updated to work w/ general build, install, clean scripts that apply to
          all source codes in the obsproc_prep group; inluded parameterized
          values for libraries (exported by build.sh script)
-      prepanow (main program):
+      prepanow.f (main program):
        - Added logic to handle particulate matter processing.
 
  Fixed file changes:
@@ -1012,7 +1087,7 @@ files:
              "module avail"
       BENEFIT: No longer needed and can slow down compilation.
    prepobs_prepdata:
-      prepdata (main program):
+      prepdata.f (main program):
        - Added encoding of wind direction/speed quality mark (DFQ) for all
          types that already encode wind direction (DDO) and either wind speed
          in knots (FFO) or wind speed in m/sec (SOB). DFQ will now be encoded
@@ -1056,7 +1131,7 @@ files:
       BENEFIT:  This will eliminate array out of bounds situations that can
                 cause the program to exit prematurely.
    prepobs_prepacqc:
-      prepacqc (main program), input_acqc:
+      prepacqc.f (main program), input_acqc.f:
        - If no aircraft reports of any type are read from input PREPBUFR file
          by subroutine input_acqc, no further processing is performed in this
          subroutine other than the usual stdout print summary at its end.
@@ -1266,7 +1341,7 @@ files:
    README.build in sorc directory:
     - Updated to reflect changes in build.sh (see above).
    prepobs_prepacqc:
-      prepacqc (main program):
+      prepacqc.f (main program):
        - Increased maximum number of flights that can be processed "maxflt"
          from 5000 to 7500.
          BENEFIT: Accounts for a gradual increase in aircraft reports over
@@ -1295,7 +1370,7 @@ files:
          index is listed out.
          BENEFIT: There are now > 99999 reports processed in most runs.  This
                   change will eliminate format integer overflow.
-      acftobs_qc (subroutine) and its child subroutines:
+      acftobs_qc.f (subroutine) and its child subroutines:
        - Keeps track of maximum value for number of flights calculated at some
          point during processing.  If, at the end of processing, this value is
          at least 90% of the allowed limit ("maxflt", set in the main program),
@@ -1558,7 +1633,7 @@ files:
                reduced due to a fiber cut and no reports survived the time-
                window check.
    prepobs_prepdata:
-      prepdata (main program):
+      prepdata.f (main program):
        - Added processing of Coast Guard tide gauge data (read from SFCSHP
          dump, dump report type 534). A 12'th word added to following namelist
          switches to account for these new reports: FWINDO, JSURFM, JSURFW.
@@ -1672,7 +1747,7 @@ files:
          from the ADPSFC dump file).
          BENEFIT: The pressure used to generate specific humidty has always
                   been at best suspect.  Now the moisture follows suit.
-      iw3unpbf (subroutine):
+      iw3unpbf.f (subroutine):
        - Added ability to read in and process percent confidence based on
          EUMETSAT Quality Indicator with and without forecast for NESDIS GOES
          winds pulled from NESDIS server (which originally stored them in dump
@@ -1707,7 +1782,7 @@ files:
          BENEFIT: Now Coast Guard tide gauge reports are available to be
                   encoded into the PREPBUFR file for all networks that process
                   the SFCSHP dump file.
-      w3unpkb7 (subroutine):
+      w3unpkb7.f (subroutine):
        - Modified to handle VAD wind reports from Level 2 decoder (subset
          "NC002017") in addition to those from Radar Coded Message (subset
          "NC002008")}.

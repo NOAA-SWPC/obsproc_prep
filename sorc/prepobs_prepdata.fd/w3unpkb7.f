@@ -1,7 +1,7 @@
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:  W3UNPKB7
-C   PRGMMR: WHITING          ORG: EMC         DATE: 2015-04-16
+C   PRGMMR: Whiting          ORG: EMC         DATE: 2016-08-15
 C
 C ABSTRACT: THIS SUBROUTINE DECODES A SINGLE REPORT FROM BUFR MESSAGES
 C   IN AN NCEP BUFR DATA FILE.  CURRENTLY WIND PROFILER {EXCEPT FOR,
@@ -191,6 +191,34 @@ C     RESULTING "IDMAX" IS NOW 2270, UP FROM 1200 BEFORE}
 C 2015-04-16 JWhiting --  RDATA2 is expanded to size 25 in order to
 C     store total cloud cover (TOCC) (present in dumps of GOES cloud
 C     reports) (stored in subr. UNPKB707).
+C 2015-12-18 D. A. Keyser -- Updated to decode variables specific to 
+C     the new WMO BUFR format for GNSS ground-based data (in dump file 
+C     "gpsipw" under subset "NC012004") in order to process GPS-Met 
+C     reports from this feed. Namely:
+C       CLATH (high-res lat) --> stored as lat in header array returned
+C        to calling program
+C       CLONH (high-res lon) --> stored as lon in header array returned
+C        to calling program
+C       STSN (station name) --> stored as STNID returned to calling
+C        program
+C       TMDBST (dry-bulb temperature to nearest 0.1K) --> stored in 
+C        cat. 14 returned to calling program
+C       APDS (atmospheric path delay in satellite signal, m, from
+C        replication where azimuth angle is zero deg. and elevation
+C        angle is 90 deg.) --> this is defined as ZENITH TOTAL DELAY and
+C        is stored in cat. 14 returned to calling program
+C       APDE (error in atmospheric path delay in satellite signal, m,
+C        from replication where azimuth angle is zero deg. and elevation
+C        angle is 90 deg.) --> this is defined as ERROR IN ZENITH TOTAL
+C        DELAY and is stored in cat. 14 returned to calling program
+C     (Note: will still also properly decode variables in current
+C     production non-standard BUFR format GPS ground-based data (in dump 
+C     file "gpsipw" under subset "NC012003").
+C 2016-08-15 JWhiting -- Added variable 'subset' to UNPKB709 argument
+C     list so as to allow its use in testing for whether reports are 
+C     from new GNSS ground-based data streams (subset=NC012004); this 
+C     replaces potentially ambiguous test on missing TDEL data from 
+C     previous GPS-IPW data streams.
 C
 C
 C USAGE:    CALL W3UNPKB7(IDATE,IHE,IHL,LUNIT,RDATA,STNID,DSNAME,
@@ -308,7 +336,7 @@ C     LIBRARY:
 C       W3NCO       - W3FI04   W3MOVDAT W3DIFDAT ERREXIT
 C       BUFRLIB     - DATELEN  DUMPBF   OPENBF   READMG   UFBCNT
 C                   - READSB   UFBINT   CLOSBF   NMSUB    GETBMISS
-C                   - IBFMS    CBFMS    READLC
+C                   - IBFMS    CBFMS    READLC   UFBREP
 C
 C REMARKS:
 C    1) A CONDITION CODE (STOP) OF 15 WILL OCCUR IF THE INPUT DATES FOR
@@ -598,8 +626,9 @@ C       1    STATION PRESSURE     MILLIBARS           REAL
 C       2    AIR TEMPERATURE      KELVIN              REAL
 C       3    RELATIVE HUMIDITY    PERCENT             REAL
 C       4    TOTAL PRECIP. WATER  MILLIMETERS         REAL
-C       5    TOTAL DELAY          METERS              REAL
-C       6    ERROR IN TOTAL DELAY METERS              REAL
+C       5    ZENITH TOTAL DELAY   METERS              REAL
+C       6    ERROR IN ZENITH      METERS              REAL
+C            TOTAL DELAY
 C       7    HYDROSTATIC DELAY    METERS              REAL
 C       8    ERROR IN HYDROSTATIC METERS              REAL
 C            DELAY
@@ -745,7 +774,7 @@ C  -----------------------------------------------------
       COMMON /PKB7DD/LSHE,LSHL,ICDATE(5),IDDATE(5)
       COMMON /PKB7FF/IFOV(4,2),KNTSAT(250:260)
       COMMON /PKB7HH/NPRINT(0:255,0:200)
- 
+
       SAVE
  
       EQUIVALENCE (RDATX,IDATA)
@@ -789,7 +818,7 @@ C  THIS SUBR. WAS CALLED, PRINT NEW HEADER, SET JRET = 1
          LUNITL = LUNIT
          JRET = 1
          PRINT 101, LUNIT
-  101    FORMAT(//' ---> W3UNPKB7: WCOSS VERSION 04/16/2015: NCEP ',
+  101    FORMAT(//' ---> W3UNPKB7: WCOSS VERSION 08/15/2016: NCEP ',
      $    'BUFR DATA SET READ FROM UNIT ',I4/)
 
          BMISS = GETBMISS()
@@ -977,7 +1006,7 @@ C  after dsname is retrieved then close and reopen data set ..
             dsname = 'ERS1DA  '
          else  if(subset.EQ.'NC012137')  then
             dsname = 'QKSWND  '
-         else  if(subset.EQ.'NC012003')  then
+         else  if(subset.EQ.'NC012003' .or. subset.EQ.'NC012004')  then
             dsname = 'GPSIPW  '
          else  if(subset.EQ.'NC002012')  then
             dsname = 'RASSDA  '
@@ -1202,7 +1231,7 @@ C-----------------------------------------------------------------------
 C   THE FOLLOWING PERTAINS TO GPS INTEGRATED PRECIPITABLE WATER REPORTS
 C-----------------------------------------------------------------------
 C STORE THE GPS-IPW DATA INTO UNPACKED QUASI-IW3UNPBF FORMAT (CAT. 14)
-         CALL UNPKB709(LUNIT,RDATA)
+         CALL UNPKB709(LUNIT,RDATA,subset)
          RDATX(1:IDMAX) = RDATA(1:IDMAX)
          IF(IDATA(43).EQ.0)  THEN
             IRET = 5
@@ -1503,7 +1532,7 @@ C  CONSTRUCT A 4-DIGIT YEAR AS LONG AS DATELEN(10) HAS BEEN CALLED
      $ 'REPORTS ORIGINATING FROM PILOT (PIBAL) BULLETINS - IRET = 8'/)
             IRET = 8
             RETURN
-         ELSE  IF(SUBSET.EQ.'NC012003')  THEN
+         ELSE  IF(SUBSET.EQ.'NC012003' .OR. SUBSET.EQ.'NC012004')  then
             IF(IPRINT.GE.1)  PRINT'(" THIS MESSAGE CONTAINS GPS-IPW ",
      $       "REPORTS")'
             ITP = 8
@@ -1947,6 +1976,7 @@ C  -----------------------------------------------------
 
       CHARACTER*1  C8TAG(3,0:3)
       CHARACTER*8  STNID,SID,SUBSET
+      character*20 sid_gnss
       CHARACTER*60 HDRSTR
       INTEGER  IDATA(IDMAX),KOUNTG(3,0:3),IRPTYP(12)
       LOGICAL  SKIP_CAT12
@@ -2008,6 +2038,10 @@ C  LATITUDE
  
       M = 1
       N = 1
+      if(hdr(m).ge.xmiss)  then
+         call ufbint(lunit,HDR_8(m),12,1,nlev,'CLATH')
+         hdr(m) = hdr_8(m)
+      end if
       IF(IPRINT.GT.1)  PRINT 199, HDR(M),M
   199 FORMAT(5X,'HDR HERE IS: ',F17.4,'; INDEX IS: ',I3)
       IF(HDR(M).LT.XMISS)  THEN
@@ -2030,6 +2064,10 @@ C  LONGITUDE
  
       M = 2
       N = 2
+      if(hdr(m).ge.xmiss)  then
+         call ufbint(lunit,HDR_8(m),12,1,nlev,'CLONH')
+         hdr(m) = hdr_8(m)
+      end if
       IF(IPRINT.GT.1)  PRINT 199, HDR(M),M
       IF(HDR(M).LT.XMISS)  THEN
 cfix? IF(HDR(M).LT.YMISS)  THEN
@@ -2145,6 +2183,19 @@ C-------------------------------------------------
 C  STATION IDENTIFICATION
 
       M = 14
+      if(subset.eq.'NC012004') then
+C.......................................................................
+C  GPS Integrated Precipitable Water from new "GNSS" BUFR feed:
+C.......................................................................
+         call readlc(lunit,sid_gnss,'STSN')
+         if(sid_gnss.eq.'                    ')  nlev = 0
+         if(nlev.eq.0)  go to 9999
+         sid = sid_gnss(1:4)//sid_gnss(6:9)
+         if(iprint.gt.1)  print 299, sid,m
+C    STNID is stored directly from STSN(1:4)//STSN(6:9)
+         stnid = sid
+      else
+
       CALL UFBINT(LUNIT,RPID_8,1,1,NLEV,'RPID ')
 
 cpppppppppp
@@ -2324,6 +2375,7 @@ C    STNID is stored directly from RPID
          STNID = SID
 C.......................................................................
       END IF
+      end if
       IF(IPRINT.GT.1)  PRINT 196, STNID
   196 FORMAT(5X,'STNID STORED IN CHARACTER AS: "',A8,'"')
  
@@ -3722,7 +3774,7 @@ C       SET CATEGORY COUNTERS FOR DATA LVL CATEGORY 13 (RADIANCE) DATA
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    UNPKB709
-C   PRGMMR: D. A. KEYSER     ORG: NP22       DATE: 2002-07-03
+C   PRGMMR: JWhiting         ORG: EMC        DATE: 2016-08-15
 C
 C ABSTRACT: FOR REPORT (SUBSET) READ OUT OF BUFR MESSAGE (PASSED IN
 C   INTERNALLY VIA BUFRLIB STORAGE), CALLS BUFRLIB ROUTINE TO DECODE
@@ -3733,13 +3785,19 @@ C   UNPACKED FORMAT.
 C
 C PROGRAM HISTORY LOG:
 C 2002-07-03  D. A. KEYSER NP22 - ORIGINAL AUTHOR
+C 2016-08-15  JWhiting - Added variable 'subset' to arg list; tested 
+C     on 'subset' to determine if new GNSS/GPS-Met zenith total delay 
+C     data fields need to be read (this replaces potentially ambiguous
+C     test on missing TDEL data from previous GPS-IPW data streams).
 C
-C USAGE:    CALL UNPKB709(LUNIT,RDATA)
+C USAGE:    CALL UNPKB709(LUNIT,RDATA,SUBSET)
 C   INPUT ARGUMENT LIST:
 C     LUNIT    - FORTRAN UNIT NUMBER FOR INPUT DATA FILE
 C     RDATA    - SINGLE GPS-IPW REPORT IN A QUASI-IW3UNPBF UNPACKED
 C              - FORMAT WITH ONLY HEADER INFORMATION FILLED IN (ALL
 C              - OTHER DATA REMAINS MISSING)
+C     SUBSET   - CHARACTER*8 BUFR MESSAGE TYPE (SAME FOR ALL REPORTS
+C              - IN A COMMON BUFR MESSAGE)
 C
 C   OUTPUT ARGUMENT LIST:
 C     RDATA    - SINGLE GPS-IPW REPORT IN A QUASI-IW3UNPBF UNPACKED
@@ -3756,7 +3814,7 @@ C   LANGUAGE: FORTRAN 90
 C   MACHINE:  NCEP WCOSS
 C
 C$$$
-      SUBROUTINE UNPKB709(LUNIT,RDATA)
+      SUBROUTINE UNPKB709(LUNIT,RDATA,subset)
 
 C  Include parameters common to more than one subroutine
 C  -----------------------------------------------------
@@ -3764,9 +3822,10 @@ C  -----------------------------------------------------
       include 'inc_w3unpkb7.inc'
 
       CHARACTER*50  CAT14S
+      character*8   subset
       INTEGER  IDATA(IDMAX)
       LOGICAL  SKIP_CAT12
-      REAL(8) CAT14_8(10),BMISS
+      REAL(8) CAT14_8(10),BMISS,gnssrpsq_8(6,255)
       REAL  CAT14(10),RDATA(*),RDATX(IDMAX)
       COMMON /PKB7AA/BMISS
       COMMON /PKB7BB/kdate(8),ldate(8),KTIMCH,IPRINT,SKIP_CAT12
@@ -3804,6 +3863,10 @@ C       STATION PRESSURE (STORED AS REAL - MB TO 10**1 PRECISION)
 C       AIR TEMPERATURE (STORED AS REAL - KELVIN TO 10**2 PRECISION)
  
       M = 2
+      if(cat14(m).ge.xmiss)  then
+         call ufbint(lunit,cat14_8(m),10,1,nlev,'TMDBST')
+         cat14(m) = cat14_8(m)
+      endif
       IF(IPRINT.GT.1)  PRINT 199, CAT14(M),M
       IF(CAT14(M).LT.XMISS)  RDATX(IDATS_14+1) = CAT14(M)
       NNNNN = IDATS_14 + 1
@@ -3825,15 +3888,36 @@ C       TOTAL PRECIPITABLE WATER (STORED AS REAL - MM TO 10**3 PREC.)
       NNNNN = IDATS_14 + 3
       IF(IPRINT.GT.1)  PRINT 198, NNNNN,RDATX(IDATS_14+3)
  
-C       TOTAL DELAY (STORED AS REAL - M TO 10**4 PRECISION)
+C       ZENITH TOTAL DELAY (STORED AS REAL - M TO 10**4 PRECISION)
  
       M = 5
+      if (subset.eq.'NC012004') then ! new GPS-Met feed
+         call ufbrep(lunit,gnssrpsq_8,6,255,irep,
+     $   'SCLF PTID BEARAZ ELEV APDS APDE')
+
+C        ZTD is obtained from "atmospheric path delay in satellite
+C         signal" (m) from replication where azimuth angle is zero deg.
+C         and elevation angle is 90 deg.)
+C        Likewise, the Error in ZTD (used below) is obtained from
+C         "error in atmospheric path delay in satellite signal" (m) from
+C         this same replication.
+C         (slant angles are discarded for now)
+
+         do jrep = 1,irep
+            if(gnssrpsq_8(3,jrep).eq.0..and.gnssrpsq_8(4,jrep).eq.90.)
+     $       then
+               cat14_8(m:m+1) = gnssrpsq_8(5:6,jrep)
+               cat14(m:m+1) = cat14_8(m:m+1)
+               exit
+            end if
+         enddo
+      end if
       IF(IPRINT.GT.1)  PRINT 199, CAT14(M),M
       IF(CAT14(M).LT.XMISS)  RDATX(IDATS_14+4) = CAT14(M)
       NNNNN = IDATS_14 + 4
       IF(IPRINT.GT.1)  PRINT 198, NNNNN,RDATX(IDATS_14+4)
  
-C       ERROR IN TOTAL DELAY (STORED AS REAL - M TO 10**4 PRECISION)
+C       ERROR IN ZENITH TOTAL DELAY (STORED AS REAL - M TO 10**4 PREC.)
  
       M = 6
       IF(IPRINT.GT.1)  PRINT 199, CAT14(M),M

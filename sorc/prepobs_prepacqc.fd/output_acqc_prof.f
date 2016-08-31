@@ -10,7 +10,7 @@ c   merged (mass and wind) reports (subsets) along with (when l_prof1lvl=T) merg
 c   single(flight)-level aircraft reports not part of any profile into a PREPBUFR-like file
 c   containing only these data.  Single-level reports get PREPBUFR report type 3xx (where xx
 c   is original type in 1xx mass and 2xx wind reports), ascending profile reports get
-c   PREPBUFR report type 4xx, and descending profile reports get PREPBUFR report type 4xx.
+c   PREPBUFR report type 4xx, and descending profile reports get PREPBUFR report type 5xx.
 c
 c Program History Log:
 c 2010-11-15  S. Bender  -- Original Author

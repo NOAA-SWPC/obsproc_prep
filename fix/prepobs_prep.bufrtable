@@ -73,6 +73,7 @@
 | LATCORSQ | 348041 | LATITUDE CORRECTION SEQUENCE                             |
 | LONCORSQ | 348042 | LONGITUDE CORRECTION SEQUENCE                            |
 | CLOU3SEQ | 348043 | OBSERVED CLOUD SEQUENCE # 3 (CEILING)                    |
+| APDS_SEQ | 348044 | ATMOSPHERIC PATH DELAY SEQUENCE                          |
 *                                                                              |
 *                                                                              |
 * THE FOLLOWING ARE TABLE D ENTRIES FOR SEQUENCES IN REPORT HEADER             |
@@ -198,7 +199,7 @@
 | RADCOR   | 363006 | RAWINSONDE HEIGHT/TEMP INTERSONDE(RADIATION) CORR. STEP  |
 *          |        |  (RADEVN subroutine in CQCBUFR program)                  |
 | PREPACQC | 363007 | AIRCRAFT QUALITY CONTROL STEP (NOT INCL. MDCRS ACARS)    |
-*          |        |  (PREPACQC program)                                      |
+*          |        |  (obsolete PREPACQC program)                             |
 | VIRTMP   | 363008 | VIRTUAL TEMPERATURE/SPECIFIC HUMIDITY PROCESSING STEP    |
 *          |        |  (PREVENTS program or VTPEVN subr. in subr. GBLEVENTS in |
 *                       PREPDATA program for all obs. types except RAOBS/DROPS;|
@@ -216,7 +217,7 @@
 | ACARSQC  | 363014 | MDCRS ACARS AIRCRAFT QUALITY CONTROL STEP                |
 *          |        |  (ACARSQC program)                                       |
 | NRLACQC  | 363015 | NRL AIRCRAFT QUALITY CONTROL STEP                        |
-*          |        |  (NRLACQC program)                                       |
+*          |        |  (PREPACQC program)                                      |
 | GSI      | 363016 | GSI ANALYSIS STEP                                        |
 *          |        |  (various GSI programs)                                  |
 | DEFAULT  | 363099 | NON-DEFINED STEP (DEFAULT)                               |
@@ -237,6 +238,7 @@
 | TCOR     | 004216 | INDICATOR WHETHER OBS. TIME IN "DHR" WAS CORRECTED       |
 |          |        |                                                          |
 | YOB      | 005002 | LATITUDE                                                 |
+| BEARAZ   | 005021 | BEARING OR AZIMUTH                                       |
 | ATRN     | 005034 | ALONG TRACK ROW NUMBER (QUIKSCAT REPORTS ONLY)           |
 |          |        |                                                          |
 | CTCN     | 006034 | CROSS TRACK CELL NUMBER (QUIKSCAT & ASCAT REPORTS ONLY)  |
@@ -250,7 +252,7 @@
 |          |        |                                                          |
 | SPRR     | 021120 | SEAWINDS PROBABILITY OF RAIN (QUIKSCAT REPORTS ONLY)     |
 |          |        |                                                          |
-| NRLQMS   | 033249 | NRL AIRCRAFT QUALITY CNTRL MARK (ADDED BY PGM NRLACQC)   |
+| NRLQMS   | 033249 | NRL AIRCRAFT QUALITY CNTRL MARK (ADDED BY PGM PREPACQC)  |
 |          |        |                                                          |
 | RSRD     | 035200 | RESTRICTIONS ON REDISTRIBUTION                           |
 | EXPRSRD  | 035201 | EXPIRATION OF RESTRICTIONS ON REDISTRIBUTION             |
@@ -330,7 +332,7 @@
 |          |        |                                                          |
 | DDO      | 011001 | WIND DIRECTION OBSERVATION (NOT ASSIMILATED)             |
 *          |        |  (stored for all reports, currently used only by         |
-*          |        |   "PREPACQC" step for aircraft reports, but will some    |
+*          |        |   "NRLACQC" step for aircraft reports, but will some     |
 *          |        |   day be used by analysis for surface reports)           |
 | SOB      | 011002 | WIND SPEED OBSERVATION (m/s) (NOT ASSIMILATED)           |
 *          |        |  (stored only for surface reports, will some day be      |
@@ -373,7 +375,7 @@
 | VCS      | 011251 | STANDARD DEVIATION OF CLIMATOLOGICAL V-COMP WIND VALUE   |
 | FFO      | 011252 | WIND SPEED OBSERVATION (kts) (NOT ASSIMILATED)           |
 *          |        |  (stored only for all non-surface reports, currently     |
-*          |        |   used only by "PREPACQC" step for aircraft reports)     |
+*          |        |   used only by "NRLACQC" step for aircraft reports)      |
 | WOETU    | 011253 | ANALYSIS-TUNED WIND OBSERVATION ERROR                    |
 |          |        |                                                          |
 | MXTM     | 012111 | MAXIMUM TEMPERATURE                                      |
@@ -432,6 +434,8 @@
 | TOSS     | 014031 | TOTAL SUNSHINE                                           |
 |          |        |                                                          |
 | OZON     | 015001 | OZONE                                                    |
+| APDS     | 015031 | ATMOSPHERIC PATH DELAY IN SATELLITE SIGNAL               |
+| APDE     | 015032 | ESTIMATED ERROR IN ATMOSPHERIC PATH DELAY                |
 |          |        |                                                          |
 | HOVI     | 020001 | HORIZONTAL VISIBILITY                                    |
 | VTVI     | 020002 | VERTICAL VISIBILITY                                      |
@@ -445,6 +449,7 @@
 | HOCT     | 020014 | HEIGHT OF TOP OF CLOUD                                   |
 | CDTP     | 020016 | CLOUD TOP PRESSURE OBSERVATION                           |
 | HBLCS    | 020201 | HEIGHT ABOVE SURFACE OF BASE OF LOWEST CLOUD SEEN        |
+| CEILING  | 020204 | CLOUD CEILING (DERIVATIVE OF HOCB - HGT OF CLOUD BASE)   |
 | WSST     | 020219 | WINDSAT SURFACE TYPE                                     |
 | CTPQM    | 020246 | CLOUD TOP PRESSURE (QUALITY) MARKER                      |
 | CTPPC    | 020247 | CLOUD TOP PRESSURE EVENT PROGRAM CODE                    |
@@ -452,8 +457,6 @@
 | CTPFC    | 020249 | FORECAST (BACKGROUND) CLOUD TOP PRESSURE VALUE           |
 | CTPOE    | 020250 | CLOUD TOP PRESSURE OBSERVATION ERROR                     |
 | CTPAN    | 020251 | ANALYZED CLOUD TOP PRESSURE VALUE                        |
-|          |        |                                                          |
-| CEILING  | 020204 | CLOUD CEILING (DERIVATIVE OF HOCB - HGT OF CLOUD BASE)   |
 |          |        |                                                          |
 | LKCS     | 021104 | LIKELIHOOD COMPUTED FOR SOLUTION (ASCAT REPORTS ONLY)    |
 | WVCQ     | 021155 | WIND VECTOR CELL QUALITY (ASCAT REPORTS ONLY)            |
@@ -612,7 +615,7 @@
 | MSONET   |        <T___INFO>  <Z___INFO>  <W___INFO>  [W2_EVENT]  <PMSL_SEQ> |
 | MSONET   |        <ALTIMSEQ>  {TOPC_SEQ}  <GUST2SEQ>                         |
 |          |                                                                   |
-| GPSIPW   | HEADR   CAT         PW__INFO                                      |
+| GPSIPW   | HEADR   CAT         PW__INFO   <APDS_SEQ>                         |
 |          |                                                                   |
 | RASSDA   | HEADR  {PRSLEVEL}                                                 |
 |          |                                                                   |
@@ -695,6 +698,7 @@
 | LATCORSQ | YORG       YCOR                                                   |
 | LONCORSQ | XORG       XCOR                                                   |
 | CLOU3SEQ | CEILING                                                           |
+| APDS_SEQ | BEARAZ     ELEV    APDS     APDE                                  |
 |          |                                                                   |
 | P__EVENT |               POB                 PQM    PPC    PRC               |
 | Q__EVENT |               QOB                 QQM    QPC    QRC               |
@@ -774,6 +778,7 @@
 | TCOR     |    0 |           0 |   3 | CODE TABLE               |-------------|
 |          |      |             |     |                          |-------------|
 | YOB      |    2 |       -9000 |  15 | DEG N                    |-------------|
+| BEARAZ   |    2 |           0 |  16 | DEGREE TRUE              |-------------|
 | ATRN     |    0 |           0 |  11 | NUMERIC                  |-------------|
 |          |      |             |     |                          |-------------|
 | CTCN     |    0 |           0 |   7 | NUMERIC                  |-------------|
@@ -959,6 +964,8 @@
 | TOSS     |    0 |           0 |  11 | MINUTE                   |-------------|
 |          |      |             |     |                          |-------------|
 | OZON     |    0 |           0 |  10 | DOBSON UNITS             |-------------|
+| APDS     |    4 |       10000 |  15 | METER                    |-------------|
+| APDE     |    4 |           0 |  10 | METER                    |-------------|
 |          |      |             |     |                          |-------------|
 | HOVI     |   -1 |           0 |  13 | METER                    |-------------|
 | VTVI     |   -1 |           0 |   7 | METER                    |-------------|
@@ -972,6 +979,7 @@
 | HOCT     |   -1 |         -40 |  11 | METER                    |-------------|
 | CDTP     |   -1 |           0 |  14 | PASCALS                  |-------------|
 | HBLCS    |    0 |           0 |   4 | CODE TABLE               |-------------|
+| CEILING  |   -1 |         -40 |  11 | METER                    |-------------|
 | WSST     |    0 |           0 |   3 | CODE TABLE               |-------------|
 | CTPQM    |    0 |           0 |   5 | CODE TABLE               |-------------|
 | CTPPC    |    0 |           0 |   5 | CODE TABLE               |-------------|
@@ -979,8 +987,6 @@
 | CTPFC    |   -1 |           0 |  14 | PASCALS                  |-------------|
 | CTPOE    |   -1 |           0 |  10 | PASCALS                  |-------------|
 | CTPAN    |   -1 |           0 |  14 | PASCALS                  |-------------|
-|          |      |             |     |                          |-------------|
-| CEILING  |   -1 |         -40 |  11 | METER                    |-------------|
 |          |      |             |     |                          |-------------|
 | LKCS     |    3 |      -30000 |  15 | NUMERIC                  |-------------|
 | WVCQ     |    0 |           0 |  24 | FLAG TABLE               |-------------|

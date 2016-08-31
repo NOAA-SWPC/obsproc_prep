@@ -5413,10 +5413,12 @@ C  ----------------------------------------------------------------
       TOB(1) = BMISS
       IF(ARR(2).LT.BMISS)  THEN
          ITMP = NINT(ARR(2)*100.)        ! From NESDIS binary FMT &
-         TOB(1) = NINT((ITMP-27315)*0.1) ! foreign, temp in "TMDB"
+         TOB(1) = NINT((ITMP-27315)*0.1) !  foreign pre-V10 BUFR,
+                                         !  temp in "TMDB"
       ELSE  IF(ARR(3).LT.BMISS)  THEN
-         ITMP = NINT(ARR(3)*100.)        ! From NESDIS BUFR Fmt,
-         TOB(1) = NINT((ITMP-27315)*0.1) !  temp in "CCST"
+         ITMP = NINT(ARR(3)*100.)        ! From NESDIS BUFR Fmt &
+         TOB(1) = NINT((ITMP-27315)*0.1) !  foreign V10 BUFR, temp
+                                         !  in "CCST"
       END IF
 
       ZOB(1) = ELV
