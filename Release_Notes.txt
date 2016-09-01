@@ -1,5 +1,5 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-obsproc_prep release 3.7.0 --> released Aug 31, 2016
+obsproc_prep release 3.7.0 --> released Sep 1, 2016
                            --> implemented  ?  ??, 2016
 
 files:
@@ -215,7 +215,8 @@ files:
       v2.2.0 of obsproc_nam,
       v2.3.0 of obsproc_prep_post,
       v2.2.0 of obsproc_rap,
-      v1.3.0 of obsproc_shared/bufr_dumplist.
+      v1.3.0 of obsproc_shared/bufr_dumplist;
+   but AFTER the implementation of v3.1.0 of obsproc_satingest.
 
    Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
    needed.
