@@ -4,7 +4,7 @@ set -e    # fail if an error is hit so that errors do not go unnoticed
 
 module purge
 module load ics/12.1
-module load ibmpe/1.3.0.10
+module load ibmpe
 source ./load_libs.rc  # use modules to set library related environment variables
 #source ./setlibs.rc  # use this if existing library modules don't quite cover all that is needed.
 

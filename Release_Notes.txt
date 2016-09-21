@@ -102,8 +102,9 @@ files:
 
  Source code changes:
    build.sh in sorc directory:
-    - Purge currently loaded modules and load specific compiler modules to
-      increase liklihood of consistent builds.
+    - Increased liklihood of consistent builds by purging currently loaded
+      environment modules and loading specific compiler module.  The
+      default ibmpe module is then loaded for codes that might need it.
     - Switch from using setlibs.rc to load_libs.rc (which loads library
       modules).
    README.build in sorc directory:
