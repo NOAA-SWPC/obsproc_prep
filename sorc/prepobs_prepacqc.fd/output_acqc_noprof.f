@@ -2,7 +2,7 @@ c$$$  Subprogram Documentation Block
 c   BEST VIEWED WITH 94-CHARACTER WIDTH WINDOW
 c
 c Subprogram: output_acqc_noprof 
-c   Programmer: D. Keyser       Org: NP22       Date: 2015-03-16
+c   Programmer: D. Keyser       Org: NP22       Date: 2015-12-09
 c
 c Abstract: Reads an input, pre-PREPACQC PREPBUFR file and matches the subsets within to the
 c   "merged" reports contained within the arrays output by the NRL aircraft QC subroutine
@@ -39,6 +39,14 @@ c 2015-03-16  D. Keyser  -- Fixed a bug which, for cases where the maximum numbe
 c                           reports that can be processed ("max_reps") is exceeded, prevented
 c                           any original reports above "max_reps" from being written out
 c                           (without any QC).
+c 2015-12-09  D. Keyser  -- 
+c                    - Variables holding latitude and longitude data (including input
+c                      arguments "alat" and "alon") now double precision. XOB and YOB in
+c                      PREPBUFR file now scaled to 10**5 (was 10**2) to handle new v7 AMDAR
+c                      and MDCRS reports which have this higher precision.
+c                      BENEFIT: Retains exact precison here. Improves QC processing.
+c                         - The format for all print statements containing latitude and longitude
+c                           changed to print to 5 decimal places.
 c
 c Usage: call output_acqc_noprof(inlun,outlun,nrpts4QC_pre,max_reps,
 c                                bmiss,alat,alon,ht_ft,idt,c_qc,
@@ -180,9 +188,9 @@ c ---------
                                      !  10th char - reason for blacklisting the aircraft
                                      !  11th char - info about flight phase
 
-      real         alat(max_reps)    ! latitude
+      real*8       alat(max_reps)    ! latitude
      +,            alon(max_reps)    ! longitude
-     +,            ht_ft(max_reps)   ! altitude in feet
+      real         ht_ft(max_reps)   ! altitude in feet
       integer      idt(max_reps)     ! time in seconds to anal. time (- before, + after)
       integer      ncep_qm_p(max_reps) ! NCEP PREPBUFR quality mark pressure (PQM)
      +,            ncep_rc_p(max_reps) ! NCEP PREPBUFR NRLACQC pressure event reason code(PRC)
@@ -228,11 +236,11 @@ c ------------------------------------------------------------------------------
                                     !  are attempting to add events
      +,         input_sqn_last      ! sequence number of previous PREPBUFR report for which
                                     !  we had attempted to add events
-      real      input_alat          ! latitude of input PREPBUFR report for which we are 
+      real*8    input_alat          ! latitude of input PREPBUFR report for which we are 
                                     !  attempting to add events
      +,         input_alon          ! longitude of input PREPBUFR report for which we are
                                     !  attempting to add events
-     +,         input_ht_ft         ! altitude of input PREPBUFR report for which we are
+      real      input_ht_ft         ! altitude of input PREPBUFR report for which we are
                                     !  attempting to add events
      +,         input_dhr           ! ob time - cycle time in decimal hours
  
@@ -495,7 +503,7 @@ c ------------------------------------------------------------
      +                       input_alon,input_dhr,nint(arr_8(3,1)),
      +                       c_qc(QCdrptsidx)
    62 format(' TIME rehabilitated: input rpt # ',i6,': id ',A8,
-     + ', lat ',f6.2,', lon ',f6.2,', dhr ',f10.5,', hght(m)',i6,
+     + ', lat ',f9.5,', lon ',f9.5,', dhr ',f10.5,', hght(m)',i6,
      + ', NRLQMS "',A11,'"')
                   print 63, input_dhr,input_idt
    63 format(' INPUT time from PRE-QC PREPBUFR file [DHR,idt(sec)] ',
@@ -512,14 +520,14 @@ c ----------------------------------------------------------------
      +                       input_alon,input_dhr,nint(arr_8(3,1)),
      +                       c_qc(QCdrptsidx)
    72 format(' LAT  rehabilitated: input rpt # ',i6,': id ',A8,
-     + ', lat ',f6.2,', lon ',f6.2,', dhr ',f10.5,', hght(m)',i6,
+     + ', lat ',f9.5,', lon ',f9.5,', dhr ',f10.5,', hght(m)',i6,
      + ', NRLQMS "',A11,'"')
                   print 73, input_alat
    73 format(' INPUT latitude from PRE-QC PREPBUFR file (YOB) is: ',
-     + f6.2)
+     + f9.5)
                   print 74, alat(QCdrptsidx)
    74 format(' REHABILITATED latitude from  acftobs_qc  (YOB) is: ',
-     + f6.2)
+     + f9.5)
                 endif
                 if(c_qc(QCdrptsidx)(4:4).eq.'R') then
 
@@ -529,14 +537,14 @@ c -----------------------------------------------------------------
      +                       input_alon,input_dhr,nint(arr_8(3,1)),
      +                       c_qc(QCdrptsidx)
    82 format(' LON  rehabilitated: input rpt # ',i6,': id ',A8,
-     + ', lat ',f6.2,', lon ',f6.2,', dhr ',f10.5,', hght(m)',i6,
+     + ', lat ',f9.5,', lon ',f9.5,', dhr ',f10.5,', hght(m)',i6,
      + ', NRLQMS "',A11,'"')
                   print 83, input_alon
    83 format(' INPUT longitude from PRE-QC PREPBUFR file (XOB) is: ',
-     + f6.2)
+     + f9.5)
                   print 84, alon(QCdrptsidx)
    84 format(' REHABILITATED longitude from  acftobs_qc  (XOB) is: ',
-     + f6.2)
+     + f9.5)
                 endif
                 if(c_qc(QCdrptsidx)(5:5).eq.'R'.or.
      +             c_qc(QCdrptsidx)(5:5).eq.'r') then
@@ -547,7 +555,7 @@ c -------------------------------------------------------------------------
      +                       input_alon,input_dhr,nint(arr_8(3,1)),
      +                       c_qc(QCdrptsidx)
    92 format(' P/A  rehabilitated: input rpt # ',i6,': id ',A8,
-     + ', lat ',f6.2,', lon ',f6.2,', dhr ',f10.5,', hght(m)',i6,
+     + ', lat ',f9.5,', lon ',f9.5,', dhr ',f10.5,', hght(m)',i6,
      + ', NRLQMS "',A11,'"')
                   print 93
    93 format(' %%%%%%%%%%'/' %%%%% WARNING: Currently not accounted ',
@@ -561,7 +569,7 @@ c -------------------------------------------------------------------
      +                       input_alon,input_dhr,nint(arr_8(3,1)),
      +                       c_qc(QCdrptsidx)
   102 format(' TMP  rehabilitated: input rpt # ',i6,': id ',A8,
-     + ', lat ',f6.2,', lon ',f6.2,', dhr ',f10.5,', hght(m)',i6,
+     + ', lat ',f9.5,', lon ',f9.5,', dhr ',f10.5,', hght(m)',i6,
      + ', NRLQMS "',A11,'"')
                   print 93
                 endif
@@ -700,8 +708,8 @@ c -------------------------------------------------------
 c Encode rehabilitated latitude, latitude correction indicator and original latitude
 c ----------------------------------------------------------------------------------
               print 76, yob_corr,input_typ,QCdrptsidx
-   76 format(' ENCODE REHABILITATED latitude ',f6.2, ' as YOB with ',
-     + 'YCOR=',f3.0,' and YORG=',f6.2,' into PREPBUFR file, rtyp = ',i3,
+   76 format(' ENCODE REHABILITATED latitude ',f9.5, ' as YOB with ',
+     + 'YCOR=',f3.0,' and YORG=',f9.5,' into PREPBUFR file, rtyp = ',i3,
      + ', for input rpt # ',i8)
               call ufbint(outlun,yob_corr,3,1,iret,'YOB YCOR YORG')
             endif
@@ -710,8 +718,8 @@ c ------------------------------------------------------------------------------
 c Encode rehabilitated longitude, longitude correction indicator and original longitude
 c -------------------------------------------------------------------------------------
               print 86, xob_corr,input_typ,QCdrptsidx
-   86 format(' ENCODE REHABILITATED longitude ',f6.2, ' as XOB with ',
-     + 'XCOR=',f3.0,' and XORG=',f6.2,' into PREPBUFR file, rtyp = ',i3,
+   86 format(' ENCODE REHABILITATED longitude ',f9.5, ' as XOB with ',
+     + 'XCOR=',f3.0,' and XORG=',f9.5,' into PREPBUFR file, rtyp = ',i3,
      + ', for input rpt # ',i8)
               call ufbint(outlun,xob_corr,3,1,iret,'XOB XCOR XORG')
             endif

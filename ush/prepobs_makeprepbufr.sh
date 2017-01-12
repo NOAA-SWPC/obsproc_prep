@@ -179,7 +179,7 @@
 #      used, usually the latest); and imports new environment variable
 #      $HOMEobsproc_network which points to directory path for network-specific
 #      prep subdirectories under version control (in production this is normally
-#      ${NWROOT}/obsproc_NETWORK.vX.Y.Z where NETWORK is, e.g., global, namp, rap,
+#      /nwprod//obsproc_NETWORK.vX.Y.Z where NETWORK is, e.g., global, namp, rap,
 #      rtma, urma, and X.Y.Z is version number being used, usually the latest) -
 #      these replace /nw${envir} in order to point to files moved from 
 #      horizontal to vertical directory structure.
@@ -195,9 +195,23 @@
 #      dictionary, /nw${envir}/decoders/decod_shared/dictionaries, rather than
 #      old horizontal structure location, /nw${envir}/dictionaries (the latter
 #      will be removed in September 2014).
-# 2016-02-05 JWhiting -- removed specific coding of root directories, replacing 
-#      them with standard parameters (NWROOT and COMROOT); replaced exact 
-#      specification of ndate utility w/ NDATE parameter. 
+# 2016-02-05 JWhiting -- Use NCO-established variables to point to root
+#      directories for main software components and input/output directories in
+#      order to run on WCOSS Phase 1 or Phase 2 (here, $COMROOT which replaces
+#      hardwire to "/com", $NWROOT which replaces hardwire to "/nwprod" in
+#      comments only).  Use NCO-established variables (presumably obtained from
+#      modules) to point to prod utilities [here, $NDATE from module prod_util
+#      (default or specified version, loaded in each network which executes this
+#      script) which replaces executable ndate in non-versioned, horizontal
+#      structure utility directory path defined by imported variable $utilexec].
+# 2016-04-29 D.A. Keyser  -- Updated logic such that when tropical cyclone
+#      relocation has not run, a first guess is required, the network is gfs or
+#      gdas, but the cycle time is not 00, 06, 12 or 18z, no attempt will be
+#      made to obtain a guess 3-hrs before and after cycle time (since it can
+#      fail).  Instead this is treated the same as any 3- or 1-hrly cycle run
+#      (like rap, e.g.) meaning two guess files will be obtained at the
+#      spanning 3 hour interval around any cycle time not a multiple of 3 hrs.
+#      BENEFIT: Allows future hourly WAM model to run properly.
 # 2016-07-12  D.C. Stokes -- Reinstated poe option to run multiple instances
 #      of the PREPDATA processing script in parallel. New variable $launcher 
 #      defines the parallel scripting launch mechanism (description below).
@@ -218,6 +232,9 @@
 #
 #     These must ALWAYS be exported to this script by the parent script --
 #
+#     COMROOT       Root to input/output "com" directory (in production,
+#                   normally either "/com" for WCOSS  Phase 1 or "/com2" for
+#                   WCOSS Phase 2)
 #     NSPLIT        Number of parts into which the PREPDATA processing shell
 #                   script (herefile MP_PREPDATA) will be split in order to
 #                   run in parallel for computational efficiency (either under
@@ -665,18 +682,16 @@
 #                  $USHVQC/prepobs_cqcvad.sh
 #                  $USHAQC/prepobs_prepacqc.sh
 #                  $USHOIQC/prepobs_oiqcbufr.sh
-#                  $NDATE  (from prod_util module)
-#                  $DATA/postmsg
+#                  $DATA/postmsg (required ONLY if "$jlogfile" is present)
 #                  $DATA/prep_step {here and by referenced script(s)}
 #                  $DATA/err_exit
 #                  $DATA/err_chk {here and by referenced script(s)}
-#        NOTE 1: $DATA/postmsg above is required ONLY if "$jlogfile" is
-#                present.
-#        NOTE 2: The last three scripts above are NOT REQUIRED utilities.
-#                If $DATA/prep_step not found, a scaled down version of it is
-#                executed in-line.  If $DATA/err_exit or $DATA/err_chk are not
-#                found, scaled down versions are created.
-#
+#                  (NOTE: The last three scripts above are NOT REQUIRED
+#                         utilities. If $DATA/prep_step not found, a scaled down
+#                         version of it is executed in-line. If $DATA/err_exit
+#                         or $DATA/err_chk are not found, scaled down versions,
+#                         created in-line, are executed.
+#     executables: $NDATE (from prod_util module)
 #     programs   :
 #          PREPOBS_MPCOPYBUFR   - executable: $MPCOPYX
 #          PREPOBS_PREPDATA     - executable: $PRPX
@@ -1014,9 +1029,11 @@ fi
 
 if [ "$RELOCATION_HAS_RUN" != 'YES' -a "$GETGUESS" != 'NO' ]; then
 
-# The GFS and GDAS networks will get the t-3 and t+3 sigma guess files here
-#  since they are needed by the GSI even if was tropical cyclone relocation was
-#  not previously performed (RELOCATION_HAS_RUN=NO)
+   if [ $cyc = 00 -o $cyc = 06 -o $cyc = 12 -o $cyc = 18 ]; then
+
+# The GFS and GDAS networks at 00, 06, 12 and 18z will get the t-3 and t+3
+#  sigma guess files here since they are needed by the GSI even if tropical
+#  cyclone relocation was not previously performed (RELOCATION_HAS_RUN=NO)
 #   (NOTE 1: Normally RELOCATION_HAS_RUN=YES for these networks)
 #   (NOTE 2: If RELOCATION_HAS_RUN=YES, the t-3 and t+3 sigma guess files have
 #            already been obtained for all networks including the GFS and GDAS)
@@ -1066,6 +1083,7 @@ echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
             set -x
         fi
       done
+   fi
    fi
 
 elif [ "$RELOCATION_HAS_RUN" = 'YES' ]; then
@@ -1364,12 +1382,14 @@ set -u
 #  problem: status file not found - indicates some or all data dumps were not
 #           found (produced) for requested time ...
 #           If highest level directory pointing to input BUFR observational
-#           data dumps is $COMROOT then EXIT (assumes all data dumps are required)
+#            data dumps is /com or /com2 then EXIT (assumes all data dumps are
+#            required)
 #           Otherwise, just echo a diagnostic (assumes only some data dumps are
 #           required)
 #  ----------------------------------------------------------------------------
 
             first5_comsp=`echo $COMSP | cut -c1-5`
+            first6_comsp=`echo $COMSP | cut -c1-6`
             first9_tstsp=`echo $tstsp | cut -c1-9`
 
             set +x
@@ -1378,8 +1398,8 @@ echo "Some or all BUFR data dumps were not found for requested time ... "
 echo
             set -x
 
-            if [ "$first5_comsp" = "$(echo ${COMROOT}/ | cut -c5)" -a \
-                 "$first9_tstsp" = '/tmp/null' ]; then
+            if [ \( "$first5_comsp" = '/com/' -o "$first6_comsp" = '/com2/' \) \
+                 -a "$first9_tstsp" = '/tmp/null' ]; then
                set +x
 echo
 echo "ABNORMAL EXIT!!!!!!!!!!!"

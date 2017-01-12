@@ -1,8 +1,8 @@
-c$$$  Subprogram Documentation Blocko
+c$$$  Subprogram Documentation Block
 c   BEST VIEWED WITH 94-CHARACTER WIDTH WINDOW
 c
 c Subprogram: input_acqc
-c   Programmer: D. Keyser       Org: NP22       Date: 2014-09-03
+c   Programmer: D. Keyser       Org: NP22       Date: 2016-12-09
 c
 c Abstract: Reads aircraft reports (mass and wind pieces) out of the input PREPBUFR file (in
 c   message types 'AIRCAR' and 'AIRCFT') and stores merged (mass and wind) data into memory
@@ -41,6 +41,23 @@ c                           where previously unformatted print was > 80 characte
 c 2014-09-03  D. Keyser  -- If no aircraft reports of any type are read from input PREPBUFR
 c                           file, no further processing is performed other than the usual
 c                           stdout print summary at the end.
+c 2016-12-09  D. Keyser  --
+c                 - Nomenclature change: replaced "MDCRS/ACARS" with just "MDCRS".
+c                 - New LATAM AMDARs contain an encrypted flight number (in addition to a tail
+c                   number, all other AMDARs have only a tail number which is copied into
+c                   flight number). Read this in and use in QC processing.
+c                   BENEFIT: Improves track-checking and other QC for LATAM AMDARs.
+c                 - Latitude/longitdue arrays "alat" and "alon" passed out of this subroutine
+c                   now double precision. XOB and YOB in PREPBUFR file now scaled to 10**5
+c                   (was 10**2) to handle new v7 AMDAR and MDCRS reports which have this
+c                   higher precision.
+c                   BENEFIT: Retains exact precison here. Improves QC processing.
+c                      - Note: QC here can be improved further by changing logic to account
+c                              for the increased precision. This needs to be investigated.
+c                              For now, location in code where this seems possible is noted by
+c                              the spanning comments:
+c                      ! vvvv DAK-future change perhaps to account for incr. lat/lon precision
+c                      ! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 c
 c Usage: call input_acqc(inlun,max_reps,mxnmev,bmiss,imiss,amiss,
 c                        m2ft,mxlv,nrpts4QC,cdtg_an,alat,alon,ht_ft,
@@ -112,8 +129,8 @@ c                    reports
 c     nevents      - Array tracking number of events for all variables (p, q, t, z, u/v,
 c                    dir/spd) for "merged" reports
 c     hdr          - Array of aircraft report headers info for "merged" reports
-c     acid         - Array of aircraft report flight numbers for "merged" MDCRS/ACARS reports
-c                    (read in from 'ACID' in input PREPBUFR file)
+c     acid         - Array of aircraft report flight numbers for "merged" MDCRS and AMDAR
+c                    (LATAM only) reports (read in from 'ACID' in input PREPBUFR file)
 c     rct          - Array of aircraft report receipt times for "merged" reports
 c     drinfo       - Array of aircraft "drift" info (just XOB, YOB, DHR right now) for
 c                    "merged" reports
@@ -331,7 +348,7 @@ c for BUFR subsets/reports:
                                        !  that are deemed to be Canadian AMDAR reports
      +,	           nMDCRS              ! number of input merged (mass + wind piece) reports
                                        !  read in from AIRCAR BUFR messages in PREPBUFR file
-                                       !  (all are MDCRS/ACARS reports)
+                                       !  (all are MDCRS reports)
      +,            nTAMDAR             ! number of input merged (mass + wind piece) reports
                                        !  read in from AIRCFT BUFR messages in PREPBUFR file
                                        !  that are deemed to be TAMDAR reports
@@ -349,9 +366,9 @@ c ------------------
       character*8    c_acftreg(max_reps) ! aircraft registration (tail) number (used in NRL
                                          !  QC processing)
       character*9    c_acftid(max_reps)  ! aircraft flight number (used in NRL QC processing)
-      real           alat(max_reps)    ! latitude
+      real*8         alat(max_reps)    ! latitude
      +,              alon(max_reps)    ! longitude
-     +,              pres(max_reps)    ! pressure
+      real           pres(max_reps)    ! pressure
      +,              ht_ft(max_reps)   ! altitude in feet
      +,              t_prcn(max_reps)  ! temperature precision
      +,              ob_t(max_reps)    ! temperature
@@ -374,7 +391,7 @@ c ------------------
      +,              nchk_s(max_reps)  ! NCEP QC flag for wind speed ob
      +,              phase(max_reps)   ! phase of flight for aircraft
 
-      logical        l_minus9c(max_reps) ! true for MDCRS/ACARS -9C temperatures
+      logical        l_minus9c(max_reps) ! true for MDCRS -9C temperatures
 
 c Variables for reading numeric data out of BUFR files via BUFRLIB
 c ----------------------------------------------------------------
@@ -565,8 +582,10 @@ c -----------------------------
       nchk_d = -9
       nchk_s = -9
 
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
       alat   = amiss
       alon   = amiss
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
       pres   = amiss
       ht_ft  = amiss
       itype  = imiss
@@ -814,9 +833,9 @@ c --------------------------------------------------------
             itype(nrpts4QC) = mod(int(hdr(nrpts4QC,6)),100) 
                              ! 30 = NCEP: AIREP (NRL Manual AIREP/voice)
                              ! 30 = NCEP: PIREP (NRL Manual AIREP/voice)
-                             ! 31 = NCEP: AMDAR (NRL: AMDAR)
+                             ! 31 = NCEP: AMDAR (all types except Canadian) (NRL: AMDAR)
                              ! 32 = NCEP; RECCOs, but these are in ADPUPA msgs
-                             ! 33 = NCEP: MDCRS/ACARS (NRL: MDCRS)
+                             ! 33 = NCEP: MDCRS (NRL: MDCRS)
                              ! 34 = NCEP: TAMDAR (NRL: ACARS)
                              ! 35 = NCEP: Canadian AMDAR (NRL: AMDAR)
 
@@ -970,14 +989,23 @@ c ------------------------------------------------------------------------------
               if(itype(nrpts4QC).eq.31 .or.
      +           itype(nrpts4QC).eq.35) then
 
-c All AMDAR types (including Canadian and European) currently store tail number in 'SID',
-c  while flight number is missing - copy this into BOTH tail number and flight number
-c  locations in NRL arrays
-c  (Note: European AMDARs do have a valid flight number but it is not yet available in
+c All AMDAR types currently store tail number in 'SID', while flight number is missing or all
+c  blanks for all types except for LATAM (Chile) - if flight number is missing or all blanks,
+c  copy 'SID' into BOTH tail number and flight number locations in NRL arrays; if flight
+c  number is present and nnot all blanks (LATAM), copy flight number (from 'ACID') into flight
+c  number location in NRL array
+c  (Note: European AMDARs may have a valid flight number but it is not yet available in
 c         PREPBUFR, when it is it will be in mnemonic 'ACID' - DAK)
-c ---------------------------------------------------------------------------------------
+c ------------------------------------------------------------------------------------------
                 c_acftreg(nrpts4QC) = charstr   ! tail number
-                c_acftid(nrpts4QC)  = charstr   ! flight number
+                c_acftid(nrpts4QC)  = charstr   ! flight number (default is tail number)
+                call ufbint(inlun,c_arr_8,1,1,nlev,'ACID')
+                if(ibfms(c_arr_8).eq.0) then
+                   if(charstr.ne.'        ') then
+                      c_acftid(nrpts4QC) = charstr    ! flight number ('ACID' if present, always)
+                      acid(nrpts4QC) = c_arr_8        !  the case for LATAM AMDAR
+                   endif
+                endif
 
               elseif(itype(nrpts4QC).eq.30 .or.
      +               itype(nrpts4QC).eq.34) then
@@ -996,9 +1024,9 @@ c ------------------------------------------------------------------------------
             
             elseif(mesgtype.eq.'AIRCAR') then
 
-c MDCRS/ACARS from ARINC currently store tail number in 'SID' and flight number in 'ACID' -
-c  copy these into  tail number and flight number locations in NRL arrays
-c  (Note: MDCRS/ACARS from AFWA was a rarely used backup to those from ARINC until it was
+c MDCRS from ARINC currently store tail number in 'SID' and flight number in 'ACID' - copy
+c  these into  tail number and flight number locations in NRL arrays
+c  (Note: MDCRS from AFWA was a rarely used backup to those from ARINC until it was
 c         discontinued on 10/30/2009 - it apparently stored flight number in 'SID' and
 c         in 'ACID' - store flight number in 'SID' as tail number and flight number in
 c         'ACID' (if present) as flight number (even those would be the same here)
@@ -1007,11 +1035,11 @@ c ------------------------------------------------------------------------------
               call ufbint(inlun,c_arr_8,1,1,nlev,'ACID')
               if(ibfms(c_arr_8).eq.0) then
                 c_acftid(nrpts4QC) = charstr    ! flight number ('ACID' if present, always)
-                acid(nrpts4QC) = c_arr_8        !  the case for MDCRS/ACARS from ARINC)
+                acid(nrpts4QC) = c_arr_8        !  the case for MDCRS from ARINC)
               else
                 c_acftid(nrpts4QC) = '         '! store flight number as missing (all blanks)
-                                                !  if not present (may be the case for MDCRS/
-                                                !  ACARS from AWFA)
+                                                !  if not present (may be the case for MDCRS
+                                                !  from AWFA)
               endif
             endif
 c ----------------------------------------------------------------------------------------
@@ -1574,8 +1602,8 @@ c Need to check phase of flight and PREPBUFR report type
 c PREPBUFR report types (mnemonic = TYP) where x is either: 1=mass, 2=wind part:
 c       x30 = NCEP: AIREP (NRL Manual AIREP/voice)
 c       x30 = NCEP: PIREP (NRL Manual AIREP/voice)
-c       x31 = NCEP: AMDAR (NRL: AMDAR)
-c       x33 = NCEP: MDCRS/ACARS (NRL: MDCRS)
+c       x31 = NCEP: AMDAR (all types except Canadian) (NRL: AMDAR)
+c       x33 = NCEP: MDCRS (NRL: MDCRS)
 c       x34 = NCEP: TAMDAR (NRL: ACARS)
 c       x35 = NCEP: Canadian AMDAR (NRL: AMDAR)
 c
@@ -1622,12 +1650,14 @@ c     *136/'amdar_asc'  = AMDAR ascending profile
 c     *137/'amdar_des'  = AMDAR descending profile
 c     * 38/'amdar_lvl'  = AMDAR level flight
 c --------------------------------------------------------------
-c ---> NRL ACARS {NOTE: Not currently used by NRL (per email from Pat Pauley 1/12/05);
-c                       NCEP will use them to provide a separate category for TAMDARs}
-c       40/'acars'      = Automated aircraft (ACARS)
-c      141/'acars_asc'  = ACARS ascending profile
-c      142/'acars_des'  = ACARS descending profile
-c       43/'acars_lvl'  = ACARS level flight
+c ---> NRL ACARS {NOTE: Originally deemed "ACARS" by NRL, but this is currently not used by
+c                       NRL (per email from Pat Pauley 1/12/05); NCEP will use them to provide
+c                       a separate category for TAMDARs and rename them as TAMDAR in all
+c                       printouts from acftobs_qc.f}
+c       40/'acars'      = Automated aircraft (TAMDAR) (POAF cannot be determined)
+c      141/'acars_asc'  = TAMDAR ascending profile
+c      142/'acars_des'  = TAMDAR descending profile
+c       43/'acars_lvl'  = TAMDAR level flight
 c --------------------------------------------------------------
 c ---> NRL MDCRS
 c     * 45/'mdcrs' = Automated aircraft (MDCRS) (POAF cannot be determined)
@@ -1664,8 +1694,8 @@ ccccccccc   nAUTOAIREP = nAUTOAIREP + 1
             nMANAIREP = nMANAIREP + 1	
           endif 
 
-        elseif(itype(i).eq.31) then     ! NCEP: AMDAR (NRL: AMDAR) (BUFR tanks b004/xx003 and
-                                        !                                      b004/xx006)
+        elseif(itype(i).eq.31) then     ! NCEP: AMDAR (all types except Canadian) (NRL: AMDAR)
+                                 ! (BUFR tanks b004/xx003, b004/xx006, b004/xx011, b004/xx103)
           nAMDAR = nAMDAR + 1	
           if(phase(i).eq.3 .or. phase(i).eq.4) then
             itype(i) = 38               ! level flight
@@ -1689,16 +1719,16 @@ ccccccccc   nAUTOAIREP = nAUTOAIREP + 1
             itype(i) = 45               ! unknown phase of flight
           endif
 
-        elseif(itype(i).eq.34) then     ! NCEP: TAMDAR (NRL: ACARS) (BUFR tanks b004/xx008,
-                                        !                                       b004/xx012,
-                                        !                                       b004/xx013)
-c DAK: Changed these from NRL AMDAR to NRL ACARS at suggestion of P. Pauley (3/2012) - allows
-c      them to be treated in a separate category for stratifying statistics - also seems to
-c      flag more AMDARs as bad which is a good thing since there are so many anyway
+        elseif(itype(i).eq.34) then     ! NCEP: TAMDAR (NRL: ACARS)
+                                 ! (BUFR tanks b004/xx008, b004/xx010, b004/xx012, b004/xx013)
+c DAK: Changed these from NRL AMDAR to NRL ACARS at suggestion of P. Pauley (3/2012), (to hold
+c      NCEP TAMDARs) - allows them to be treated in a separate category for stratifying
+c      statistics - also seems to flag more AMDARs as bad which is a good thing since there
+c      are so many anyway
           nTAMDAR = nTAMDAR + 1	
-                  ! NOTE: All TAMDARs currently have missing phase of flight and will get set
-                  !       to unknown value initially (may later change) (still MADIS feed,
-                  !       AirDat feed does have pase of flight)
+                  ! NOTE: MADIS-feed TAMDARs currently have missing phase of flight and will
+                  !       get set to unknown value initially (may later change)
+                  !       AirDAT/Panasonic BUFR-feed TAMDARs do contain phase of flight)
           if(phase(i).eq.3 .or. phase(i).eq.4) then
 ccccccccccc itype(i) = 38               ! level flight
             itype(i) = 43               ! level flight
@@ -1793,7 +1823,7 @@ c ---------------------------------------------------
         qms(3) = nchk_d(i)
         qms(4) = nchk_s(i)
 
-c DAK: this could be coded up more eficiently!
+c DAK: this could be coded up more efficiently!
         do J=1,4
           if(qms(j).eq.2) then 
             qms(j) = 0
@@ -1822,7 +1852,7 @@ c ------------------------------------------------------------------------------
 
 c If ob is missing, then store NRL quality mark as -9
 c ---------------------------------------------------
-c DAK: this could be coded up more eficiently!
+c DAK: this could be coded up more efficiently!
           if(j.eq.1 .and. ob_t(i).eq.amiss) then
             qms(j) = -9
           elseif(j.eq.2 .and. ob_q(i).eq.amiss) then
@@ -1835,7 +1865,7 @@ c DAK: this could be coded up more eficiently!
 
 c Store altered quality marks into NRL QM arrays
 c ----------------------------------------------
-c DAK: this could be coded up more eficiently!
+c DAK: this could be coded up more efficiently!
           if(j.eq.1) then
             ichk_t(i) = qms(j)
           elseif(j.eq.2) then
@@ -1878,7 +1908,7 @@ c -------------
       write(*,*) 'NUMBER OF AIREPS (MANUAL AIREPS/voice): ',nMANAIREP
       write(*,*) 'NUMBER OF AMDAR (excl. Canadian): ',nAMDAR
       write(*,*) 'NUMBER OF CANADIAN AMDAR: ',nAMDARcan
-      write(*,*) 'NUMBER OF MDCRS/ACARS: ',nMDCRS
+      write(*,*) 'NUMBER OF MDCRS: ',nMDCRS
       write(*,*) 'NUMBER OF TAMDAR: ',nTAMDAR
 
 c End program

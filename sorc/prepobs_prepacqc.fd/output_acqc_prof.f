@@ -2,7 +2,7 @@ c$$$  Subprogram Documentation Block
 c   BEST VIEWED WITH 94-CHARACTER WIDTH WINDOW
 c
 c Subprogram: output_acqc_prof 
-c   Programmer: D. Keyser       Org: NP22       Date: 2013-02-07
+c   Programmer: D. Keyser       Org: NP22       Date: 2016-12-09
 c
 c Abstract: Reads in sorted NRLACQC quality controlled single-level aircraft reports and
 c   constructs profiles from ascending or descending flights.  Encodes these profiles as
@@ -18,6 +18,15 @@ c 2012-05-08  D. Keyser  -- Prepared for operational implementation
 c 2012-11-20  J. Woollen -- Initial port to WCOSS
 c 2013-02-07  D. Keyser  -- Final changes to run on WCOSS: use formatted print statements
 c                           where previously unformatted print was > 80 characters
+c 2016-12-09  D. Keyser  --
+c                 - Nomenclature change: replaced "MDCRS/ACARS" with just "MDCRS".
+c                 - Latitude/longitdue arrays "alat" and "alon" passed into of this subroutine
+c                   now double precision. XOB and YOB in PREPBUFR file now scaled to 10**5
+c                   (was 10**2) to handle new v7 AMDAR and MDCRS reports which have this
+c                   higher precision.
+c                   BENEFIT: Retains exact precison here. Improves QC processing.
+c                         - The format for all print statements containing latitude and longitude
+c                           changed to print to 5 decimal places.
 c
 c Usage: call output_acqc_prof(proflun,nrpts4QC_pre,max_reps,mxnmev,
 c                              mxlv,bmiss,cdtg_an,alat,alon,ht_ft,
@@ -64,13 +73,12 @@ c                    NRL QC processing
 c     ob_t         - Array of aircraft temperatures for the "merged" reports
 c     nevents      - Array tracking number of events for variables for each report
 c     hdr          - Array containing header information for the "merged" reports {word 1 is
-c                    flight number for AIREPs, tail number for AMDARs (all types) and MDCRS/
-c                    ACARs, and manfactured id for PIREPs and TAMDARs  - this will be later
-c                    be encoded into 'SID' for aircraft reports in output  PREPBUFR-like
-c                    file)
-c     acid         - Array containing flight numbers for the "merged" MDCRS/ACARS reports
-c                    (this will be encoded into 'ACID' for MDCRS/ACARS reports in output
-c                    PREPBUFR-like profiles file)
+c                    flight number for AIREPs, tail number for AMDARs (all types) and MDCRS,
+c                    and manfactured id for PIREPs and TAMDARs  - this will be later be
+c                    encoded into 'SID' for aircraft reports in output  PREPBUFR-like file)
+c     acid         - Array containing flight numbers for the "merged" MDCRS and AMDAR (LATAM
+c                    only) reports {this will be encoded into 'ACID' for MDCRS and AMDAR
+c                    (LATAM only) reports in output PREPBUFR-like profiles file}
 c     rct          - Array containing receipt times for the "merged" reports
 c     drinfo       - Array containing drift information for the "merged" reports
 c     acft_seq     - Array containing temperature precision and phase of flight for the
@@ -226,9 +234,9 @@ c ----------------
                                       !  10th char - reason for blacklisting the aircraft
                                       !  11th char - info about flight phase
 
-      real         alat(max_reps)     ! latitude
+      real*8       alat(max_reps)     ! latitude
      +,            alon(max_reps)     ! longitude
-     +,            ht_ft(max_reps)    ! altitude in feet
+      real         ht_ft(max_reps)    ! altitude in feet
 
       integer      idt(max_reps)      ! time in seconds to anal. time (- before, + after)
       character*8  c_acftreg(max_reps)! aircraft registration (tail) number as used in NRL
@@ -489,8 +497,8 @@ c ------------------------------------------------------------------------------
      +,       acft_seq(max_reps,2)    ! PCAT POAF
 
       real*8  acid_last_profile       ! ACID (aircraft flight number) for last (or only)
-                                      !  MDCRS/ACARS report in profile (passed into
-                                      !  subroutine sub2mem_mer)
+                                      !  MDCRS or AMDAR (LATAM only) report in profile (passed
+                                      !  into subroutine sub2mem_mer)
 
       character*9  c_acftid_last_profile  ! aircraft flight number (as processed by NRL QC
                                           !  procesing) for last (or only) report in profile
@@ -635,13 +643,20 @@ c ------------------------------------------------------------------------------
      +             "tail #''s")')
 
         write(52,*)
-        write(52,'(" AMDAR reports (all types) report only a tail # - ",
-     +             "this is stored as both flight # and tail # for ",
-     +             "NRLACQC sorting - the PREPBUFR file continues to ",
+        write(52,'(" All AMDAR reports except LATAM report only a tail",
+     +            " # - this is stored as both flight # and tail # for",
+     +             " NRLACQC sorting - the PREPBUFR file continues to ",
      +             "encode only tail # (stored in ''SID'')")')
         write(52,*)
-        write(52,'(" MDCRS/ACARs reports from ARINC report both a tail",
-     +             " # and a flight # - these are used as reported for",
+        write(52,'(" AMDAR reports from LATAM report both a tail # and",
+     +             " a flight # - these are used as reported for ",
+     +             "NRLACQC sorting - the PREPBUFR file continues to ",
+     +             "encode both tail # and flight # (as ''SID'' and ",
+     +             "''ACID'',")')
+        write(52,*) 'resp.)'
+        write(52,*)
+        write(52,'(" MDCRS reports from ARINC report both a tail # and",
+     +             " a flight # - these are used as reported for",
      +             " NRLACQC sorting - the PREPBUFR file continues to ",
      +             "encode both tail # and flight # (as ''SID'' and ",
      +             "''ACID'',")')
@@ -649,14 +664,14 @@ c ------------------------------------------------------------------------------
 
         write(52,*)
         write(52,3001)
- 3001   format(169x,'! _PREPBUFR_QMs_!NRLACQC_REASON_CODE'/
-     +         'index flight    tail num itype pof     lat    lon   ',
-     +         'time  hght   pres temp/evnt spec_h/evnt  uwnd   ',
+ 3001   format(172x,'! _PREPBUFR_QMs_!NRLACQC_REASON_CODE'/
+     +         'index flight    tail num itp pf       lat       lon',
+     +         '    time  hght   pres temp/evnt spec_h/evnt  uwnd   ',
      +         'vwnd/evnt t-prec !__qc_flag__!rcptm mstq cat  wspd ',
      +         'wdir rtyp         ! Pq Zq Tq Qq Wq!Prc Zrc Trc Qrc ',
      +         'Wrc'/
-     +         '----- --------- -------- ----- ---   ----- ------ ',
-     +         '------ ----- ------ --------- ----------- ------  ',
+     +         '----- --------- -------- --- --   -------- --------',
+     +         '- ------ ----- ------ --------- ----------- ------  ',
      +         '--------- ------  -----------!----- ---- --- ----- ',
      +         '---- ----         ! -- -- -- -- --!--- --- --- --- ',
      +         '---')
@@ -1099,7 +1114,7 @@ c ------------------------------------------------------------
             print 62, j,hdr(j,1),hdr(j,3),hdr(j,2),hdr(j,4),
      +                nint(hdr(j,5)),c_qc(j)
    62 format(' TIME rehab. (prof): input rpt # ',i6,': id ',a8,', lat ',
-     + f6.2,', lon ',f6.2,', dhr ',f10.5,', hght(m)',i6,', NRLQMS "',
+     + f9.5,', lon ',f9.5,', dhr ',f10.5,', hght(m)',i6,', NRLQMS "',
      + A11,'"')
             print 63, hdr(j,4),nint(hdr(j,4)*3600.)
    63 format(' INPUT time from PRE-QC PREPBUFR file [DHR,idt(sec)] ',
@@ -1121,14 +1136,14 @@ c ----------------------------------------------------------------
             print 72, j,hdr(j,1),hdr(j,3),hdr(j,2),hdr(j,4),
      +                nint(hdr(j,5)),c_qc(j)
    72 format(' LAT  rehab. (prof): input rpt # ',i6,': id ',A8,', lat ',
-     + f6.2,', lon ',f6.2,', dhr ',f10.5,', hght(m)',i6,', NRLQMS "',
+     + f9.5,', lon ',f9.5,', dhr ',f10.5,', hght(m)',i6,', NRLQMS "',
      + A11,'"')
             print 73, hdr(j,3)
    73 format(' INPUT latitude from PRE-QC PREPBUFR file (YOB) is: ',
-     + f6.2)
+     + f9.5)
             print 74, alat(j)
    74 format(' REHAB. (prof) latitude from  acftobs_qc  (YOB) is: ',
-     + f6.2,' use this in profile if created')
+     + f9.5,' use this in profile if created')
             hdr2wrt(3) = alat(j)
 	    drinfo_accum(2,nlvinprof) = alat(j)
           endif
@@ -1139,14 +1154,14 @@ c -----------------------------------------------------------------
             print 82, j,hdr(j,1),hdr(j,3),hdr(j,2),hdr(j,4),
      +                nint(hdr(j,5)),c_qc(j)
    82 format(' LON  rehab. (prof): input rpt # ',i6,': id ',A8,', lat ',
-     + f6.2,', lon ',f6.2,', dhr ',f10.5,', hght(m)',i6,', NRLQMS "',
+     + f9.5,', lon ',f9.5,', dhr ',f10.5,', hght(m)',i6,', NRLQMS "',
      + A11,'"')
             print 83, hdr(j,2)
    83 format(' INPUT longitude from PRE-QC PREPBUFR file (XOB) is: ',
-     + f6.2)
+     + f9.5)
             print 84, alon(j)
    84 format(' REHAB. (prof) longitude from  acftobs_qc  (XOB) is: ',
-     + f6.2,' use this in profile if created')
+     + f9.5,' use this in profile if created')
             hdr2wrt(2) = alon(j)
 	    drinfo_accum(1,nlvinprof) = alon(j)
           endif
@@ -1157,7 +1172,7 @@ c -------------------------------------------------------------------------
             print 92, j,hdr(j,1),hdr(j,3),hdr(j,2),hdr(j,4),
      +                nint(hdr(j,5)),c_qc(j)
    92 format(' P/A  rehab. (prof): input rpt # ',i6,': id ',A8,', lat ',
-     + f6.2,', lon ',f6.2,', dhr ',f10.5,', hght(m)',i6,', NRLQMS "',
+     + f9.5,', lon ',f9.5,', dhr ',f10.5,', hght(m)',i6,', NRLQMS "',
      + A11,'"')
             print 93
    93 format(' %%%%%%%%%%'/' %%%%% Currently not accounted for in ',
@@ -1170,7 +1185,7 @@ c -------------------------------------------------------------------
             print 102, j,hdr(j,1),hdr(j,3),hdr(j,2),hdr(j,4),
      +                 nint(hdr(j,5)),c_qc(j)
   102 format(' TMP  rehabilitated: input rpt # ',i6,': id ',A8,', lat ',
-     + f6.2,', lon ',f6.2,', dhr ',f10.5,', hght(m)',i6,', NRLQMS "',
+     + f9.5,', lon ',f9.5,', dhr ',f10.5,', hght(m)',i6,', NRLQMS "',
      + A11,'"')
             print 93
           endif

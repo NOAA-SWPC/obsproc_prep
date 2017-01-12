@@ -43,6 +43,27 @@ c                      condition code 98 (so no real change in what happens here
 c                      it happens).
 c                    - Increased format width from I5 to I6 in all places where aircraft obs
 c                      index is listed out (since there now can be > 99999 reports).
+c 2016-12-09  D. Keyser  -- 
+c                    - Since "ACARS" as referred to here is not used and we earlier decided to
+c                      use this to provide a separate category for TAMDARs (for stratifying
+c                      statistics), all printout here changes the term "ACARS" to "TAMDAR".
+c                      In addition, all comments now refer to "TAMDAR" instead of "ACARS".
+c                    - Variables holding latitude and longitude data (including input
+c                      arguments "alat" and "alon") now double precision. XOB and YOB in
+c                      PREPBUFR file now scaled to 10**5 (was 10**2) to handle new v7 AMDAR
+c                      and MDCRS reports which have this higher precision.
+c                      BENEFIT: Retains exact precison here. Improves QC processing.
+c                         - Note: QC here can be improved further by changing logic in many
+c                                 places to account for the increased precision. This needs to
+c                                 be investigated.  For now, locations in code where this
+c                                 seems possible are noted by the spanning comments:
+c                      ! vvvv DAK-future change perhaps to account for incr. lat/lon precision
+c                      ! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
+c                         - The format for all print statements containing latitude and longitude
+c                           changed to print to 5 decimal places.
+c                         - Intrinsic function "ifix" replaced with "int" for cases where the
+c                           argument is now a real*8 lat or lon (else compiler error if "ifix"
+c                           operates on a real*8 argument).
 c
 c   BEST VIEWED WITH 94-CHARACTER WIDTH WINDOW
 ccccc
@@ -68,10 +89,15 @@ c
      x,    sumabs_xiv_d,sumabs_xiv_s,l_minus9c
      x,    l_last,l_first_date,l_operational,l_pc,l_ncep,*)
 c
-c This routine performs qc checks on the combined MDCRS/ACARS, AIREP, PIREP and
-c AMDAR aircraft data.  To the extent possible, the data are sorted
-c into tracks and checked for consistency along the tracks.
-c
+c This routine performs qc checks on the combined ACARS, AIREP, PIREP,
+c AMDAR and TAMDAR aircraft data.  To the extent possible, the data are
+c sorted into tracks and checked for consistency along the tracks.
+
+cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+c For NCEP purposes NRL ACARS applies to TAMDAR - all references to
+c  ACARS are changed to TAMDAR in printout
+cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
 c Adapted from sortacrs--P.M. Pauley's original ACARS QC program
 c Most QC checks patterned after those developed by Bill Moninger
 c
@@ -222,9 +248,9 @@ c     -----------
       integer      idp(max_reps)       ! surface pressure change at ob location
       character*8  c_acftreg(max_reps) ! aircraft registration (tail) number
       character*9  c_acftid(max_reps)  ! aircraft flight number
-      real         alat(max_reps)      ! latitude
+      real*8       alat(max_reps)      ! latitude
      $,            alon(max_reps)      ! longitude
-     $,            pres(max_reps)      ! pressure
+      real         pres(max_reps)      ! pressure
      $,            ht_ft(max_reps)     ! height in feet
       real         t_prcn(max_reps)    ! temperature precision
       real         ob_t(max_reps)      ! temperature
@@ -253,8 +279,10 @@ c     ---------------------------
                                        !  else =0)
       character*6  cmaxflt             ! character form of maxflt for NCEP print statement
 c      character*9  c_air_id(max_reps)  ! airep flight id for mixed duplicate
-c     x,            c_acr_id(max_reps)  ! acars flight id for mixed duplicate
-c      character*8  c_acr_reg(maxflt)   ! acars tail number for mixed duplicate
+ccccdak     x,            c_acr_id(max_reps)  ! acars flight id for mixed duplicate
+c     x,            c_acr_id(max_reps)  ! tamdar flight id for mixed duplicate
+ccccdak      character*8  c_acr_reg(maxflt)   ! acars tail number for mixed duplicate
+c      character*8  c_acr_reg(maxflt)   ! tamdar tail number for mixed duplicate
 c      integer      idt_min(maxflt)     ! min time for flight segment
 c     $,            idt_max(maxflt)     ! max time for flight segment
 c
@@ -351,17 +379,22 @@ c     ---------------
      $,            kk                  ! do loop index
      $,            iob                 ! do loop index--over reports
      $,            len                 ! length of filename
-      integer      knt_acars           ! number of acars reports
+ccccdak      integer      knt_acars           ! number of acars reports
+      integer      knt_acars           ! number of tamdar reports
      $,            knt_mdcrs           ! number of mdcrs reports
      $,            knt_man_airep       ! number of manual airep reports
      $,            knt_man_Yairep      ! number of manual YRXX airep reports
      $,            knt_airep           ! number of airep reports
      $,            knt_amdar           ! number of amdar reports
 c
-      integer      i_acars             ! instrument type for acars
-     $,            i_acars_lvl         ! instrument type for acars--level flt
-     $,            i_acars_asc         ! instrument type for acars--ascent
-     $,            i_acars_des         ! instrument type for acars--descent
+ccccdak      integer      i_acars             ! instrument type for acars
+      integer      i_acars             ! instrument type for tamdar
+ccccdak     $,            i_acars_lvl         ! instrument type for acars--level flt
+     $,            i_acars_lvl         ! instrument type for tamdar--level flt
+ccccdak     $,            i_acars_asc         ! instrument type for acars--ascent
+     $,            i_acars_asc         ! instrument type for tamdar--ascent
+ccccdak     $,            i_acars_des         ! instrument type for acars--descent
+     $,            i_acars_des         ! instrument type for tamdar--descent
      $,            i_mdcrs             ! instrument type for mdcrs
      $,            i_mdcrs_lvl         ! instrument type for mdcrs--level flt
      $,            i_mdcrs_asc         ! instrument type for mdcrs--ascent
@@ -954,7 +987,7 @@ c
      x,        ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,        ob_spd(ii),xiv_s(ii),ichk_s(ii),idp(ii)
  8001       format(i6,1x,a8,1x,a8,1x,a9,1x
-     x,        i7,1x,2f9.3,1x,f8.1,1x,f7.0,1x
+     x,        i7,1x,2f11.5,1x,f8.1,1x,f7.0,1x
      x,        f5.2,4(2(1x,f8.2),1x,i5),1x,i4)
             iht_ft = imiss
           endif
@@ -966,6 +999,7 @@ c
           endif
         endif
 c
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
         if(alat(ii).eq.amiss) then
           c_lat = '99999'
         else
@@ -991,9 +1025,11 @@ cc     $             //c_ht_ft(1:5)
      $             //c_lon(1:6)
      $             //c_type(1:2)
       enddo
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 c
       write(io8,*)
-      write(io8,*) 'Number of raw acars reports      = ',knt_acars
+ccccdak      write(io8,*) 'Number of raw acars reports      = ',knt_acars
+      write(io8,*) 'Number of raw tamdar reports     = ',knt_acars
       write(io8,*) 'Number of raw mdcrs reports      = ',knt_mdcrs
       write(io8,*) 'Number of raw man_airep reports  = ',knt_man_airep
       write(io8,*) 'Number of raw man_Yairep reports = ',knt_man_Yairep
@@ -2122,7 +2158,7 @@ c     x,      ob_dir(ii),xiv_d(ii),ichk_d(ii)
 c     x,      ob_spd(ii),xiv_s(ii),ichk_s(ii),idp(ii)
 c     x,      c_qc(ii),csort(ii)
 c 8011     format(i5,1x,i6,1x,a8,1x,a8,1x,a9,1x
-c     x,      i7,1x,2f9.3,1x,f8.1,1x,f7.0,1x
+c     x,      i7,1x,2f11.5,1x,f8.1,1x,f7.0,1x
 c     x,      f5.2,4(2(1x,f8.2),1x,i5),1x,i4
 c     x,      1x,'!',a11,'!',1x,a25)
 c        endif
@@ -2191,7 +2227,8 @@ c
 c
       if(l_print) then
         write(io8,*) 
-        write(io8,*) 'Unrejected re-encoded ACARS and AMDAR reports'
+ccccdak        write(io8,*) 'Unrejected re-encoded ACARS and AMDAR reports'
+        write(io8,*) 'Unrejected re-encoded TAMDAR and AMDAR reports'
         write(io8,*) '---------------------------------------------'
       endif
 c
@@ -2216,8 +2253,9 @@ c
           k_AIREP_tot = k_AIREP_tot + 1
 c
 c         Count the total number of UAL AIREPs
-c         (Most of these are re-encoded ACARS)
-c         ------------------------------------
+ccccdak         (Most of these are re-encoded ACARS)
+c         (Most of these are re-encoded TAMDAR)
+c         -------------------------------------
           if(c_acftid(ii)(1:3).eq.'UAL') then
             k_UAL_tot = k_UAL_tot + 1
 c
@@ -2281,7 +2319,7 @@ c             -------------------------
      x,            ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,            ob_spd(ii),xiv_s(ii),ichk_s(ii),idp(ii)
      x,            c_qc(ii)
- 3002           format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x,f8.1,1x
+ 3002           format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f11.5,1x,f8.1,1x
      x,           f7.0,1x,f5.2,4(2(1x,f8.2),1x,i5),1x,i4,1x,'!',a11,'!')
               endif
             endif
@@ -3368,7 +3406,7 @@ c
       integer      ii,iob              ! do loop indices
       integer      max_reps            ! maximum number of observations allowed
      $,            numdo               ! number of reports to print
-      real         alat(max_reps)      ! latitude
+      real*8       alat(max_reps)      ! latitude
      $,            alon(max_reps)      ! longitude
       real         pres(max_reps)      ! pressure
      $,            ht_ft(max_reps)     ! height in feet
@@ -3404,13 +3442,14 @@ c
      $,            isec                ! ob second
      $,            itime               ! ob minute/second
 c
-      real         wlon                ! west longitude
+      real*8       wlon                ! west longitude
 c
 c # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 c
       write(io8,8030)
- 8030 format(' index type     tail num flight      time hh:mm:ss   lat'
-     $,'     lon  height  t-pr  temp ichk dir ichk spd ichk humid ichk')
+ 8030 format(' index type     tail num flight      time hh:mm:ss     '
+     $,'lat        lon   height  t-pr  temp ichk dir ichk spd ichk '
+     $,'humid ichk')
 c
       read(cdtg_an,'(8x,i2)') ihr_an
 c
@@ -3453,7 +3492,7 @@ c        if(alon(ii).ge.300.0) then
      x,      ob_q(ii),ichk_q(ii)
  8001   format(i6,1x,a8,1x,a8,1x,a9,1x
      x,      i6,1x,i2,':',i2,':',i2,1x
-     x,      f6.2,1x,f7.2,1x,f6.1,1x,f6.0,1x
+     x,      f9.5,1x,f10.5,1x,f6.1,1x,f6.0,1x
      x,      f5.2,1x,f6.2,1x,i4,1x,f4.0,1x,i3,1x
      x,      f5.1,1x,i3,1x,f6.2,1x,i3)
 c        endif
@@ -3608,7 +3647,7 @@ c     -----------
       integer      idt(max_reps)       ! time in seconds to analysis time 
       character*8  c_acftreg(max_reps) ! aircraft registration (tail) number
       character*9  c_acftid(max_reps)  ! aircraft flight number
-      real         alat(max_reps)      ! latitude
+      real*8       alat(max_reps)      ! latitude
      $,            alon(max_reps)      ! longitude
       real         pres(max_reps)      ! pressure
      $,            ht_ft(max_reps)     ! height in feet
@@ -3632,8 +3671,10 @@ c     ---------------------------
       integer      maxflt               ! max number of flights allowed
 c     x,            ndup                ! number of ids with mixed duplicates
 c      character*9  c_air_id(maxflt)    ! airep flight id for mixed duplicate
-c     x,            c_acr_id(maxflt)    ! acars flight id for mixed duplicate
-c      character*8  c_acr_reg(maxflt)   ! acars tail number for mixed duplicate
+ccccdak     x,            c_acr_id(maxflt)    ! acars flight id for mixed duplicate
+c     x,            c_acr_id(maxflt)    ! tamdar flight id for mixed duplicate
+ccccdak      character*8  c_acr_reg(maxflt)   ! acars tail number for mixed duplicate
+c      character*8  c_acr_reg(maxflt)   ! tamdar tail number for mixed duplicate
 c      integer      kdup(maxflt)        ! number of mixed duplicates per id pair
 c     $,            idt_min(maxflt)     ! min time for flight segment
 c     $,            idt_max(maxflt)     ! max time for flight segment
@@ -3675,10 +3716,14 @@ c
      $,            kbadtot             ! total number of rejected duplicates
      $,            kbad(5,3)           ! counter for number of exact, near duplicates
 c
-      integer      i_acars             ! instrument type for acars
-     $,            i_acars_lvl         ! instrument type for acars--level flt
-     $,            i_acars_asc         ! instrument type for acars--ascent
-     $,            i_acars_des         ! instrument type for acars--descent
+ccccdak      integer      i_acars             ! instrument type for acars
+      integer      i_acars             ! instrument type for tamdar
+ccccdak     $,            i_acars_lvl         ! instrument type for acars--level flt
+     $,            i_acars_lvl         ! instrument type for tamdar--level flt
+ccccdak     $,            i_acars_asc         ! instrument type for acars--ascent
+     $,            i_acars_asc         ! instrument type for tamdar--ascent
+ccccdak     $,            i_acars_des         ! instrument type for acars--descent
+     $,            i_acars_des         ! instrument type for tamdar--descent
      $,            i_mdcrs             ! instrument type for mdcrs
      $,            i_mdcrs_lvl         ! instrument type for mdcrs--level flt
      $,            i_mdcrs_asc         ! instrument type for mdcrs--ascent
@@ -3699,23 +3744,29 @@ c
      $,            n_ex_sh_MaMa        !        --manAIREP-manAIREP
      $,            n_ex_sh_MaAr        !        --manAIREP-AIREP
      $,            n_ex_sh_MaMd        !        --manAIREP-MDCRS
-     $,            n_ex_sh_MaAc        !        --manAIREP-ACARS
+ccccdak     $,            n_ex_sh_MaAc        !        --manAIREP-ACARS
+     $,            n_ex_sh_MaAc        !        --manAIREP-TAMDAR
      $,            n_ex_sh_ArMa        !        --AIREP-manAIREP
      $,            n_ex_sh_ArAr        !        --AIREP-AIREP
      $,            n_exact_0ll         ! number of exact dups with zero lat/lon
-     $,            n_ex_0ll_AcAc       !        --ACARS-ACARS
+ccccdak     $,            n_ex_0ll_AcAc       !        --ACARS-ACARS
+     $,            n_ex_0ll_AcAc       !        --TAMDAR-TAMDAR
      $,            n_ex_0ll_MdMd       !        --MDCRS-MDCRS
      $,            n_ex_0ll_MaMa       !        --manAIREP-manAIREP
      $,            n_ex_0ll_MaAr       !        --manAIREP-AIREP
-     $,            n_exact_MdAc        ! number of exact dups--MDCRS-ACARS
-     $,            n_exact_AcMa        ! number of exact dups--ACARS-manAIREP
-     $,            n_exact_AcAr        ! number of exact dups--ACARS-AIREP
+ccccdak     $,            n_exact_MdAc        ! number of exact dups--MDCRS-ACARS
+     $,            n_exact_MdAc        ! number of exact dups--MDCRS-TAMDAR
+ccccdak     $,            n_exact_AcMa        ! number of exact dups--ACARS-manAIREP
+     $,            n_exact_AcMa        ! number of exact dups--TAMDAR-manAIREP
+ccccdak     $,            n_exact_AcAr        ! number of exact dups--ACARS-AIREP
+     $,            n_exact_AcAr        ! number of exact dups--TAMDAR-AIREP
      $,            n_exact_MdMa        ! number of exact dups--MDCRS-manAIREP
      $,            n_exact_MdAr        ! number of exact dups--MDCRS-AIREP
      $,            n_exact_AmAr        ! number of exact dups--AMDAR-AIREP
      $,            n_exact_AmMa        ! number of exact dups--AMDAR-manAIREP
      $,            n_exact_ArMa        ! number of exact dups--AIREP-manAIREP
-     $,            n_exact_AcAc        ! number of exact dups--ACARS-ACARS
+ccccdak     $,            n_exact_AcAc        ! number of exact dups--ACARS-ACARS
+     $,            n_exact_AcAc        ! number of exact dups--TAMDAR-TAMDAR
      $,            n_exact_MdMd        ! number of exact dups--MDCRS-MDCRS
      $,            n_exact_ArAr        ! number of exact dups--AIREP-AIREP
      $,            n_exact_MaMa        ! number of exact dups--manAIREP-manAIREP
@@ -3726,11 +3777,13 @@ c
      $,            n_nr_sh_MaMa        !        --manAIREP-manAIREP
      $,            n_nr_sh_MaAr        !        --manAIREP-AIREP
      $,            n_nr_sh_MaMd        !        --manAIREP-MDCRS
-     $,            n_nr_sh_MaAc        !        --manAIREP-ACARS
+ccccdak     $,            n_nr_sh_MaAc        !        --manAIREP-ACARS
+     $,            n_nr_sh_MaAc        !        --manAIREP-TAMDAR
      $,            n_nr_sh_ArMa        !        --AIREP-manAIREP
      $,            n_nr_sh_ArAr        !        --AIREP-AIREP
      $,            n_near_0ll          ! number of near dups with zero lat/lon
-     $,            n_nr_0ll_AcAc       !        --ACARS-ACARS
+ccccdak     $,            n_nr_0ll_AcAc       !        --ACARS-ACARS
+     $,            n_nr_0ll_AcAc       !        --TAMDAR-TAMDAR
      $,            n_nr_0ll_MdMd       !        --MDCRS-MDCRS
      $,            n_nr_0ll_MaAr       !        --manAIREP-AIREP
      $,            n_nr_0ll_AmAr       !        --AMDAR-AIREP
@@ -3745,21 +3798,27 @@ c
      $,            n_nr_mswn_MaAm      !        --manAIREP-AMDAR
      $,            n_nr_mswn_ArMa      !        --AIREP-manAIREP
      $,            n_nr_mswn_ArAr      !        --AIREP-AIREP
-     $,            n_nr_mswn_AcAc      !        --ACARS-ACARS
+ccccdak     $,            n_nr_mswn_AcAc      !        --ACARS-ACARS
+     $,            n_nr_mswn_AcAc      !        --TAMDAR-TAMDAR
      $,            n_nr_mswn_MdMd      !        --MDCRS-MDCRS
-     $,            n_nr_mswn_AcMd      !        --ACARS-MDCRS
-     $,            n_nr_mswn_MdAc      !        --MDCRS-ACARS
+ccccdak     $,            n_nr_mswn_AcMd      !        --ACARS-MDCRS
+     $,            n_nr_mswn_AcMd      !        --TAMDAR-MDCRS
+ccccdak     $,            n_nr_mswn_MdAc      !        --MDCRS-ACARS
+     $,            n_nr_mswn_MdAc      !        --MDCRS-TAMDAR
      $,            n_nr_mswn_MdAm      !        --MDCRS-AMDAR
      $,            n_nr_mswn_MdAr      !        --MDCRS-AIREP
      $,            n_nr_mswn_MdMa      !        --MDCRS-manAIREP
-     $,            n_nr_mswn_ArAc      !        --AIREP-ACARS
+ccccdak     $,            n_nr_mswn_ArAc      !        --AIREP-ACARS
+     $,            n_nr_mswn_ArAc      !        --AIREP-TAMDAR
      $,            n_nr_mswn_ArMd      !        --AIREP-MDCRS
-     $,            n_nr_mswn_MaAc      !        --manAIREP-ACARS
+ccccdak     $,            n_nr_mswn_MaAc      !        --manAIREP-ACARS
+     $,            n_nr_mswn_MaAc      !        --manAIREP-TAMDAR
      $,            n_nr_mswn_MaMd      !        --manAIREP-MDCRS
      $,            n_nr_mswn_AmAm      !        --AMDAR-AMDAR
      $,            n_nr_mswn_ArAm      !        --AIREP-AMDAR
      $,            n_nr_mswn_AmAr      !        --AMDAR-AIREP
-     $,            n_nr_mswn_AcAm      !        --ACARS-AMDAR
+ccccdak     $,            n_nr_mswn_AcAm      !        --ACARS-AMDAR
+     $,            n_nr_mswn_AcAm      !        --TAMDAR-AMDAR
      $,            n_near_ws_IT        ! number of near dups with missing winds
                                        !   and with flight # beginning with 'IT'
      $,            n_near_ws_EU        ! number of near dups with missing winds
@@ -3779,9 +3838,11 @@ c
      $,            n_nr_mst_MaMa       !        --manAIREP-manAIREP
      $,            n_nr_mst_MaAr       !        --manAIREP-AIREP
      $,            n_nr_mst_MaAm       !        --manAIREP-AMDAR
-     $,            n_nr_mst_ArAc       !        --AIREP-ACARS
+ccccdak     $,            n_nr_mst_ArAc       !        --AIREP-ACARS
+     $,            n_nr_mst_ArAc       !        --AIREP-TAMDAR
      $,            n_nr_mst_ArMd       !        --AIREP-MDCRS
-     $,            n_nr_mst_MaAc       !        --manAIREP-ACARS
+ccccdak     $,            n_nr_mst_MaAc       !        --manAIREP-ACARS
+     $,            n_nr_mst_MaAc       !        --manAIREP-TAMDAR
      $,            n_nr_mst_MaMd       !        --manAIREP-MDCRS
      $,            n_nr_mst_MdMd       !        --MDCRS-MDCRS
      $,            n_nr_mst_ArMa       !        --manAIREP-AIREP
@@ -3789,27 +3850,34 @@ c
      $,            n_nr_mst_ArAr       !        --AIREP-AIREP
      $,            n_nr_mst_AmAr       !        --AMDAR-AIREP
      $,            n_nr_mst_ArAm       !        --AIREP-AMDAR
-     $,            n_near_MdAc         ! number of near dups--MDCRS-ACARS
-     $,            n_near_AcAr         ! number of near dups--ACARS-AIREP
+ccccdak     $,            n_near_MdAc         ! number of near dups--MDCRS-ACARS
+     $,            n_near_MdAc         ! number of near dups--MDCRS-TAMDAR
+ccccdak     $,            n_near_AcAr         ! number of near dups--ACARS-AIREP
+     $,            n_near_AcAr         ! number of near dups--TAMDAR-AIREP
      $,            n_near_MdAr         ! number of near dups--MDCRS-AIREP
      $,            n_near_AmAr         ! number of near dups--AMDAR-AIREP
-     $,            n_near_AcMa         ! number of near dups--ACARS-manAIREP
+ccccdak     $,            n_near_AcMa         ! number of near dups--ACARS-manAIREP
+     $,            n_near_AcMa         ! number of near dups--TAMDAR-manAIREP
      $,            n_near_MdMa         ! number of near dups--MDCRS-manAIREP
      $,            n_near_ArMa         ! number of near dups--AIREP-manAIREP
      $,            n_near_AmMa         ! number of near dups--AIREP-manAIREP
-     $,            n_near_AcAc         ! number of near dups--ACARS-ACARS
+ccccdak     $,            n_near_AcAc         ! number of near dups--ACARS-ACARS
+     $,            n_near_AcAc         ! number of near dups--TAMDAR-TAMDAR
      $,            n_near_MdMd         ! number of near dups--MDCRS-MDCRS
      $,            n_near_ArAr         ! number of near dups--AIREP-AIREP
      $,            n_near_MaMa         ! number of near dups--manAIREP-manAIREP
      $,            n_near_AmAm         ! number of near dups--AMDAR-AMDAR
      $,            n_near_negpos       ! number of near dups with neg/pos altitude
 c
-      integer      n_slow_MdAc         ! number of low-wind dups--MDCRS-ACARS
-     $,            n_slow_AcAr         ! number of low-wind dups--ACARS-AIREP
+ccccdak      integer      n_slow_MdAc         ! number of low-wind dups--MDCRS-ACARS
+      integer      n_slow_MdAc         ! number of low-wind dups--MDCRS-TAMDAR
+ccccdak     $,            n_slow_AcAr         ! number of low-wind dups--ACARS-AIREP
+     $,            n_slow_AcAr         ! number of low-wind dups--TAMDAR-AIREP
      $,            n_slow_MdAr         ! number of low-wind dups--MDCRS-AIREP
      $,            n_slow_AmAr         ! number of low-wind dups--AMDAR-AIREP
      $,            n_slow_ArMa         ! number of low-wind dups--AIREP-manAIREP
-     $,            n_slow_AcAc         ! number of low-wind dups--ACARS-ACARS
+ccccdak     $,            n_slow_AcAc         ! number of low-wind dups--ACARS-ACARS
+     $,            n_slow_AcAc         ! number of low-wind dups--TAMDAR-TAMDAR
      $,            n_slow_MdMd         ! number of low-wind dups--MDCRS-MDCRS
      $,            n_slow_ArAr         ! number of low-wind dups--AIREP-AIREP
      $,            n_slow_MaMa         ! number of low-wind dups--manAIREP-manAIREP
@@ -3829,8 +3897,10 @@ c
      $,            n_sh_Ma             ! number of manual aireps with short id
      $,            n_00_Md             ! number of mdcrs with rounded position
      $,            n_0000_Md           ! number of mdcrs with rounded position (0,0 deg)
-     $,            n_00_Ac             ! number of acars with rounded position
-     $,            n_0000_Ac           ! number of acars with rounded position (0,0 deg)
+ccccdak     $,            n_00_Ac             ! number of acars with rounded position
+     $,            n_00_Ac             ! number of tamdar with rounded position
+ccccdak     $,            n_0000_Ac           ! number of acars with rounded position (0,0 deg)
+     $,            n_0000_Ac           ! number of tamdar with rounded position (0,0 deg)
      $,            n_00_Ar             ! number of aireps with rounded position
      $,            n_0000_Ar           ! number of aireps with rounded position (0,0 deg)
      $,            n_00_Ma             ! number of manual aireps with rounded position
@@ -3841,46 +3911,54 @@ c
       integer      n_lat               ! latitude index
      $,            n_lon               ! longitude index
      $,            n_area_Md(19,37)    ! number of mdcrs reports by area
-     $,            n_area_Ac(19,37)    ! number of acars reports by area
+ccccdak     $,            n_area_Ac(19,37)    ! number of acars reports by area
+     $,            n_area_Ac(19,37)    ! number of tamdar reports by area
      $,            n_area_Ar(19,37)    ! number of airep reports by area
      $,            n_area_Ma(19,37)    ! number of manual airep reports by area
      $,            n_area_Am(19,37)    ! number of amdar reports by area
      $,            n_time_Md(24)       ! number of mdcrs reports by time
-     $,            n_time_Ac(24)       ! number of acars reports by time
+ccccdak     $,            n_time_Ac(24)       ! number of acars reports by time
+     $,            n_time_Ac(24)       ! number of tamdar reports by time
      $,            n_time_Ar(24)       ! number of airep reports by time
      $,            n_time_Ma(24)       ! number of manual airep reports by time
      $,            n_time_Am(24)       ! number of amdar reports by time
      $,            n_lev_Md(53)        ! number of mdcrs reports by level
-     $,            n_lev_Ac(53)        ! number of acars reports by level
+ccccdak     $,            n_lev_Ac(53)        ! number of acars reports by level
+     $,            n_lev_Ac(53)        ! number of tamdar reports by level
      $,            n_lev_Ar(53)        ! number of airep reports by level
      $,            n_lev_Ma(53)        ! number of manual airep reports by level
      $,            n_lev_Am(53)        ! number of amdar reports by level
      $,            klev                ! index for level
      $,            n_temp_Md(36,13)    ! number of mdcrs reports by temp, alt
-     $,            n_temp_Ac(36,13)    ! number of acars reports by temp, alt
+ccccdak     $,            n_temp_Ac(36,13)    ! number of acars reports by temp, alt
+     $,            n_temp_Ac(36,13)    ! number of tamdar reports by temp, alt
      $,            n_temp_Ar(36,13)    ! number of airep reports by temp, alt
      $,            n_temp_Ma(36,13)    ! number of manual airep reports by temp, alt
      $,            n_temp_Am(36,13)    ! number of amdar reports by temp, alt
      $,            ktemp               ! index for temperature
      $,            kalt                ! index for altitude
      $,            n_wspd_Md(40,13)    ! number of mdcrs reports by wspd, alt
-     $,            n_wspd_Ac(40,13)    ! number of acars reports by wspd, alt
+ccccdak     $,            n_wspd_Ac(40,13)    ! number of acars reports by wspd, alt
+     $,            n_wspd_Ac(40,13)    ! number of tamdar reports by wspd, alt
      $,            n_wspd_Ar(40,13)    ! number of airep reports by wspd, alt
      $,            n_wspd_Ma(40,13)    ! number of manual airep reports by wspd, alt
      $,            n_wspd_Am(40,13)    ! number of amdar reports by wspd, alt
      $,            kwspd               ! index for windspeed
 c
-      integer      nrep_Ac             ! number of acars reports considered
+ccccdak      integer      nrep_Ac             ! number of acars reports considered
+      integer      nrep_Ac             ! number of tamdar reports considered
      $,            nrep_Md             ! number of mdcrs reports considered
      $,            nrep_Ma             ! number of manual airep reports considered
      $,            nrep_Ar             ! number of airep reports considered
      $,            nrep_Am             ! number of amdar reports considered
-     $,            nbad_Ac             ! number of bad acars
+ccccdak     $,            nbad_Ac             ! number of bad acars
+     $,            nbad_Ac             ! number of bad tamdar
      $,            nbad_Md             ! number of bad mdcrs
      $,            nbad_Ma             ! number of bad manual aireps
      $,            nbad_Ar             ! number of bad aireps
      $,            nbad_Am             ! number of bad amdar 
-     $,            ndup_Ac             ! number of duplicate acars 
+ccccdak     $,            ndup_Ac             ! number of duplicate acars 
+     $,            ndup_Ac             ! number of duplicate tamdar 
      $,            ndup_Md             ! number of duplicate mdcrs
      $,            ndup_Ma             ! number of duplicate manual aireps
      $,            ndup_Ar             ! number of duplicate aireps
@@ -3911,8 +3989,10 @@ c     --------
      $,            l_iim1_0lat         ! true if iim1 rep has zero latitude
      $,            l_ii_0lon           ! true if ii rep has zero latitude 
      $,            l_iim1_0lon         ! true if iim1 rep has zero latitude
-     $,            l_ii_acars          ! true if ii rep is type acars
-     $,            l_iim1_acars        ! true if iim1 rep is type acars
+ccccdak     $,            l_ii_acars          ! true if ii rep is type acars
+     $,            l_ii_acars          ! true if ii rep is type tamdar
+ccccdak     $,            l_iim1_acars        ! true if iim1 rep is type acars
+     $,            l_iim1_acars        ! true if iim1 rep is type tamdar
      $,            l_ii_mdcrs          ! true if ii rep is type mdcrs
      $,            l_iim1_mdcrs        ! true if iim1 rep is type mdcrs
      $,            l_ii_airep          ! true if ii rep is type airep
@@ -4217,12 +4297,13 @@ c
      $         ktype.eq.5) then 
           n_sh_Ma = n_sh_Ma + 1
         endif
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
 c
 c       Count reports with lat and lon in whole degrees
 c       (Count positions of 0.0 lat and 0.0 lon separately)
 c       ---------------------------------------------------
-        if((abs(alat(ii)-float(ifix(alat(ii)))).lt.0.001).and.
-     $     (abs(alon(ii)-float(ifix(alon(ii)))).lt.0.001)) then
+        if((abs(alat(ii)-float(int(alat(ii)))).lt.0.001).and.
+     $     (abs(alon(ii)-float(int(alon(ii)))).lt.0.001)) then
 c
           if(ktype.eq.1) then 
             if(abs(alat(ii)).lt.0.001.and.
@@ -4261,11 +4342,12 @@ c
             endif
           endif
         endif
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 c
 c       Count reports by geographic area
 c       --------------------------------
-        n_lat = ifix(alat(ii))/10 + 10
-        n_lon = ifix(alon(ii))/10 + 1
+        n_lat = int(alat(ii))/10 + 10
+        n_lon = int(alon(ii))/10 + 1
 c
         if(ktype.eq.1) then 
           n_area_Md(n_lat,n_lon) = n_area_Md(n_lat,n_lon) + 1
@@ -4513,6 +4595,7 @@ c
                 l_ii_sh = .true.
               endif
             endif
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
 c
 c           iim1 report has zero latitude?
 c           ------------------------------
@@ -4545,17 +4628,20 @@ c           -----------------------------
      $         alon(iim1).gt.0.125.and.
      $         alon(iim1).lt.359.875)
      $        l_ii_0lon = .true.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 c
-c           iim1 report is ACARS?
-c           ---------------------
+ccccdak           iim1 report is ACARS?
+c           iim1 report is TAMDAR?
+c           ----------------------
             l_iim1_acars = .false.
             if(itype(iim1).eq.i_acars.or.
      $         itype(iim1).eq.i_acars_lvl.or.
      $         itype(iim1).eq.i_acars_des.or.
      $         itype(iim1).eq.i_acars_asc) l_iim1_acars = .true.
 c
-c           ii report is ACARS?
-c           -------------------
+ccccdak           ii report is ACARS?
+c           ii report is TAMDAR?
+c           --------------------
             l_ii_acars = .false.
             if(itype(ii).eq.i_acars.or.
      $         itype(ii).eq.i_acars_lvl.or.
@@ -4636,10 +4722,12 @@ c
 c           Check if report is exact dup (qc flag = 'D')
 c           --------------------------------------------
             if(idt_dif.eq.0) then
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
               if((abs(alat(iim1)-alat(ii)).lt.0.015.or.
      $            l_iim1_0lat.or.l_ii_0lat).and.
      $           (abs(alon(iim1)-alon(ii)).lt.0.015.or.
      $            l_iim1_0lon.or.l_ii_0lon).and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $           (abs(pres(iim1)-pres(ii)).lt.0.05.or.
      $            abs(ht_ft(iim1)-ht_ft(ii)).lt.0.5).and.
      $           abs(ob_t(iim1)-ob_t(ii)).lt.0.05.and.
@@ -4648,8 +4736,10 @@ c           --------------------------------------------
      $           abs(ob_spd(iim1)-ob_spd(ii)).lt.0.05) then
 c
 c               If exact dup found, decide which report to keep:
-c                 Choose MDCRS over ACARS
-c                 Choose ACARS/MDCRS over AIREP
+ccccdak                 Choose MDCRS over ACARS
+c                 Choose MDCRS over TAMDAR
+ccccdak                 Choose ACARS/MDCRS over AIREP
+c                 Choose TAMDAR or MDCRS over AIREP
 c                 Choose AMDAR over AIREP
 c                 Choose automated over manual AIREP
 c                 Choose 7-char flight number over 6-char flight number
@@ -4702,7 +4792,8 @@ c
                       if(l_print) write(io8,*) 'manAIREP-MDCRS dup'
                     elseif(l_iim1_man.and.l_ii_acars) then 
                       n_ex_sh_MaAc = n_ex_sh_MaAc + 1
-                      if(l_print) write(io8,*) 'manAIREP-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'manAIREP-ACARS dup'
+                      if(l_print) write(io8,*) 'manAIREP-TAMDAR dup'
                     elseif(l_ii_man.and.l_iim1_airep) then 
                       n_ex_sh_ArMa = n_ex_sh_ArMa + 1
                       if(l_print) write(io8,*) 'AIREP-manAIREP dup'
@@ -4726,7 +4817,8 @@ c
                     endif
                     if(l_iim1_acars.and.l_ii_acars) then
                       n_ex_0ll_AcAc = n_ex_0ll_AcAc + 1
-                      if(l_print) write(io8,*) 'ACARS-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'ACARS-ACARS dup'
+                      if(l_print) write(io8,*) 'TAMDAR-TAMDAR dup'
                     elseif(l_iim1_mdcrs.and.l_ii_mdcrs) then
                       n_ex_0ll_MdMd = n_ex_0ll_MdMd + 1
                       if(l_print) write(io8,*) 'MDCRS-MDCRS dup'
@@ -4750,7 +4842,8 @@ c
                     l_print = .false.
                     if(l_print) then
                       write(io8,*)
-                      write(io8,*) 'MDCRS-ACARS exact dup found--'
+ccccdak                      write(io8,*) 'MDCRS-ACARS exact dup found--'
+                      write(io8,*) 'MDCRS-TAMDAR exact dup found--'
      x,                             ii
                     endif
 c
@@ -4759,7 +4852,8 @@ c
                     l_print = .false.
                     if(l_print) then
                       write(io8,*)
-                      write(io8,*) 'ACARS-manAIREP exact dup--',ii
+ccccdak                      write(io8,*) 'ACARS-manAIREP exact dup--',ii
+                      write(io8,*) 'TAMDAR-manAIREP exact dup--',ii
                     endif
 c
                   elseif(l_ii_acars.and.l_iim1_airep) then
@@ -4767,7 +4861,8 @@ c
                     l_print = .false.
                     if(l_print) then
                       write(io8,*)
-                      write(io8,*) 'ACARS-AIREP exact dup--',ii
+ccccdak                      write(io8,*) 'ACARS-AIREP exact dup--',ii
+                      write(io8,*) 'TAMDAR-AIREP exact dup--',ii
                     endif
 c
                   elseif(l_ii_mdcrs.and.l_iim1_man) then
@@ -4869,7 +4964,8 @@ c
                       if(l_print) write(io8,*) 'manAIREP-MDCRS dup'
                     elseif(l_ii_man.and.l_iim1_acars) then 
                       n_ex_sh_MaAc = n_ex_sh_MaAc + 1
-                      if(l_print) write(io8,*) 'manAIREP-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'manAIREP-ACARS dup'
+                      if(l_print) write(io8,*) 'manAIREP-TAMDAR dup'
                     elseif(l_iim1_man.and.l_ii_airep) then 
                       n_ex_sh_ArMa = n_ex_sh_ArMa + 1
                       if(l_print) write(io8,*) 'AIREP-manAIREP dup'
@@ -4893,7 +4989,8 @@ c
                     endif
                     if(l_iim1_acars.and.l_ii_acars) then
                       n_ex_0ll_AcAc = n_ex_0ll_AcAc + 1
-                      if(l_print) write(io8,*) 'ACARS-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'ACARS-ACARS dup'
+                      if(l_print) write(io8,*) 'TAMDAR-TAMDAR dup'
                     elseif(l_iim1_mdcrs.and.l_ii_mdcrs) then
                       n_ex_0ll_MdMd = n_ex_0ll_MdMd + 1
                       if(l_print) write(io8,*) 'MDCRS-MDCRS dup'
@@ -4917,7 +5014,8 @@ c
                     l_print = .false.
                     if(l_print) then
                       write(io8,*)
-                      write(io8,*) 'MDCRS-ACARS exact dup found--'
+ccccdak                      write(io8,*) 'MDCRS-ACARS exact dup found--'
+                      write(io8,*) 'MDCRS-TAMDAR exact dup found--'
      $,                             ii
                     endif
 c
@@ -4926,7 +5024,8 @@ c
                     l_print = .false.
                     if(l_print) then
                       write(io8,*)
-                      write(io8,*) 'ACARS-manAIREP exact dup--',ii
+ccccdak                      write(io8,*) 'ACARS-manAIREP exact dup--',ii
+                      write(io8,*) 'TAMDAR-manAIREP exact dup--',ii
                     endif
 c
                   elseif(l_iim1_acars.and.l_ii_airep) then
@@ -4934,7 +5033,8 @@ c
                     l_print = .false.
                     if(l_print) then
                       write(io8,*)
-                      write(io8,*) 'ACARS-AIREP exact dup--',ii
+ccccdak                      write(io8,*) 'ACARS-AIREP exact dup--',ii
+                      write(io8,*) 'TAMDAR-AIREP exact dup--',ii
                     endif
 c
                   elseif(l_iim1_mdcrs.and.l_ii_man) then
@@ -5007,7 +5107,8 @@ c
                     l_print = .false.
                     if(l_print) then
                       write(io8,*)
-                      write(io8,*) 'ACARS-ACARS exact dup found--'
+ccccdak                      write(io8,*) 'ACARS-ACARS exact dup found--'
+                      write(io8,*) 'TAMDAR-TAMDAR exact dup found--'
      $,                             ii
                     endif
 c
@@ -5106,6 +5207,7 @@ c           Check if report is a near dup (qc flag = 'd')
 c           Most near dups came in different formats with different units/precision
 c           -----------------------------------------------------------------------
 c
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
 c           First exclude reports that are too far apart--set c_qc to '.'
 c           -------------------------------------------------------------
             if((abs(alat(iim1)-alat(ii)).lt.0.125.or.
@@ -5116,6 +5218,7 @@ c           -------------------------------------------------------------
      $          ( (l_iim1_0lon.or.l_ii_0lon).and.
      $            (c_acftid(ii).eq.c_acftid(iim1).or.
      $             l_ii_man.or.l_iim1_man) ))) then
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 c
 c             Time threshold changed to 90 sec to look for position reports (8/15/01)
 c             -----------------------------------------------------------------------
@@ -5206,9 +5309,11 @@ c
                 endif
 c
 c               If near dup found, decide which report to keep
-c                 Choose MDCRS over ACARS
+ccccdak                 Choose MDCRS over ACARS
+c                 Choose MDCRS over TAMDAR
 c                 Choose reports with flight phase over no reported flight phase
-c                 Choose ACARS/MDCRS over AIREP/manual AIREP
+ccccdak                 Choose ACARS/MDCRS over AIREP/manual AIREP
+c                 Choose TAMDAR or MDCRS over AIREP/manual AIREP
 c                 Choose AMDAR over AIREP/manual AIREP
 c                 Choose automated over manual AIREP
 c                 Choose 7-char flight number over 6-char flight number
@@ -5228,8 +5333,10 @@ c               ----------
      $                   (l_ii_amdar.and.l_iim1_airep)).and.            ! new
      $                  c_acftreg(ii).eq.c_acftreg(iim1) ).and.
 c
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
      $                 ((abs(alat(iim1)-alat(ii)).lt.0.025.and.
      $                   abs(alon(iim1)-alon(ii)).lt.0.025.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $                   abs(ob_t(iim1)-ob_t(ii)).lt.0.65.and.
      $                   ((abs(difdir).lt.5.5).or.
      $                    (ob_dir(ii).eq.amiss.and.
@@ -5252,8 +5359,10 @@ c
      $                    (ob_spd(ii).gt.1.25.and.
      $                     ob_spd(iim1).lt.0.05)) ).or.
 c
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
      $                  (abs(alat(iim1)-alat(ii)).lt.0.055.and.
      $                   abs(alon(iim1)-alon(ii)).lt.0.055.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $                   abs(ht_ft(iim1)-ht_ft(ii)).lt.15.5.and.
      $                   idt_dif.le.30.and.
      $                   abs(ob_t(iim1)-ob_t(ii)).lt.1.25.and.
@@ -5295,10 +5404,12 @@ c
 c
      $             l_iim1_sh.or.
 c
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
      $             (l_iim1_0lat.and.abs(alat(ii)).gt.0.125).or.
 c
      $             (l_iim1_0lon.and.
      $              (alon(ii).gt.0.125.and.alon(ii).lt.359.875)).or.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 c
      $             (ob_t(ii).ne.amiss.and.ob_t(iim1).eq.amiss).or.
 c
@@ -5342,7 +5453,8 @@ c
                       if(l_print) write(io8,*) 'manAIREP-MDCRS dup'
                     elseif(l_iim1_man.and.l_ii_acars) then 
                       n_nr_sh_MaAc = n_nr_sh_MaAc + 1
-                      if(l_print) write(io8,*) 'manAIREP-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'manAIREP-ACARS dup'
+                      if(l_print) write(io8,*) 'manAIREP-TAMDAR dup'
                     elseif(l_ii_man.and.l_iim1_airep) then 
                       n_nr_sh_ArMa = n_nr_sh_ArMa + 1
                       if(l_print) write(io8,*) 'AIREP-manAIREP dup'
@@ -5357,11 +5469,13 @@ c
                       endif
                     endif
 c
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   elseif(((l_iim1_0lat.and.
      $                     abs(alat(ii)).gt.0.125).or.
      $                    (l_iim1_0lon.and.
      $                     (alon(ii).gt.0.125.and.
      $                      alon(ii).lt.359.875))).and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $                   (c_acftid(ii).eq.c_acftid(iim1).or.
      $                    l_ii_man.or.l_iim1_man)) then
                     n_near_0ll = n_near_0ll + 1
@@ -5372,7 +5486,8 @@ c
                     endif
                     if(l_iim1_acars.and.l_ii_acars) then
                       n_nr_0ll_AcAc = n_nr_0ll_AcAc + 1
-                      if(l_print) write(io8,*) 'ACARS-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'ACARS-ACARS dup'
+                      if(l_print) write(io8,*) 'TAMDAR-TAMDAR dup'
                     elseif(l_iim1_mdcrs.and.l_ii_mdcrs) then
                       n_nr_0ll_MdMd = n_nr_0ll_MdMd + 1
                       if(l_print) write(io8,*) 'MDCRS-MDCRS dup'
@@ -5426,13 +5541,15 @@ c
                       if(l_print) write(io8,*) 'manAIREP-AMDAR dup'
                     elseif(l_iim1_airep.and.l_ii_acars) then
                       n_nr_mst_ArAc = n_nr_mst_ArAc + 1
-                      if(l_print) write(io8,*) 'AIREP-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'AIREP-ACARS dup'
+                      if(l_print) write(io8,*) 'AIREP-TAMDAR dup'
                     elseif(l_iim1_airep.and.l_ii_mdcrs) then
                       n_nr_mst_ArMd = n_nr_mst_ArMd + 1
                       if(l_print) write(io8,*) 'AIREP-MDCRS dup'
                     elseif(l_iim1_man.and.l_ii_acars) then
                       n_nr_mst_MaAc = n_nr_mst_MaAc + 1
-                      if(l_print) write(io8,*) 'manAIREP-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'manAIREP-ACARS dup'
+                      if(l_print) write(io8,*) 'manAIREP-TAMDAR dup'
                     elseif(l_iim1_man.and.l_ii_mdcrs) then
                       n_nr_mst_MaMd = n_nr_mst_MaMd + 1
                       if(l_print) write(io8,*) 'manAIREP-MDCRS dup'
@@ -5497,16 +5614,19 @@ c
                       if(l_print) write(io8,*) 'AIREP-AIREP dup'
                     elseif(l_iim1_acars.and.l_ii_acars) then
                       n_nr_mswn_AcAc = n_nr_mswn_AcAc + 1
-                      if(l_print) write(io8,*) 'ACARS-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'ACARS-ACARS dup'
+                      if(l_print) write(io8,*) 'TAMDAR-TAMDAR dup'
                     elseif(l_iim1_mdcrs.and.l_ii_mdcrs) then
                       n_nr_mswn_MdMd = n_nr_mswn_MdMd + 1
                       if(l_print) write(io8,*) 'MDCRS-MDCRS dup'
                     elseif(l_iim1_acars.and.l_ii_mdcrs) then
                       n_nr_mswn_AcMd = n_nr_mswn_AcMd + 1
-                      if(l_print) write(io8,*) 'ACARS-MDCRS dup'
+ccccdak                      if(l_print) write(io8,*) 'ACARS-MDCRS dup'
+                      if(l_print) write(io8,*) 'TAMDAR-MDCRS dup'
                     elseif(l_iim1_mdcrs.and.l_ii_acars) then
                       n_nr_mswn_MdAc = n_nr_mswn_MdAc + 1
-                      if(l_print) write(io8,*) 'MDCRS-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'MDCRS-ACARS dup'
+                      if(l_print) write(io8,*) 'MDCRS-TAMDAR dup'
                     elseif(l_iim1_mdcrs.and.l_ii_amdar) then
                       n_nr_mswn_MdAm = n_nr_mswn_MdAm + 1
                       if(l_print) write(io8,*) 'MDCRS-AMDAR dup'
@@ -5518,13 +5638,15 @@ c
                       if(l_print) write(io8,*) 'MDCRS-manAIREP dup'
                     elseif(l_iim1_airep.and.l_ii_acars) then
                       n_nr_mswn_ArAc = n_nr_mswn_ArAc + 1
-                      if(l_print) write(io8,*) 'AIREP-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'AIREP-ACARS dup'
+                      if(l_print) write(io8,*) 'AIREP-TAMDAR dup'
                     elseif(l_iim1_airep.and.l_ii_mdcrs) then
                       n_nr_mswn_ArMd = n_nr_mswn_ArMd + 1
                       if(l_print) write(io8,*) 'AIREP-MDCRS dup'
                     elseif(l_iim1_man.and.l_ii_acars) then
                       n_nr_mswn_MaAc = n_nr_mswn_MaAc + 1
-                      if(l_print) write(io8,*) 'manAIREP-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'manAIREP-ACARS dup'
+                      if(l_print) write(io8,*) 'manAIREP-TAMDAR dup'
                     elseif(l_iim1_man.and.l_ii_mdcrs) then
                       n_nr_mswn_MaMd = n_nr_mswn_MaMd + 1
                       if(l_print) write(io8,*) 'manAIREP-MDCRS dup'
@@ -5539,7 +5661,8 @@ c
                       if(l_print) write(io8,*) 'AMDAR-AIREP dup'
                     elseif(l_iim1_acars.and.l_ii_amdar) then
                       n_nr_mswn_AcAm = n_nr_mswn_AcAm + 1
-                      if(l_print) write(io8,*) 'ACARS-AMDAR dup'
+ccccdak                      if(l_print) write(io8,*) 'ACARS-AMDAR dup'
+                      if(l_print) write(io8,*) 'TAMDAR-AMDAR dup'
                     else
                       l_print = .true.
                       if(l_print) then
@@ -5610,7 +5733,8 @@ c
                     l_print = .false.
                     if(l_print) then
                       write(io8,*)
-                      write(io8,*) 'MDCRS-ACARS near dup found--',ii
+ccccdak                      write(io8,*) 'MDCRS-ACARS near dup found--',ii
+                      write(io8,*) 'MDCRS-TAMDAR near dup found--',ii
                     endif
 c
                   elseif(l_ii_mdcrs.and.l_iim1_mdcrs) then
@@ -5659,7 +5783,8 @@ c
                     l_print = .false.
                     if(l_print) then
                       write(io8,*)
-                      write(io8,*) 'ACARS-ACARS near dup found--',ii
+ccccdak                      write(io8,*) 'ACARS-ACARS near dup found--',ii
+                      write(io8,*) 'TAMDAR-TAMDAR near dup found--',ii
                     endif
 c
                   elseif(l_ii_acars.and.l_iim1_airep) then
@@ -5667,7 +5792,8 @@ c
                     l_print = .false.
                     if(l_print) then
                       write(io8,*)
-                      write(io8,*) 'ACARS-AIREP near dup found--',ii
+ccccdak                      write(io8,*) 'ACARS-AIREP near dup found--',ii
+                      write(io8,*) 'TAMDAR-AIREP near dup found--',ii
                     endif
 c
                   elseif(l_ii_mdcrs.and.l_iim1_airep) then
@@ -5723,7 +5849,8 @@ c
                     l_print = .false.
                     if(l_print) then
                       write(io8,*)
-                      write(io8,*) 'ACARS-manAIREP near dup--',ii
+ccccdak                      write(io8,*) 'ACARS-manAIREP near dup--',ii
+                      write(io8,*) 'TAMDAR-manAIREP near dup--',ii
                     endif
 c
                   elseif(l_ii_mdcrs.and.l_iim1_man) then
@@ -5766,9 +5893,11 @@ c               ------------
      $                        itype(iim1).ne.i_mdcrs).or.
      $                       (l_iim1_amdar.and.l_ii_airep)).and.
      $                      c_acftreg(ii).eq.c_acftreg(iim1)).and.
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
 c
      $                     ((abs(alat(iim1)-alat(ii)).lt.0.025.and.
      $                       abs(alon(iim1)-alon(ii)).lt.0.025.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $                       abs(ob_t(iim1)-ob_t(ii)).lt.0.65.and.
      $                       ((abs(difdir).lt.5.5).or.
      $                        (ob_dir(ii).eq.amiss.and.
@@ -5791,8 +5920,10 @@ c
      $                        (ob_spd(iim1).gt.1.25.and.
      $                         ob_spd(ii).lt.0.05)) ).or.
 c
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
      $                      (abs(alat(iim1)-alat(ii)).lt.0.055.and.
      $                       abs(alon(iim1)-alon(ii)).lt.0.055.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $                       abs(ht_ft(iim1)-ht_ft(ii)).lt.15.5.and.
      $                       idt_dif.le.30.and.
      $                       abs(ob_t(iim1)-ob_t(ii)).lt.1.25.and.
@@ -5834,10 +5965,12 @@ c
 c
      $                 l_ii_sh.or.
 c
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
      $                 (l_ii_0lat.and.abs(alat(ii)).gt.0.125).or.
 c
      $                 (l_ii_0lon.and.
      $                (alon(ii).gt.0.125.and.alon(ii).lt.359.875)).or.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 c
      $                 (ob_t(iim1).ne.amiss.and.ob_t(ii).eq.amiss).or.
 c
@@ -5890,7 +6023,8 @@ c
                       if(l_print) write(io8,*) 'manAIREP-MDCRS dup'
                     elseif(l_ii_man.and.l_iim1_acars) then 
                       n_nr_sh_MaAc = n_nr_sh_MaAc + 1
-                      if(l_print) write(io8,*) 'manAIREP-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'manAIREP-ACARS dup'
+                      if(l_print) write(io8,*) 'manAIREP-TAMDAR dup'
                     elseif(l_iim1_man.and.l_ii_airep) then 
                       n_nr_sh_ArMa = n_nr_sh_ArMa + 1
                       if(l_print) write(io8,*) 'AIREP-manAIREP dup'
@@ -5905,10 +6039,12 @@ c
                       endif
                     endif
 c
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   elseif(((l_ii_0lat.and.abs(alat(ii)).gt.0.125).or.
      $                    (l_ii_0lon.and.
      $                     (alon(ii).gt.0.125.and.
      $                      alon(ii).lt.359.875))).and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $                   (c_acftid(ii).eq.c_acftid(iim1).or.
      $                  l_ii_man.or.l_iim1_man)) then
                     n_near_0ll = n_near_0ll + 1
@@ -5919,7 +6055,8 @@ c
                     endif
                     if(l_iim1_acars.and.l_ii_acars) then
                       n_nr_0ll_AcAc = n_nr_0ll_AcAc + 1
-                      if(l_print) write(io8,*) 'ACARS-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'ACARS-ACARS dup'
+                      if(l_print) write(io8,*) 'TAMDAR-TAMDAR dup'
                     elseif(l_iim1_mdcrs.and.l_ii_mdcrs) then
                       n_nr_0ll_MdMd = n_nr_0ll_MdMd + 1
                       if(l_print) write(io8,*) 'MDCRS-MDCRS dup'
@@ -5973,13 +6110,15 @@ c
                       if(l_print) write(io8,*) 'manAIREP-AMDAR dup'
                     elseif(l_ii_airep.and.l_iim1_acars) then
                       n_nr_mst_ArAc = n_nr_mst_ArAc + 1
-                      if(l_print) write(io8,*) 'AIREP-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'AIREP-ACARS dup'
+                      if(l_print) write(io8,*) 'AIREP-TAMDAR dup'
                     elseif(l_ii_airep.and.l_iim1_mdcrs) then
                       n_nr_mst_ArMd = n_nr_mst_ArMd + 1
                       if(l_print) write(io8,*) 'AIREP-MDCRS dup'
                     elseif(l_ii_man.and.l_iim1_acars) then
                       n_nr_mst_MaAc = n_nr_mst_MaAc + 1
-                      if(l_print) write(io8,*) 'manAIREP-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'manAIREP-ACARS dup'
+                      if(l_print) write(io8,*) 'manAIREP-TAMDAR dup'
                     elseif(l_ii_man.and.l_iim1_mdcrs) then
                       n_nr_mst_MaMd = n_nr_mst_MaMd + 1
                       if(l_print) write(io8,*) 'manAIREP-MDCRS dup'
@@ -6044,16 +6183,19 @@ c
                       if(l_print) write(io8,*) 'AIREP-AIREP dup'
                     elseif(l_ii_acars.and.l_iim1_acars) then
                       n_nr_mswn_AcAc = n_nr_mswn_AcAc + 1
-                      if(l_print) write(io8,*) 'ACARS-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'ACARS-ACARS dup'
+                      if(l_print) write(io8,*) 'TAMDAR-TAMDAR dup'
                     elseif(l_ii_mdcrs.and.l_iim1_mdcrs) then
                       n_nr_mswn_MdMd = n_nr_mswn_MdMd + 1
                       if(l_print) write(io8,*) 'MDCRS-MDCRS dup'
                     elseif(l_ii_acars.and.l_iim1_mdcrs) then
                       n_nr_mswn_AcMd = n_nr_mswn_AcMd + 1
-                      if(l_print) write(io8,*) 'ACARS-MDCRS dup'
+ccccdak                      if(l_print) write(io8,*) 'ACARS-MDCRS dup'
+                      if(l_print) write(io8,*) 'TAMDAR-MDCRS dup'
                     elseif(l_ii_mdcrs.and.l_iim1_acars) then
                       n_nr_mswn_MdAc = n_nr_mswn_MdAc + 1
-                      if(l_print) write(io8,*) 'MDCRS-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'MDCRS-ACARS dup'
+                      if(l_print) write(io8,*) 'MDCRS-TAMDAR dup'
                     elseif(l_ii_mdcrs.and.l_iim1_amdar) then
                       n_nr_mswn_MdAm = n_nr_mswn_MdAm + 1
                       if(l_print) write(io8,*) 'MDCRS-AMDAR dup'
@@ -6065,13 +6207,15 @@ c
                       if(l_print) write(io8,*) 'MDCRS-manAIREP dup'
                     elseif(l_ii_airep.and.l_iim1_acars) then
                       n_nr_mswn_ArAc = n_nr_mswn_ArAc + 1
-                      if(l_print) write(io8,*) 'AIREP-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'AIREP-ACARS dup'
+                      if(l_print) write(io8,*) 'AIREP-TAMDAR dup'
                     elseif(l_ii_airep.and.l_iim1_mdcrs) then
                       n_nr_mswn_ArMd = n_nr_mswn_ArMd + 1
                       if(l_print) write(io8,*) 'AIREP-MDCRS dup'
                     elseif(l_ii_man.and.l_iim1_acars) then
                       n_nr_mswn_MaAc = n_nr_mswn_MaAc + 1
-                      if(l_print) write(io8,*) 'manAIREP-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'manAIREP-ACARS dup'
+                      if(l_print) write(io8,*) 'manAIREP-TAMDAR dup'
                     elseif(l_ii_man.and.l_iim1_mdcrs) then
                       n_nr_mswn_MaMd = n_nr_mswn_MaMd + 1
                       if(l_print) write(io8,*) 'manAIREP-MDCRS dup'
@@ -6086,7 +6230,8 @@ c
                       if(l_print) write(io8,*) 'AMDAR-AIREP dup'
                     elseif(l_ii_acars.and.l_iim1_amdar) then
                       n_nr_mswn_AcAm = n_nr_mswn_AcAm + 1
-                      if(l_print) write(io8,*) 'ACARS-AMDAR dup'
+ccccdak                      if(l_print) write(io8,*) 'ACARS-AMDAR dup'
+                      if(l_print) write(io8,*) 'TAMDAR-AMDAR dup'
                     else
                       l_print = .true.
                       if(l_print) then
@@ -6157,7 +6302,8 @@ c
                     l_print = .false.
                     if(l_print) then
                       write(io8,*)
-                      write(io8,*) 'MDCRS-ACARS near dup found--',ii
+ccccdak                      write(io8,*) 'MDCRS-ACARS near dup found--',ii
+                      write(io8,*) 'MDCRS-TAMDAR near dup found--',ii
                     endif
 c
                   elseif(itype(iim1).eq.i_mdcrs.and.
@@ -6174,7 +6320,8 @@ c
                     l_print = .false.
                     if(l_print) then
                       write(io8,*)
-                      write(io8,*) 'ACARS-AIREP near dup found--',ii
+ccccdak                      write(io8,*) 'ACARS-AIREP near dup found--',ii
+                      write(io8,*) 'TAMDAR-AIREP near dup found--',ii
                     endif
 c
                   elseif(l_iim1_mdcrs.and.l_ii_airep) then
@@ -6198,7 +6345,8 @@ c
                     l_print = .false.
                     if(l_print) then
                       write(io8,*)
-                      write(io8,*) 'ACARS-manAIREP near dup--',ii
+ccccdak                      write(io8,*) 'ACARS-manAIREP near dup--',ii
+                      write(io8,*) 'TAMDAR-manAIREP near dup--',ii
                     endif
 c
                   elseif(l_iim1_mdcrs.and.l_ii_man) then
@@ -6234,8 +6382,10 @@ c
                     endif
                   endif
 c
-c               Exclude other MDCRS-ACARS, MDCRS-AIREP, ACARS-AIREP, MDCRS-MDCRS
-c                 or ACARS-ACARS duplicates
+ccccdak               Exclude other MDCRS-ACARS, MDCRS-AIREP, ACARS-AIREP, MDCRS-MDCRS
+ccccdak                 or ACARS-ACARS duplicates
+c               Exclude other MDCRS-TAMDAR, MDCRS-AIREP, TAMDAR-AIREP, MDCRS-MDCRS
+c                 or TAMDAR-TAMDAR duplicates
 c               ----------------------------------------------------------------
                 elseif( (l_iim1_mdcrs.and.l_ii_acars).or.
      $                  (l_ii_mdcrs.and.l_iim1_acars).or.
@@ -6317,8 +6467,10 @@ c             (These are typically near-surface observations)
 c             ------------------------------------------------------------
               elseif(idt_dif.ge.0.and.idt_dif.le.90.and.
      $               c_qc(iim1)(1:1).ne.'D'.and.
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
      $               abs(alat(iim1)-alat(ii)).lt.0.035.and.
      $               abs(alon(iim1)-alon(ii)).lt.0.035.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 c     $               abs(ht_ft(iim1)-ht_ft(ii)).lt.50.5.and.
      $               abs(ht_ft(iim1)-ht_ft(ii)).lt.25.5.and.
      $               (c_acftid(ii).eq.c_acftid(iim1).or.
@@ -6357,8 +6509,10 @@ c     $               abs(ob_t(iim1)-ob_t(ii)).lt.2.05.and.
      $                 ) then
 c
 c               If near dup found, decide which report to keep
-c                 Choose MDCRS over ACARS
-c                 Choose ACARS/MDCRS over AIREP/manual AIREP
+ccccdak                 Choose MDCRS over ACARS
+c                 Choose MDCRS over TAMDAR
+ccccdak                 Choose ACARS/MDCRS over AIREP/manual AIREP
+c                 Choose TAMDAR or MDCRS over AIREP/manual AIREP
 c                 Choose AMDAR over AIREP/manual AIREP
 c                 Choose automated over manual AIREP
 c                 Choose 7-char flight number over 6-char flight number
@@ -6418,7 +6572,8 @@ c
                       if(l_print) write(io8,*) 'manAIREP-MDCRS dup'
                     elseif(l_iim1_man.and.l_ii_acars) then 
                       n_nr_sh_MaAc = n_nr_sh_MaAc + 1
-                      if(l_print) write(io8,*) 'manAIREP-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'manAIREP-ACARS dup'
+                      if(l_print) write(io8,*) 'manAIREP-TAMDAR dup'
                     elseif(l_ii_man.and.l_iim1_airep) then 
                       n_nr_sh_ArMa = n_nr_sh_ArMa + 1
                       if(l_print) write(io8,*) 'AIREP-manAIREP dup'
@@ -6468,16 +6623,19 @@ c
                       if(l_print) write(io8,*) 'AIREP-AIREP dup'
                     elseif(l_iim1_acars.and.l_ii_acars) then
                       n_nr_mswn_AcAc = n_nr_mswn_AcAc + 1
-                      if(l_print) write(io8,*) 'ACARS-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'ACARS-ACARS dup'
+                      if(l_print) write(io8,*) 'TAMDAR-TAMDAR dup'
                     elseif(l_iim1_mdcrs.and.l_ii_mdcrs) then
                       n_nr_mswn_MdMd = n_nr_mswn_MdMd + 1
                       if(l_print) write(io8,*) 'MDCRS-MDCRS dup'
                     elseif(l_iim1_acars.and.l_ii_mdcrs) then
                       n_nr_mswn_AcMd = n_nr_mswn_AcMd + 1
-                      if(l_print) write(io8,*) 'ACARS-MDCRS dup'
+ccccdak                      if(l_print) write(io8,*) 'ACARS-MDCRS dup'
+                      if(l_print) write(io8,*) 'TAMDAR-MDCRS dup'
                     elseif(l_iim1_mdcrs.and.l_ii_acars) then
                       n_nr_mswn_MdAc = n_nr_mswn_MdAc + 1
-                      if(l_print) write(io8,*) 'MDCRS-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'MDCRS-ACARS dup'
+                      if(l_print) write(io8,*) 'MDCRS-TAMDAR dup'
                     elseif(l_iim1_mdcrs.and.l_ii_amdar) then
                       n_nr_mswn_MdAm = n_nr_mswn_MdAm + 1
                       if(l_print) write(io8,*) 'MDCRS-AMDAR dup'
@@ -6489,13 +6647,15 @@ c
                       if(l_print) write(io8,*) 'MDCRS-manAIREP dup'
                     elseif(l_iim1_airep.and.l_ii_acars) then
                       n_nr_mswn_ArAc = n_nr_mswn_ArAc + 1
-                      if(l_print) write(io8,*) 'AIREP-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'AIREP-ACARS dup'
+                      if(l_print) write(io8,*) 'AIREP-TAMDAR dup'
                     elseif(l_iim1_airep.and.l_ii_mdcrs) then
                       n_nr_mswn_ArMd = n_nr_mswn_ArMd + 1
                       if(l_print) write(io8,*) 'AIREP-MDCRS dup'
                     elseif(l_iim1_man.and.l_ii_acars) then
                       n_nr_mswn_MaAc = n_nr_mswn_MaAc + 1
-                      if(l_print) write(io8,*) 'manAIREP-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'manAIREP-ACARS dup'
+                      if(l_print) write(io8,*) 'manAIREP-TAMDAR dup'
                     elseif(l_iim1_man.and.l_ii_mdcrs) then
                       n_nr_mswn_MaMd = n_nr_mswn_MaMd + 1
                       if(l_print) write(io8,*) 'manAIREP-MDCRS dup'
@@ -6510,7 +6670,8 @@ c
                       if(l_print) write(io8,*) 'AMDAR-AIREP dup'
                     elseif(l_iim1_acars.and.l_ii_amdar) then
                       n_nr_mswn_AcAm = n_nr_mswn_AcAm + 1
-                      if(l_print) write(io8,*) 'ACARS-AMDAR dup'
+ccccdak                      if(l_print) write(io8,*) 'ACARS-AMDAR dup'
+                      if(l_print) write(io8,*) 'TAMDAR-AMDAR dup'
                     else
                       l_print = .true.
                       if(l_print) then
@@ -6524,7 +6685,8 @@ c
                     l_print = .false.
                     if(l_print) then
                       write(io8,*)
-                      write(io8,*) 'MDCRS-ACARS low-wind dup found'
+ccccdak                      write(io8,*) 'MDCRS-ACARS low-wind dup found'
+                      write(io8,*) 'MDCRS-TAMDAR low-wind dup found'
                     endif
 c
                   elseif(l_ii_mdcrs.and.l_iim1_airep) then
@@ -6557,7 +6719,8 @@ c
                     l_print = .false.
                     if(l_print) then
                       write(io8,*)
-                      write(io8,*) 'ACARS-AIREP low-wind dup found'
+ccccdak                      write(io8,*) 'ACARS-AIREP low-wind dup found'
+                      write(io8,*) 'TAMDAR-AIREP low-wind dup found'
                     endif
 c
                   elseif(l_ii_acars.and.l_iim1_acars) then
@@ -6565,7 +6728,8 @@ c
                     l_print = .false.
                     if(l_print) then
                       write(io8,*)
-                      write(io8,*) 'ACARS-ACARS low-wind dup found'
+ccccdak                      write(io8,*) 'ACARS-ACARS low-wind dup found'
+                      write(io8,*) 'TAMDAR-TAMDAR low-wind dup found'
                     endif
 c
                   elseif(l_ii_amdar.and.l_iim1_airep) then
@@ -6679,7 +6843,8 @@ c
                       if(l_print) write(io8,*) 'manAIREP-MDCRS dup'
                     elseif(l_ii_man.and.l_iim1_acars) then 
                       n_nr_sh_MaAc = n_nr_sh_MaAc + 1
-                      if(l_print) write(io8,*) 'manAIREP-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'manAIREP-ACARS dup'
+                      if(l_print) write(io8,*) 'manAIREP-TAMDAR dup'
                     elseif(l_iim1_man.and.l_ii_airep) then 
                       n_nr_sh_ArMa = n_nr_sh_ArMa + 1
                       if(l_print) write(io8,*) 'AIREP-manAIREP dup'
@@ -6729,16 +6894,19 @@ c
                       if(l_print) write(io8,*) 'AIREP-AIREP dup'
                     elseif(l_ii_acars.and.l_iim1_acars) then
                       n_nr_mswn_AcAc = n_nr_mswn_AcAc + 1
-                      if(l_print) write(io8,*) 'ACARS-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'ACARS-ACARS dup'
+                      if(l_print) write(io8,*) 'TAMDAR-TAMDAR dup'
                     elseif(l_ii_mdcrs.and.l_iim1_mdcrs) then
                       n_nr_mswn_MdMd = n_nr_mswn_MdMd + 1
                       if(l_print) write(io8,*) 'MDCRS-MDCRS dup'
                     elseif(l_ii_acars.and.l_iim1_mdcrs) then
                       n_nr_mswn_AcMd = n_nr_mswn_AcMd + 1
-                      if(l_print) write(io8,*) 'ACARS-MDCRS dup'
+ccccdak                      if(l_print) write(io8,*) 'ACARS-MDCRS dup'
+                      if(l_print) write(io8,*) 'TAMDAR-MDCRS dup'
                     elseif(l_ii_mdcrs.and.l_iim1_acars) then
                       n_nr_mswn_MdAc = n_nr_mswn_MdAc + 1
-                      if(l_print) write(io8,*) 'MDCRS-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'MDCRS-ACARS dup'
+                      if(l_print) write(io8,*) 'MDCRS-TAMDAR dup'
                     elseif(l_ii_mdcrs.and.l_iim1_amdar) then
                       n_nr_mswn_MdAm = n_nr_mswn_MdAm + 1
                       if(l_print) write(io8,*) 'MDCRS-AMDAR dup'
@@ -6750,13 +6918,15 @@ c
                       if(l_print) write(io8,*) 'MDCRS-manAIREP dup'
                     elseif(l_ii_airep.and.l_iim1_acars) then
                       n_nr_mswn_ArAc = n_nr_mswn_ArAc + 1
-                      if(l_print) write(io8,*) 'AIREP-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'AIREP-ACARS dup'
+                      if(l_print) write(io8,*) 'AIREP-TAMDAR dup'
                     elseif(l_ii_airep.and.l_iim1_mdcrs) then
                       n_nr_mswn_ArMd = n_nr_mswn_ArMd + 1
                       if(l_print) write(io8,*) 'AIREP-MDCRS dup'
                     elseif(l_ii_man.and.l_iim1_acars) then
                       n_nr_mswn_MaAc = n_nr_mswn_MaAc + 1
-                      if(l_print) write(io8,*) 'manAIREP-ACARS dup'
+ccccdak                      if(l_print) write(io8,*) 'manAIREP-ACARS dup'
+                      if(l_print) write(io8,*) 'manAIREP-TAMDAR dup'
                     elseif(l_ii_man.and.l_iim1_mdcrs) then
                       n_nr_mswn_MaMd = n_nr_mswn_MaMd + 1
                       if(l_print) write(io8,*) 'manAIREP-MDCRS dup'
@@ -6771,7 +6941,8 @@ c
                       if(l_print) write(io8,*) 'AMDAR-AIREP dup'
                     elseif(l_ii_acars.and.l_iim1_amdar) then
                       n_nr_mswn_AcAm = n_nr_mswn_AcAm + 1
-                      if(l_print) write(io8,*) 'ACARS-AMDAR dup'
+ccccdak                      if(l_print) write(io8,*) 'ACARS-AMDAR dup'
+                      if(l_print) write(io8,*) 'TAMDAR-AMDAR dup'
                     else
                       l_print = .true.
                       if(l_print) then
@@ -6785,7 +6956,8 @@ c
                     l_print = .false.
                     if(l_print) then
                       write(io8,*)
-                      write(io8,*) 'MDCRS-ACARS low-wind dup found'
+ccccdak                      write(io8,*) 'MDCRS-ACARS low-wind dup found'
+                      write(io8,*) 'MDCRS-TAMDAR low-wind dup found'
                     endif
 c
                   elseif(l_iim1_mdcrs.and.l_ii_airep) then
@@ -6818,7 +6990,8 @@ c
                     l_print = .false.
                     if(l_print) then
                       write(io8,*)
-                      write(io8,*) 'ACARS-AIREP low-wind dup found'
+ccccdak                      write(io8,*) 'ACARS-AIREP low-wind dup found'
+                      write(io8,*) 'TAMDAR-AIREP low-wind dup found'
                     endif
 c
                   elseif(l_iim1_acars.and.l_ii_acars) then
@@ -6826,7 +6999,8 @@ c
                     l_print = .false.
                     if(l_print) then
                       write(io8,*)
-                      write(io8,*) 'ACARS-ACARS low-wind dup found'
+ccccdak                      write(io8,*) 'ACARS-ACARS low-wind dup found'
+                      write(io8,*) 'TAMDAR-TAMDAR low-wind dup found'
                     endif
 c
                   elseif(l_ii_amdar.and.l_iim1_amdar) then
@@ -6876,8 +7050,10 @@ c             Echo to log file for later inspection
 c             -----------------------------------------------------------------
               elseif(idt_dif.ge.0.and.idt_dif.le.90.and.
      $               c_qc(iim1)(1:1).ne.'D'.and.
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
      $               abs(alat(iim1)-alat(ii)).lt.0.125.and.
      $               abs(alon(iim1)-alon(ii)).lt.0.125.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $               ((ht_ft(ii).lt.25000.and.
      $             abs(ht_ft(iim1)-ht_ft(ii)).lt.htdif_same/4+0.5).or.
      $                (((l_ii_mdcrs.and.(.not.l_iim1_mdcrs)).or.        ! new
@@ -6916,8 +7092,10 @@ c             wind differences--assume encode error and reject both!
 c             -----------------------------------------------------------------
               elseif((idt_dif.ge.0.and.idt_dif.le.90).and.
      $               c_qc(iim1)(1:1).ne.'D'.and.
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
      $               abs(alat(iim1)-alat(ii)).lt.0.035.and.
      $               abs(alon(iim1)-alon(ii)).lt.0.035.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $               (abs(ht_ft(iim1)-ht_ft(ii)).lt.0.5.or.
      $                abs(pres(iim1)-pres(ii)).lt.0.05).and.
      $               (c_acftid(ii).eq.c_acftid(iim1).or.
@@ -7016,8 +7194,10 @@ c             Echo to log file for later inspection
 c             -------------------------------------
               elseif(idt_dif.ge.0.and.idt_dif.le.90.and.
      $               c_qc(iim1)(1:1).ne.'D'.and.
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
      $               abs(alat(iim1)-alat(ii)).lt.0.035.and.
      $               abs(alon(iim1)-alon(ii)).lt.0.035.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 c     $               abs(ht_ft(iim1)-ht_ft(ii)).lt.50.5.and.
      $               abs(ht_ft(iim1)-ht_ft(ii)).lt.25.5.and.
      $               (c_acftid(ii).eq.c_acftid(iim1).or.
@@ -7160,12 +7340,13 @@ c     $          c_acftid(ii).ne.c_acftid(iim1))) then
      x,            ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,            ob_spd(ii),xiv_s(ii),ichk_s(ii)
      x,            c_qc(ii)
- 8002         format(i3,1x,i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x
+ 8002         format(i3,1x,i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f11.5,1x
      x,            f8.1,1x,f7.0,1x,f5.2,4(2(1x,f8.2),1x,i5),1x
      x,            '!',a11,'!')
             endif
 cc
-cc           Set up table associating airep and acars flight ids
+ccccccdak           Set up table associating airep and acars flight ids
+cc           Set up table associating airep and tamdar flight ids
 cc           Require that the report be within idt_samflt of the previously
 cc             saved minimum and maximum times for this flight segment
 cc             and is within fairly close limits on position, temp and winds
@@ -7174,8 +7355,10 @@ c            if( ( (l_ii_acars   .and..not.l_iim1_acars ).or.
 c     $            (l_iim1_acars .and..not.l_ii_acars   ).or.
 c     $            (l_ii_mdcrs  .and..not.l_iim1_mdcrs).or.
 c     $            (l_iim1_mdcrs.and..not.l_ii_mdcrs  ) ).and.
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
 c     $          abs(alat(iim1)-alat(ii))    .lt.0.025.and.
 c     $          abs(alon(iim1)-alon(ii))    .lt.0.025.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 c     $          abs(ob_t(iim1)-ob_t(ii))    .lt.0.65.and.
 c     $          abs(difdir).lt.5.5.and.
 c     $          abs(ob_spd(iim1)-ob_spd(ii)).lt.0.55.and.  
@@ -7273,8 +7456,9 @@ cc
 cc Output mixed duplicate mapping
 cc ------------------------------
 c      write(io8,*)
-c      write(io8,*) '         kk  airep id acars id  #  idt_min idt_max'
-c      write(io8,*) '         --  -------- -------- --- ------- -------'
+ccccdak      write(io8,*) '         kk  airep id acars id  #  idt_min idt_max'
+c      write(io8,*) '         kk  airep id tamdar id  #  idt_min idt_max'
+c      write(io8,*) '         --  -------- --------- --- ------- -------'
 c      do kk=1,ndup
 c        write(io8,*) kk,'  ',c_air_id(kk),c_acr_id(kk),kdup(kk),
 c     $               idt_min(kk),idt_max(kk)
@@ -7282,7 +7466,8 @@ c      enddo
 cc
 cc Map new flight ids and tail numbers on airep data
 cc Check all flights--allow AMDAR-AIREP mixed dups
-cc Almost all of the AIREP-ACARS/MDCRS dups are UAL
+ccccccdak Almost all of the AIREP-ACARS/MDCRS dups are UAL
+cc Almost all of the AIREP-TAMDAR/MDCRS dups are UAL
 cc -------------------------------------------------
 c      kmap = 0
 c      l_ual_all = .false.
@@ -7415,8 +7600,8 @@ c     ---------------------------
         write(io30,*) 'Encode dups (E or e)'
         write(io30,*) '--------------------'
         write(io30,3001)
- 3001   format(' index  type    tail num   flight     time     lat'
-     x,        '      lon       pres  height '
+ 3001   format(' index  type    tail num   flight     time       lat'
+     x,        '        lon       pres  height '
      x,        't-prcn   temp     innov  ichk'
      x,        ' spec hum    innov  ichk'
      x,        '   ob_dir    innov  ichk'
@@ -7504,7 +7689,7 @@ c
      x,        ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,        ob_spd(ii),xiv_s(ii),ichk_s(ii)
      x,        c_qc(ii)
- 3002       format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x,f8.1,1x,f7.0
+ 3002       format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f11.5,1x,f8.1,1x,f7.0
      x,          1x,f5.2,4(2(1x,f8.2),1x,i5),1x,'!',a11,'!')
           endif
 c
@@ -7540,7 +7725,8 @@ c     -----------------
         write(io30,*)
         write(io30,*)'  Number of MDCRS    encode dups rejected = '
      $,                   kbad(1,1)
-        write(io30,*)'  Number of ACARS    encode dups rejected = '
+ccccdak        write(io30,*)'  Number of ACARS    encode dups rejected = '
+        write(io30,*)'  Number of TAMDAR   encode dups rejected = '
      $,                   kbad(2,1)
         write(io30,*)'  Number of AMDAR    encode dups rejected = '
      $,                   kbad(3,1)
@@ -7554,7 +7740,8 @@ c     Output tail number counts
 c     -------------------------
       write(io8,*) 
       write(io8,*) '  Tail numbers for rejected encode dups'
-      write(io8,*) '  Tail Num  MDCRS  ACARS  AMDAR  AIREP  MAN  '
+ccccdak      write(io8,*) '  Tail Num  MDCRS  ACARS  AMDAR  AIREP  MAN  '
+      write(io8,*) '  Tail Num  MDCRS  TAMDAR AMDAR  AIREP  MAN  '
       write(io8,*) '  -------------------------------------------'
 c
       do mm=1,kreg
@@ -7567,7 +7754,8 @@ c
 c
       write(io8,*) 
       write(io8,*) '  Tail numbers for reports with bad temperature'
-      write(io8,*) '  Tail Num  MDCRS  ACARS  AMDAR  AIREP  MAN  '
+ccccdak      write(io8,*) '  Tail Num  MDCRS  ACARS  AMDAR  AIREP  MAN  '
+      write(io8,*) '  Tail Num  MDCRS  TAMDAR AMDAR  AIREP  MAN  '
       write(io8,*) '  -------------------------------------------'
 c
       do mm=1,kreg
@@ -7580,7 +7768,8 @@ c
 c
       write(io8,*) 
       write(io8,*) '  Tail numbers for reports with bad winds'
-      write(io8,*) '  Tail Num  MDCRS  ACARS  AMDAR  AIREP  MAN  '
+ccccdak      write(io8,*) '  Tail Num  MDCRS  ACARS  AMDAR  AIREP  MAN  '
+      write(io8,*) '  Tail Num  MDCRS  TAMDAR AMDAR  AIREP  MAN  '
       write(io8,*) '  -------------------------------------------'
 c
       do mm=1,kreg
@@ -7720,7 +7909,8 @@ c     -----------------
       if(.not.l_operational) then
         write(io30,*)'  Number of MDCRS    exact dups rejected = '
      $,                 kbad(1,2)
-        write(io30,*)'  Number of ACARS    exact dups rejected = '
+ccccdak        write(io30,*)'  Number of ACARS    exact dups rejected = '
+        write(io30,*)'  Number of TAMDAR   exact dups rejected = '
      $,                 kbad(2,2)
         write(io30,*)'  Number of AMDAR    exact dups rejected = '
      $,                 kbad(3,2)
@@ -7730,7 +7920,8 @@ c     -----------------
      $,                 kbad(5,2)
         write(io30,*)'  Number of MDCRS    near dups rejected  = '
      $,                 kbad(1,3)
-        write(io30,*)'  Number of ACARS    near dups rejected  = '
+ccccdak        write(io30,*)'  Number of ACARS    near dups rejected  = '
+        write(io30,*)'  Number of TAMDAR   near dups rejected  = '
      $,                 kbad(2,3)
         write(io30,*)'  Number of AMDAR    near dups rejected  = '
      $,                 kbad(3,3)
@@ -7759,7 +7950,8 @@ c     ---------------------
         enddo
 c
         write(io8,*)
-        write(io8,*) 'Distribution of ACARS reports'
+ccccdak        write(io8,*) 'Distribution of ACARS reports'
+        write(io8,*) 'Distribution of TAMDAR reports'
         do ii=19,1,-1
           write(io8,'(37i7)') (n_area_Ac(ii,kk),kk=1,37)
         enddo
@@ -7789,7 +7981,8 @@ c
         enddo
 c
         write(io8,*)
-        write(io8,*) 'Temporal distribution of ACARS reports'
+ccccdak        write(io8,*) 'Temporal distribution of ACARS reports'
+        write(io8,*) 'Temporal distribution of TAMDAR reports'
         do ii=1,24
           write(io8,*) ii,n_time_Ac(ii)
         enddo
@@ -7821,7 +8014,8 @@ c
         write(io8,*) '>50',n_lev_Md(52)
 c
         write(io8,*)
-        write(io8,*) 'Vertical distribution of ACARS reports'
+ccccdak        write(io8,*) 'Vertical distribution of ACARS reports'
+        write(io8,*) 'Vertical distribution of TAMDAR reports'
         write(io8,*) '<0 ',n_lev_Ac(53)
         do ii=0,50
           write(io8,*) ii,n_lev_Ac(ii+1)
@@ -7878,8 +8072,9 @@ c
      $                                   (n_temp_Md(34,ii),ii=1,12)
 c
         write(io8,*)
-        write(io8,*) 'Vertical distribution of ACARS temp reports'
-        write(io8,*) '-------------------------------------------'
+ccccdak        write(io8,*) 'Vertical distribution of ACARS temp reports'
+        write(io8,*) 'Vertical distribution of TAMDAR temp reports'
+        write(io8,*) '--------------------------------------------'
         write(io8,'(''                           Altitude (kft)'')')
         write(io8,'(1x,a45,a41)')
      $  'Temp (C)   <0   0-5   5-10 10-15 15-20 20-25 ',
@@ -8003,7 +8198,8 @@ c
      $                                   (n_wspd_Md(38,ii),ii=1,12)
 c
         write(io8,*)
-        write(io8,*) 'Vertical distribution of ACARS wspd reports'
+ccccdak        write(io8,*) 'Vertical distribution of ACARS wspd reports'
+        write(io8,*) 'Vertical distribution of TAMDAR wspd reports'
         write(io8,*) '-------------------------------------------'
         write(io8,'(''                           Altitude (kft)'')')
         write(io8,'(1x,a45,a41)')
@@ -8107,7 +8303,8 @@ c
       write(*,*) 'Duplicate check data counts--',cdtg_an
       write(*,*) '---------------------------------------'
       write(*,'(1x,a55)')
-     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+ccccdak     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+     $ 'Type of check     MDCRS  TAMDAR   AMDAR   AIREP     man'
       write(*,'(1x,a55)')
      $ '--------------- ------- ------- ------- ------- -------'
       write(*,'('' Num considered '',5(1x,i7))')
@@ -8129,7 +8326,8 @@ c
       write(io8,*) 'Duplicate check data counts'
       write(io8,*) '---------------------------'
       write(io8,'(1x,a55)')
-     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+ccccdak     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+     $ 'Type of check     MDCRS  TAMDAR   AMDAR   AIREP     man'
       write(io8,'(1x,a55)')
      $ '--------------- ------- ------- ------- ------- -------'
       write(io8,'(''Num considered '',5(1x,i7))')
@@ -8432,10 +8630,14 @@ c     ---------------
      $,            k_yairep            ! number of YRXX86 AIREPs rejected
       real         percent             ! percentage of rejected reports
 c
-      integer      i_acars             ! instrument type for acars
-     $,            i_acars_lvl         ! instrument type for acars--level flt
-     $,            i_acars_asc         ! instrument type for acars--ascent
-     $,            i_acars_des         ! instrument type for acars--descent
+ccccdak      integer      i_acars             ! instrument type for acars
+      integer      i_acars             ! instrument type for tamdar
+ccccdak     $,            i_acars_lvl         ! instrument type for acars--level flt
+     $,            i_acars_lvl         ! instrument type for tamdar--level flt
+ccccdak     $,            i_acars_asc         ! instrument type for acars--ascent
+     $,            i_acars_asc         ! instrument type for tamdar--ascent
+ccccdak     $,            i_acars_des         ! instrument type for acars--descent
+     $,            i_acars_des         ! instrument type for tamdar--descent
      $,            i_mdcrs             ! instrument type for mdcrs
      $,            i_mdcrs_lvl         ! instrument type for mdcrs--level flt
      $,            i_mdcrs_asc         ! instrument type for mdcrs--ascent
@@ -8454,10 +8656,14 @@ c
      $,            ifirst2             ! indicator - 1st time in subr. maxflt @ ipt 2 exceeded
      $,            ifirst3             ! indicator - 1st time in subr. maxflt @ ipt 3 exceeded
 c
-      save         i_acars             ! instrument type for acars
-     $,            i_acars_lvl         ! instrument type for acars--level flt
-     $,            i_acars_asc         ! instrument type for acars--ascent
-     $,            i_acars_des         ! instrument type for acars--descent
+ccccdak      save         i_acars             ! instrument type for acars
+      save         i_acars             ! instrument type for tamdar
+ccccdak     $,            i_acars_lvl         ! instrument type for acars--level flt
+     $,            i_acars_lvl         ! instrument type for tamdar--level flt
+ccccdak     $,            i_acars_asc         ! instrument type for acars--ascent
+     $,            i_acars_asc         ! instrument type for tamdar--ascent
+ccccdak     $,            i_acars_des         ! instrument type for acars--descent
+     $,            i_acars_des         ! instrument type for tamdar--descent
      $,            i_mdcrs             ! instrument type for mdcrs
      $,            i_mdcrs_lvl         ! instrument type for mdcrs--level flt
      $,            i_mdcrs_asc         ! instrument type for mdcrs--ascent
@@ -8944,7 +9150,8 @@ c
       write(io8,*) numreps,' reports retained'
       write(io8,*) kbad(1),' MDCRS reports skipped leaving    ',kgood(1)
      $          ,'--',kper(1),'%'
-      write(io8,*) kbad(2),' ACARS reports skipped leaving    ',kgood(2)
+ccccdak      write(io8,*) kbad(2),' ACARS reports skipped leaving    ',kgood(2)
+      write(io8,*) kbad(2),' TAMDAR rpts skipped leaving      ',kgood(2)
      $          ,'--',kper(2),'%'
       write(io8,*) kbad(3),' AMDAR reports skipped leaving    ',kgood(3)
      $          ,'--',kper(3),'%'
@@ -9467,10 +9674,14 @@ c Other variables
 c ---------------
       integer      io8                 ! i/o unit number for log file
 c
-      integer      i_acars             ! instrument type for acars
-     $,            i_acars_lvl         ! instrument type for acars--level flt
-     $,            i_acars_asc         ! instrument type for acars--ascent
-     $,            i_acars_des         ! instrument type for acars--descent
+ccccdak      integer      i_acars             ! instrument type for acars
+      integer      i_acars             ! instrument type for tamdar
+ccccdak     $,            i_acars_lvl         ! instrument type for acars--level flt
+     $,            i_acars_lvl         ! instrument type for tamdar--level flt
+ccccdak     $,            i_acars_asc         ! instrument type for acars--ascent
+     $,            i_acars_asc         ! instrument type for tamdar--ascent
+ccccdak     $,            i_acars_des         ! instrument type for acars--descent
+     $,            i_acars_des         ! instrument type for tamdar--descent
      $,            i_mdcrs             ! instrument type for mdcrs
      $,            i_mdcrs_lvl         ! instrument type for mdcrs--level flt
      $,            i_mdcrs_asc         ! instrument type for mdcrs--ascent
@@ -9708,7 +9919,8 @@ c ------------------------------
         write(io8,*)
         write(io8,*) 'Indices for individual tail numbers'
         write(io8,*) '-----------------------------------'
-        write(io8,*) '  mm flight# #MDCRS  #ACARS  #AMDAR   ',
+ccccdak        write(io8,*) '  mm flight# #MDCRS  #ACARS  #AMDAR   ',
+        write(io8,*) '  mm flight# #MDCRS  #TAMDAR #AMDAR   ',
      $               ' #AIREP  #manAIREP '
       endif
 c
@@ -10022,7 +10234,8 @@ c
       logical      l_init              ! initialize variables if true
      $,            l_last              ! true if last time subroutine is called
 c
-      data c_label/'MDCRS   ','ACARS   ','AMDAR   ',
+ccccdak      data c_label/'MDCRS   ','ACARS   ','AMDAR   ',
+      data c_label/'MDCRS   ','TAMDAR  ','AMDAR   ',
      $             'AIREP   ','manAIREP'/
 c
       data c_reg_list/'AN','AR','BA','EU','IT','KL','LH','MK','NZ','QF'
@@ -10617,7 +10830,7 @@ c     -----------
       integer      idt(max_reps)       ! time in seconds to analysis time 
       character*8  c_acftreg(max_reps) ! aircraft registration (tail) number
       character*9  c_acftid(max_reps)  ! aircraft flight number
-      real         alat(max_reps)      ! latitude
+      real*8       alat(max_reps)      ! latitude
      $,            alon(max_reps)      ! longitude
       real         pres(max_reps)      ! pressure
      $,            ht_ft(max_reps)     ! height in feet
@@ -10665,10 +10878,14 @@ c
      $,            kbadtot             ! total number of rejected duplicates
      $,            kbad(5)             ! counter for number of invalid reports
 c
-      integer      i_acars             ! instrument type for acars
-     $,            i_acars_lvl         ! instrument type for acars--level flt
-     $,            i_acars_asc         ! instrument type for acars--ascent
-     $,            i_acars_des         ! instrument type for acars--descent
+ccccdak      integer      i_acars             ! instrument type for acars
+      integer      i_acars             ! instrument type for tamdar
+ccccdak     $,            i_acars_lvl         ! instrument type for acars--level flt
+     $,            i_acars_lvl         ! instrument type for tamdar--level flt
+ccccdak     $,            i_acars_asc         ! instrument type for acars--ascent
+     $,            i_acars_asc         ! instrument type for tamdar--ascent
+ccccdak     $,            i_acars_des         ! instrument type for acars--descent
+     $,            i_acars_des         ! instrument type for tamdar--descent
      $,            i_mdcrs             ! instrument type for mdcrs
      $,            i_mdcrs_lvl         ! instrument type for mdcrs--level flt
      $,            i_mdcrs_asc         ! instrument type for mdcrs--ascent
@@ -10706,12 +10923,14 @@ c
      $,            n_blank_Md          ! number of MDCRS reports with blank id
      $,            n_blank_Am          ! number of AMDAR reports with blank id
 c
-      integer      nrep_Ac             ! number of acars reports considered
+ccccdak      integer      nrep_Ac             ! number of acars reports considered
+      integer      nrep_Ac             ! number of tamdar reports considered
      $,            nrep_Md             ! number of mdcrs reports considered
      $,            nrep_Ma             ! number of manual airep reports considered
      $,            nrep_Ar             ! number of airep reports considered
      $,            nrep_Am             ! number of amdar reports considered
-     $,            nbad_Ac             ! number of bad acars
+ccccdak     $,            nbad_Ac             ! number of bad acars
+     $,            nbad_Ac             ! number of bad tamdar
      $,            nbad_Md             ! number of bad mdcrs
      $,            nbad_Ma             ! number of bad manual aireps
      $,            nbad_Ar             ! number of bad aireps
@@ -10998,11 +11217,13 @@ c
             write(io8,*)
             write(io8,*) 'Report marked bad in decoder'
           endif
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
 c
 c Check for zero position--lat/lon both zero
 c ------------------------------------------
         elseif(abs(alat(ii)).lt.0.001.and.
      $         abs(alon(ii)).lt.0.001) then
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 c
           c_qc(ii)(3:4) = 'BB'
 c
@@ -11027,6 +11248,7 @@ c
             write(io8,*)
             write(io8,*) 'Report found with missing time'
           endif
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
 c
 c Check for missing latitude/longitude
 c ------------------------------------
@@ -11035,6 +11257,7 @@ c ------------------------------------
 c
           if(alat(ii).eq.amiss) c_qc(ii)(3:3) = 'M'
           if(alon(ii).eq.amiss) c_qc(ii)(4:4) = 'M'
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 c
           n_miss_pos(ktype) = n_miss_pos(ktype) + 1
 c
@@ -11799,7 +12022,7 @@ c
      x,        ob_dir(iip1),xiv_d(iip1),ichk_d(iip1)
      x,        ob_spd(iip1),xiv_s(iip1),ichk_s(iip1)
      x,        c_qc(iip1)
- 8002     format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x
+ 8002     format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f11.5,1x
      x,        f8.1,1x,f7.0,1x,f5.2,4(2(1x,f8.2),1x,i5),1x
      x,        '!',a11,'!')
         endif
@@ -11815,8 +12038,8 @@ c ---------------------
         write(io32,*) 'Invalid reports'
         write(io32,*) '---------------'
         write(io32,3001)
- 3001   format(' index  type    tail num   flight     time     lat'
-     x,        '      lon       pres  height '
+ 3001   format(' index  type    tail num   flight     time       lat'
+     x,        '        lon       pres  height '
      x,        't-prcn   temp     innov  ichk'
      x,        ' spec hum    innov  ichk'
      x,        '   ob_dir    innov  ichk'
@@ -11926,7 +12149,7 @@ c
      x,        ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,        ob_spd(ii),xiv_s(ii),ichk_s(ii)
      x,        c_qc(ii)
- 3002       format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x,f8.1,1x,f7.0
+ 3002       format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f11.5,1x,f8.1,1x,f7.0
      x,          1x,f5.2,4(2(1x,f8.2),1x,i5),1x,'!',a11,'!')
           endif
         endif
@@ -11982,7 +12205,8 @@ c     -----------------
         write(io32,*)
         write(io32,*)'  Number of invalid MDCRS    reps rejected = '
      $,                   kbad(1)
-        write(io32,*)'  Number of invalid ACARS    reps rejected = '
+ccccdak        write(io32,*)'  Number of invalid ACARS    reps rejected = '
+        write(io32,*)'  Number of invalid TAMDAR   reps rejected = '
      $,                   kbad(2)
         write(io32,*)'  Number of invalid AMDAR    reps rejected = '
      $,                   kbad(3)
@@ -11997,7 +12221,8 @@ c
       write(io8,*) '  -------------------------'
       write(io8,*)'  Number of invalid MDCRS    reps rejected = '
      $,                   kbad(1)
-      write(io8,*)'  Number of invalid ACARS    reps rejected = '
+ccccdak      write(io8,*)'  Number of invalid ACARS    reps rejected = '
+      write(io8,*)'  Number of invalid TAMDAR   reps rejected = '
      $,                   kbad(2)
       write(io8,*)'  Number of invalid AMDAR    reps rejected = '
      $,                   kbad(3)
@@ -12012,7 +12237,8 @@ c     ---------------------
       write(*,*) 'Invalid check data counts--',cdtg_an
       write(*,*) '-------------------------------------'
       write(*,'(1x,a55)')
-     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+ccccdak     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+     $ 'Type of check     MDCRS  TAMDAR   AMDAR   AIREP     man'
       write(*,'(1x,a55)')
      $ '--------------- ------- ------- ------- ------- -------'
       write(*,'('' Num considered '',5(1x,i7))')
@@ -12026,7 +12252,8 @@ c
       write(io8,*) 'Invalid check data counts'
       write(io8,*) '-------------------------'
       write(io8,'(1x,a55)')
-     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+ccccdak     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+     $ 'Type of check     MDCRS  TAMDAR   AMDAR   AIREP     man'
       write(io8,'(1x,a55)')
      $ '--------------- ------- ------- ------- ------- -------'
       write(io8,'(''Num considered '',5(1x,i7))')
@@ -12124,7 +12351,7 @@ c     -----------
       integer      idt(max_reps)       ! time in seconds to analysis time 
       character*8  c_acftreg(max_reps) ! aircraft registration (tail) number
       character*9  c_acftid(max_reps)  ! aircraft flight number
-      real         alat(max_reps)      ! latitude
+      real*8       alat(max_reps)      ! latitude
      $,            alon(max_reps)      ! longitude
       real         pres(max_reps)      ! pressure
      $,            ht_ft(max_reps)     ! height in feet
@@ -12192,12 +12419,14 @@ c     --------
      $,            kbadt(5)            ! counter for number of bad temperatures
      $,            kbadw(5)            ! counter for number of bad winds
      $,            kbadtot             ! counter for total number of bad reports
-      integer      nrep_Ac             ! number of acars reports considered
+ccccdak      integer      nrep_Ac             ! number of acars reports considered
+      integer      nrep_Ac             ! number of tamdar reports considered
      $,            nrep_Md             ! number of mdcrs reports considered
      $,            nrep_Ma             ! number of manual airep reports considered
      $,            nrep_Ar             ! number of airep reports considered
      $,            nrep_Am             ! number of amdar reports considered
-      integer      nstk_Ac             ! number of acars reports rejected
+ccccdak      integer      nstk_Ac             ! number of acars reports rejected
+      integer      nstk_Ac             ! number of tamdar reports rejected
      $,            nstk_Md             ! number of mdcrs reports rejected
      $,            nstk_Ma             ! number of manual airep reports rejected
      $,            nstk_Ar             ! number of airep reports rejected
@@ -12205,10 +12434,14 @@ c     --------
 c
 c     Instrument types
 c     ----------------
-      integer      i_acars             ! instrument type for acars
-     $,            i_acars_lvl         ! instrument type for acars--level flt
-     $,            i_acars_asc         ! instrument type for acars--ascent
-     $,            i_acars_des         ! instrument type for acars--descent
+ccccdak      integer      i_acars             ! instrument type for acars
+      integer      i_acars             ! instrument type for tamdar
+ccccdak     $,            i_acars_lvl         ! instrument type for acars--level flt
+     $,            i_acars_lvl         ! instrument type for tamdar--level flt
+ccccdak     $,            i_acars_asc         ! instrument type for acars--ascent
+     $,            i_acars_asc         ! instrument type for tamdar--ascent
+ccccdak     $,            i_acars_des         ! instrument type for acars--descent
+     $,            i_acars_des         ! instrument type for tamdar--descent
      $,            i_mdcrs             ! instrument type for mdcrs
      $,            i_mdcrs_lvl         ! instrument type for mdcrs--level flt
      $,            i_mdcrs_asc         ! instrument type for mdcrs--ascent
@@ -12239,7 +12472,8 @@ c
      $,            iifirst             ! index for first stuck latitude
      $,            iilast              ! index for last stuck latitude
 c
-      integer      k_ACARS             ! number of ACARS/MDCRS reports
+ccccdak      integer      k_ACARS             ! number of ACARS/MDCRS reports
+      integer      k_ACARS             ! number of TAMDAR/MDCRS reports
      $,            k_AIREP             ! number of AIREP reports
      $,            k_manAIREP          ! number of manual AIREP reports
      $,            k_AMDAR             ! number of AMDAR reports
@@ -12247,6 +12481,12 @@ c
      $,            ktype               ! ob type
 c
       integer      istk_time           ! value of stuck clock
+      real*8       alat_min            ! min value of latitude during flight
+     $,            alat_max            ! max value of latitude during flight
+     $,            alon_min            ! min value of longitude during flight
+     $,            alon_max            ! max value of longitude during flight
+     $,            stk_alat            ! value of stuck latitude
+     $,            stk_alon            ! value of stuck longitude
       real         ht_max              ! max height during flight
      $,            ht_min              ! min height during flight
      $,            ht_max_stuck        ! max height during stuck portion
@@ -12255,12 +12495,6 @@ c
      $,            temp_max            ! max tempetature during flight
      $,            ob_min              ! min value of parameter during flight
      $,            ob_max              ! max value of parameter during flight
-     $,            alat_min            ! min value of latitude during flight
-     $,            alat_max            ! max value of latitude during flight
-     $,            alon_min            ! min value of longitude during flight
-     $,            alon_max            ! max value of longitude during flight
-     $,            stk_alat            ! value of stuck latitude
-     $,            stk_alon            ! value of stuck longitude
      $,            stk_pres            ! value of stuck pressure
      $,            stk_alt             ! value of stuck altitude
      $,            stk_temp            ! value of stuck temperature
@@ -12372,8 +12606,9 @@ c --------------------------------------------------------------
           temp_min = ob_t(iistart)
           temp_max = ob_t(iistart)
 c
-c         First find first ACARS/MDCRS/AIREP report and count reports by category
-c         -----------------------------------------------------------------------
+ccccdak         First find first ACARS/MDCRS/AIREP report and count reports by category
+c         First find first TAMDAR/MDCRS/AIREP report and count reports by category
+c         ------------------------------------------------------------------------
           do iob=istart,iend
             ii = indx(iob)
             if(ht_ft(ii).lt.ht_min)  ht_min = ht_ft(ii)
@@ -12414,8 +12649,9 @@ c
             endif
           enddo
 c
-c         If more than 3 ACARS/MDCRS/AIREP/AMDAR reports are present, look for stuck clock
-c         --------------------------------------------------------------------------------
+ccccdak         If more than 3 ACARS/MDCRS/AIREP/AMDAR reports are present, look for stuck clock
+c         If more than 3 TAMDAR/MDCRS/AIREP/AMDAR reports are present, look for stuck clock
+c         ---------------------------------------------------------------------------------
           if((k_ACARS+k_AIREP+k_AMDAR).ge.3) then
             stuck = .true.
             k_stuck = 0
@@ -12562,6 +12798,7 @@ c           Check if position is stuck
 c           --------------------------
             stuck = .true.
             k_stuck = 0
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
             stk_alat = -999 999
             stk_alon = -999 999
             iobfirst = -999 999
@@ -12572,6 +12809,7 @@ c           --------------------------
             alat_max = -999 999
             alon_min =  999 999
             alon_max = -999 999
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
             ht_min_stuck =  999 999
             ht_max_stuck = -999 999
 c
@@ -12588,6 +12826,7 @@ c
 c             Skip over reports with previously averaged positions
 c             ----------------------------------------------------
               elseif(ichk_t(ii).eq.-4) then
+!vvvv^ DAK-future change perhaps to account for incr. lat/lon precision
 c
 c             Set "stuck" to false if lat/lons not equal and re-initialize stats
 c             ------------------------------------------------------------------
@@ -12609,6 +12848,7 @@ c               -------------------------------------------------
      $             abs(alon_max-alon_min).lt.0.015.and.
      $             (abs(stk_alat).lt.0.005.or.
      $              abs(stk_alon).lt.0.005.or.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              ht_max_stuck-ht_min_stuck.lt.100..or.
      $              ((itype(ii).ne.i_amdar.and.
      $                itype(ii).ne.i_amdar_lvl.and.
@@ -12644,22 +12884,27 @@ c
 c
                 stuck = .false.
                 k_stuck = 0
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 stk_alat = -999 999
                 stk_alon = -999 999
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 iobfirst = -999 999
                 ioblast = -999 999
                 iifirst = -999 999
                 iilast = -999 999
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 alat_min =  999 999
                 alat_max = -999 999
                 alon_min =  999 999
                 alon_max = -999 999
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 ht_min_stuck =  999 999
                 ht_max_stuck = -999 999
 c
 c             Accumulate statistics for stuck segments
 c             ----------------------------------------
               else
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 k_stuck = k_stuck + 1
                 stk_alat = alat(ii)
                 stk_alon = alon(ii)
@@ -12705,6 +12950,7 @@ c           -----------------------------------------------------------------
      $          k_ACARS+k_AIREP+k_AMDAR.eq.0).and.
      $         (abs(alat(iistart)).lt.0.005.or.
      $          abs(alon(iistart)).lt.0.005.or.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $          ht_max-ht_min.lt.100..or.
      $          ((itype(ii).ne.i_amdar.and.
      $            itype(ii).ne.i_amdar_lvl.and.
@@ -12725,6 +12971,7 @@ c
 c           Otherwise, if only a portion of the flight is stuck, set QC flags
 c           -----------------------------------------------------------------
             elseif(k_stuck.ge.3.and.
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
      $             stk_alat.ne.-999 999.and.
      $             stk_alon.ne.-999 999.and.
      $             stk_alat.ne.amiss.and.
@@ -12733,6 +12980,7 @@ c           -----------------------------------------------------------------
      $             abs(alon_max-alon_min).lt.0.015.and.
      $             (abs(stk_alat).lt.0.005.or.
      $              abs(stk_alon).lt.0.005.or.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              ht_max_stuck-ht_min_stuck.lt.100..or.
      $              ((itype(ii).ne.i_amdar.and.
      $                itype(ii).ne.i_amdar_lvl.and.
@@ -12770,6 +13018,7 @@ c           Check if latitude is stuck
 c           --------------------------
             stuck = .true.
             k_stuck = 0
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
             stk_alat = -999 999
             iobfirst = -999 999
             ioblast = -999 999
@@ -12777,6 +13026,7 @@ c           --------------------------
             iilast = -999 999
             alat_min =  999 999
             alat_max = -999 999
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
             ht_min_stuck =  999 999
             ht_max_stuck = -999 999
 c
@@ -12794,6 +13044,7 @@ c             Skip over reports with previously averaged positions
 c             ----------------------------------------------------
               elseif(ichk_t(ii).eq.-4) then
 c
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
 c             Set "stuck" to false if lats not equal and re-initialize stats
 c             --------------------------------------------------------------
               elseif(abs(alat(iim1)-alat(ii)).gt.0.005.and.
@@ -12811,6 +13062,7 @@ c     $             abs(idt(iilast)-idt(iifirst)).gt.1800.and.
 c     $             (abs(stk_alat).lt.0.005.or.
 c     $              ht_max_stuck-ht_min_stuck.lt.100..or.
 c     $              ht_max_stuck-ht_min_stuck.gt.9000.) ) then
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 cc
 c                  do jj=iobfirst,ioblast
 c                    ii = indx(jj)
@@ -12835,6 +13087,7 @@ c                endif
 c
                 stuck = .false.
                 k_stuck = 0
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 stk_alat = -999 999
                 iobfirst = -999 999
                 ioblast = -999 999
@@ -12842,6 +13095,7 @@ c
                 iilast = -999 999
                 alat_min =  999 999
                 alat_max = -999 999
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 ht_min_stuck =  999 999
                 ht_max_stuck = -999 999
 c
@@ -12849,6 +13103,7 @@ c             Accumulate statistics for stuck segments
 c             ----------------------------------------
               elseif(c_qc(ii)(3:3).ne.'K') then
                 k_stuck = k_stuck + 1
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 stk_alat = alat(ii)
                 if(iobfirst.eq.-999 999) then
                   iobfirst = iob-1
@@ -12856,6 +13111,7 @@ c             ----------------------------------------
      $               alat(iim1).ne.amiss) alat_min = alat(iim1)
                   if(alat(iim1).gt.alat_max.and.
      $               alat(iim1).ne.amiss) alat_max = alat(iim1)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                   if(ht_ft(iim1).lt.ht_min_stuck) 
      $               ht_min_stuck = ht_ft(iim1)
                   if(ht_ft(iim1).gt.ht_max_stuck) 
@@ -12864,10 +13120,12 @@ c             ----------------------------------------
                 ioblast = iob
                 if(iifirst.eq.-999 999) iifirst = iim1
                 iilast = ii
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alat(ii).lt.alat_min.and.
      $             alat(ii).ne.amiss) alat_min = alat(ii)
                 if(alat(ii).gt.alat_max.and.
      $             alat(ii).ne.amiss) alat_max = alat(ii)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 if(ht_ft(ii).lt.ht_min_stuck) ht_min_stuck = ht_ft(ii)
                 if(ht_ft(ii).gt.ht_max_stuck) ht_max_stuck = ht_ft(ii)
               endif
@@ -12877,6 +13135,7 @@ c           Don't reject flights with constant lat rounded to nearest deg
 c           or flights with elapsed time less than 30 minutes (1800 seconds)
 c           --------------------------------------------------------------
             if(stuck.and.
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
      $         alat(iistart).ne.amiss.and.
      $         abs(alat_max-alat_min).lt.0.005.and.
      $         abs(nint(alat(iistart))-alat(iistart)).gt.0.005.and.
@@ -12884,6 +13143,7 @@ c           --------------------------------------------------------------
      $         (k_ACARS+k_AIREP+k_AMDAR.ge.3.or.
      $          k_ACARS+k_AIREP+k_AMDAR.eq.0).and.
      $         (abs(alat(iistart)).lt.0.005.or.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $          ht_max-ht_min.lt.100..or.
      $          ht_max-ht_min.gt.9000.)) then
 c
@@ -12895,12 +13155,14 @@ cc
 cc           Otherwise, if only a portion of the flight is stuck, set QC flags
 cc           -----------------------------------------------------------------
 c            elseif(k_stuck.ge.3.and.
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
 c     $             stk_alat.ne.-999 999.and.
 c     $             stk_alat.ne.amiss.and.
 c     $             abs(alat_max-alat_min).lt.0.005.and.
 c     $             abs(nint(stk_alat)-stk_alat).gt.0.005.and.
 c     $             abs(idt(iilast)-idt(iifirst)).gt.1800.and.
 c     $             (abs(stk_alat).lt.0.005.or.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 c     $              ht_max_stuck-ht_min_stuck.lt.100..or.
 c     $              ht_max_stuck-ht_min_stuck.gt.9000.) ) then
 cc
@@ -12930,6 +13192,7 @@ c           Check if longitude is stuck
 c           ---------------------------
             stuck = .true.
             k_stuck = 0
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
             stk_alon = -999 999
             iobfirst = -999 999
             ioblast = -999 999
@@ -12937,6 +13200,7 @@ c           ---------------------------
             iilast = -999 999
             alon_min =  999 999
             alon_max = -999 999
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
             ht_min_stuck =  999 999
             ht_max_stuck = -999 999
 c
@@ -12956,6 +13220,7 @@ c             ----------------------------------------------------
 c
 c             Set "stuck" to false if lons not equal and re-initialize stats
 c             --------------------------------------------------------------
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
               elseif(abs(alon(iim1)-alon(ii)).gt.0.005.and.
      $               alon(iim1).ne.amiss.and.
      $               alon(ii).ne.amiss) then
@@ -12971,6 +13236,7 @@ c     $             abs(idt(iilast)-idt(iifirst)).gt.1800.and.
 c     $             (abs(stk_alon).lt.0.005.or.
 c     $              ht_max_stuck-ht_min_stuck.lt.100..or.
 c     $              ht_max_stuck-ht_min_stuck.gt.9000.) ) then
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 cc
 c                  do jj=iobfirst,ioblast
 c                    ii = indx(jj)
@@ -12995,6 +13261,7 @@ c                endif
 c
                 stuck = .false.
                 k_stuck = 0
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 stk_alon = -999 999
                 iobfirst = -999 999
                 ioblast = -999 999
@@ -13002,6 +13269,7 @@ c
                 iilast = -999 999
                 alon_min =  999 999
                 alon_max = -999 999
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 ht_min_stuck =  999 999
                 ht_max_stuck = -999 999
 c
@@ -13012,10 +13280,12 @@ c             ----------------------------------------
                 stk_alon = alon(ii)
                 if(iobfirst.eq.-999 999) then
                   iobfirst = iob-1
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(alon(iim1).lt.alon_min.and.
      $               alon(iim1).ne.amiss) alon_min = alon(iim1)
                   if(alon(iim1).gt.alon_max.and.
      $               alon(iim1).ne.amiss) alon_max = alon(iim1)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                   if(ht_ft(iim1).lt.ht_min_stuck) 
      $               ht_min_stuck = ht_ft(iim1)
                   if(ht_ft(iim1).gt.ht_max_stuck) 
@@ -13024,10 +13294,12 @@ c             ----------------------------------------
                 ioblast = iob
                 if(iifirst.eq.-999 999) iifirst = iim1
                 iilast = ii
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alon(ii).lt.alon_min.and.
      $             alon(ii).ne.amiss) alon_min = alon(ii)
                 if(alon(ii).gt.alon_max.and.
      $             alon(ii).ne.amiss) alon_max = alon(ii)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 if(ht_ft(ii).lt.ht_min_stuck) ht_min_stuck = ht_ft(ii)
                 if(ht_ft(ii).gt.ht_max_stuck) ht_max_stuck = ht_ft(ii)
               endif
@@ -13037,6 +13309,7 @@ c           Don't reject flights with constant lon rounded to nearest deg
 c           or flights with elapsed time less than 30 minutes (1800 seconds)
 c           --------------------------------------------------------------
             if(stuck.and.
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
      $         alon(iistart).ne.amiss.and.
      $         abs(alon_max-alon_min).lt.0.005.and.
      $         abs(nint(alon(iistart))-alon(iistart)).gt.0.005.and.
@@ -13045,6 +13318,7 @@ c     $         abs(alon(iiend)-alon(iistart)).lt.0.005.and.
      $         (k_ACARS+k_AIREP+k_AMDAR.ge.3.or.
      $          k_ACARS+k_AIREP+k_AMDAR.eq.0).and.
      $         (abs(alon(iistart)).lt.0.005.or.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $          ht_max-ht_min.lt.100..or.
      $          ht_max-ht_min.gt.9000.)) then
 c
@@ -13056,12 +13330,14 @@ cc
 cc           Otherwise, if only a portion of the flight is stuck, set QC flags
 cc           -----------------------------------------------------------------
 c            elseif(k_stuck.ge.3.and.
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
 c     $             stk_alon.ne.-999 999.and.
 c     $             stk_alon.ne.amiss.and.
 c     $             abs(alon_max-alon_min).lt.0.005.and.
 c     $             abs(nint(stk_alon)-stk_alon).gt.0.005.and.
 c     $             abs(idt(iilast)-idt(iifirst)).gt.1800.and.
 c     $             (abs(stk_alon).lt.0.005.or.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 c     $              ht_max_stuck-ht_min_stuck.lt.100..or.
 c     $              ht_max_stuck-ht_min_stuck.gt.9000.) ) then
 c
@@ -13443,9 +13719,10 @@ c              enddo
 c
             endif  
 c
-c           Recompute temperature reported in whole degrees for ACARS/MDCRS
+ccccdak           Recompute temperature reported in whole degrees for ACARS/MDCRS
+c           Recompute temperature reported in whole degrees for TAMDAR/MDCRS
 c           Mark as bad for other types
-c           ---------------------------------------------------------------
+c           ----------------------------------------------------------------
             if(temp_min.gt.266.0.and.
      $         temp_max.lt.278.0.and.
      $         (.not.stuck).and.
@@ -13950,8 +14227,8 @@ c ---------------------
         write(io33,*) 'Reports with temperatures in whole degrees'
         write(io33,*) '------------------------------------------'
         write(io33,3001)
- 3001   format(' index  type    tail num   flight     time     lat'
-     x,      '      lon       pres  height '
+ 3001   format(' index  type    tail num   flight     time       lat'
+     x,      '        lon       pres  height '
      x,      't-prcn   temp     innov  ichk'
      x,      ' spec hum    innov  ichk'
      x,      '   ob_dir    innov  ichk'
@@ -13975,7 +14252,7 @@ c
      x,        ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,        ob_spd(ii),xiv_s(ii),ichk_s(ii)
      x,        c_qc(ii)
- 3002       format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x,f8.1,1x,f7.0
+ 3002       format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f11.5,1x,f8.1,1x,f7.0
      x,          1x,f5.2,4(2(1x,f8.2),1x,i5),1x,'!',a11,'!')
           endif
 c
@@ -14016,7 +14293,8 @@ c
       if(.not.l_operational) then
         write(io33,*)
         write(io33,*) '  Number of MDCRS    in whole deg =',nstk_whol(1)
-        write(io33,*) '  Number of ACARS    in whole deg =',nstk_whol(2)
+ccccdak        write(io33,*) '  Number of ACARS    in whole deg =',nstk_whol(2)
+        write(io33,*) '  Number of TAMDAR   in whole deg =',nstk_whol(2)
         write(io33,*) '  Number of AMDAR    in whole deg =',nstk_whol(3)
         write(io33,*) '  Number of AIREP    in whole deg =',nstk_whol(4)
         write(io33,*) '  Number of manAIREP in whole deg =',nstk_whol(5)
@@ -14198,17 +14476,20 @@ c
       if(.not.l_operational) then
         write(io33,*)
         write(io33,*)'  Number of stuck MDCRS    reps rejected=',kbad(1)
-        write(io33,*)'  Number of stuck ACARS    reps rejected=',kbad(2)
+ccccdak        write(io33,*)'  Number of stuck ACARS    reps rejected=',kbad(2)
+        write(io33,*)'  Number of stuck TAMDAR   reps rejected=',kbad(2)
         write(io33,*)'  Number of stuck AMDAR    reps rejected=',kbad(3)
         write(io33,*)'  Number of stuck AIREP    reps rejected=',kbad(4)
         write(io33,*)'  Number of stuck manAIREP reps rejected=',kbad(5)
         write(io33,*)'  Number of stuck MDCRS    temps marked=',kbadt(1)
-        write(io33,*)'  Number of stuck ACARS    temps marked=',kbadt(2)
+ccccdak        write(io33,*)'  Number of stuck ACARS    temps marked=',kbadt(2)
+        write(io33,*)'  Number of stuck TAMDAR   temps marked=',kbadt(2)
         write(io33,*)'  Number of stuck AMDAR    temps marked=',kbadt(3)
         write(io33,*)'  Number of stuck AIREP    temps marked=',kbadt(4)
         write(io33,*)'  Number of stuck manAIREP temps marked=',kbadt(5)
         write(io33,*)'  Number of stuck MDCRS    winds marked=',kbadw(1)
-        write(io33,*)'  Number of stuck ACARS    winds marked=',kbadw(2)
+ccccdak        write(io33,*)'  Number of stuck ACARS    winds marked=',kbadw(2)
+        write(io33,*)'  Number of stuck TAMDAR   winds marked=',kbadw(2)
         write(io33,*)'  Number of stuck AMDAR    winds marked=',kbadw(3)
         write(io33,*)'  Number of stuck AIREP    winds marked=',kbadw(4)
         write(io33,*)'  Number of stuck manAIREP winds marked=',kbadw(5)
@@ -14218,17 +14499,20 @@ c
       write(io8,*) '  Reports with stuck values'
       write(io8,*) '  -------------------------'
       write(io8,*)'  Number of stuck MDCRS    reps rejected = ',kbad(1)
-      write(io8,*)'  Number of stuck ACARS    reps rejected = ',kbad(2)
+ccccdak      write(io8,*)'  Number of stuck ACARS    reps rejected = ',kbad(2)
+      write(io8,*)'  Number of stuck TAMDAR   reps rejected = ',kbad(2)
       write(io8,*)'  Number of stuck AMDAR    reps rejected = ',kbad(3)
       write(io8,*)'  Number of stuck AIREP    reps rejected = ',kbad(4)
       write(io8,*)'  Number of stuck manAIREP reps rejected = ',kbad(5)
       write(io8,*)'  Number of stuck MDCRS    temps marked = ',kbadt(1)
-      write(io8,*)'  Number of stuck ACARS    temps marked = ',kbadt(2)
+ccccdak      write(io8,*)'  Number of stuck ACARS    temps marked = ',kbadt(2)
+      write(io8,*)'  Number of stuck TAMDAR   temps marked = ',kbadt(2)
       write(io8,*)'  Number of stuck AMDAR    temps marked = ',kbadt(3)
       write(io8,*)'  Number of stuck AIREP    temps marked = ',kbadt(4)
       write(io8,*)'  Number of stuck manAIREP temps marked = ',kbadt(5)
       write(io8,*)'  Number of stuck MDCRS    winds marked = ',kbadw(1)
-      write(io8,*)'  Number of stuck ACARS    winds marked = ',kbadw(2)
+ccccdak      write(io8,*)'  Number of stuck ACARS    winds marked = ',kbadw(2)
+      write(io8,*)'  Number of stuck TAMDAR   winds marked = ',kbadw(2)
       write(io8,*)'  Number of stuck AMDAR    winds marked = ',kbadw(3)
       write(io8,*)'  Number of stuck AIREP    winds marked = ',kbadw(4)
       write(io8,*)'  Number of stuck manAIREP winds marked = ',kbadw(5)
@@ -14282,7 +14566,8 @@ c     Output tail number counts
 c     -------------------------
       write(io8,*) 
       write(io8,*) '  Tail numbers for reports with temp in whole deg'
-      write(io8,*) '  Tail Num  MDCRS  ACARS  AMDAR  AIREP  MAN  '
+ccccdak      write(io8,*) '  Tail Num  MDCRS  ACARS  AMDAR  AIREP  MAN  '
+      write(io8,*) '  Tail Num  MDCRS  TAMDAR AMDAR  AIREP  MAN  '
       write(io8,*) '  -------------------------------------------'
 c
       do mm=1,kreg
@@ -14295,7 +14580,8 @@ c
 c
       write(io8,*) 
       write(io8,*) '  Tail numbers for reports with stuck temperature'
-      write(io8,*) '  Tail Num  MDCRS  ACARS  AMDAR  AIREP  MAN  '
+ccccdak      write(io8,*) '  Tail Num  MDCRS  ACARS  AMDAR  AIREP  MAN  '
+      write(io8,*) '  Tail Num  MDCRS  TAMDAR AMDAR  AIREP  MAN  '
       write(io8,*) '  -------------------------------------------'
 c
       do mm=1,kreg
@@ -14308,7 +14594,8 @@ c
 c
       write(io8,*) 
       write(io8,*) '  Tail numbers for reports with stuck winds'
-      write(io8,*) '  Tail Num  MDCRS  ACARS  AMDAR  AIREP  MAN  '
+ccccdak      write(io8,*) '  Tail Num  MDCRS  ACARS  AMDAR  AIREP  MAN  '
+      write(io8,*) '  Tail Num  MDCRS  TAMDAR AMDAR  AIREP  MAN  '
       write(io8,*) '  -------------------------------------------'
 c
       do mm=1,kreg
@@ -14323,7 +14610,8 @@ c
       write(*,*) 'Stuck value check data counts--',cdtg_an
       write(*,*) '-----------------------------------------'
       write(*,'(1x,a55)')
-     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+ccccdak     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+     $ 'Type of check     MDCRS  TAMDAR   AMDAR   AIREP     man'
       write(*,'(1x,a55)')
      $ '--------------- ------- ------- ------- ------- -------'
       write(*,'('' Num considered '',5(1x,i7))')
@@ -14341,7 +14629,8 @@ c
       write(io8,*) 'Stuck value check data counts'
       write(io8,*) '-----------------------------'
       write(io8,'(1x,a55)')
-     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+ccccdak     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+     $ 'Type of check     MDCRS  TAMDAR   AMDAR   AIREP     man'
       write(io8,'(1x,a55)')
      $ '--------------- ------- ------- ------- ------- -------'
       write(io8,'(''Num considered '',5(1x,i7))')
@@ -14422,7 +14711,7 @@ c     -----------
       integer      idt(max_reps)       ! time in seconds to analysis time 
       character*8  c_acftreg(max_reps) ! aircraft registration (tail) number
       character*9  c_acftid(max_reps)  ! aircraft flight number
-      real         alat(max_reps)      ! latitude
+      real*8       alat(max_reps)      ! latitude
      $,            alon(max_reps)      ! longitude
       real         pres(max_reps)      ! pressure
      $,            ht_ft(max_reps)     ! height in feet
@@ -14525,10 +14814,14 @@ c
      $,            es                  ! saturation vapor pressure
      $,            qs                  ! saturation specific humidity
 c
-      integer      i_acars             ! instrument type for acars
-     $,            i_acars_lvl         ! instrument type for acars--level flt
-     $,            i_acars_asc         ! instrument type for acars--ascent
-     $,            i_acars_des         ! instrument type for acars--descent
+ccccdak      integer      i_acars             ! instrument type for acars
+      integer      i_acars             ! instrument type for tamdar
+ccccdak     $,            i_acars_lvl         ! instrument type for acars--level flt
+     $,            i_acars_lvl         ! instrument type for tamdar--level flt
+ccccdak     $,            i_acars_asc         ! instrument type for acars--ascent
+     $,            i_acars_asc         ! instrument type for tamdar--ascent
+ccccdak     $,            i_acars_des         ! instrument type for acars--descent
+     $,            i_acars_des         ! instrument type for tamdar--descent
      $,            i_mdcrs             ! instrument type for mdcrs
      $,            i_mdcrs_lvl         ! instrument type for mdcrs--level flt
      $,            i_mdcrs_asc         ! instrument type for mdcrs--ascent
@@ -14549,7 +14842,8 @@ c     Switches
 c     --------
       logical      l_print             ! print values if true
      $,            l_init              ! initialize counters if true
-     $,            l_ii_acars          ! true if ii rep is type acars
+ccccdak     $,            l_ii_acars          ! true if ii rep is type acars
+     $,            l_ii_acars          ! true if ii rep is type tamdar
      $,            l_ii_mdcrs          ! true if ii rep is type mdcrs
      $,            l_ii_airep          ! true if ii rep is type airep
      $,            l_ii_man            ! true if ii rep is type manual airep
@@ -14643,7 +14937,8 @@ c       -------------------
           l_ii_mdcrs = .true.
           ktype = 1
 c
-c       report is ACARS?
+ccccdak       report is ACARS?
+c       report is TAMDAR?
 c       -------------------
         elseif(itype(ii).eq.i_acars.or.
      $         itype(ii).eq.i_acars_lvl.or.
@@ -14689,6 +14984,7 @@ c
 c First perform checks that reject the whole report
 c -------------------------------------------------
 c
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
 c Reject reports with unphysical latitudes
 c ----------------------------------------
         if(alat(ii).gt.90.0.or.alat(ii).lt.-90.0) then
@@ -14704,6 +15000,7 @@ c -----------------------------------------
           if(l_print) write(io8,*) 'Longitude bad'
           c_qc(ii)(4:4) = 'B'
           n_bad_pos(ktype) = n_bad_pos(ktype) + 1
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 c
 c Reject reports with unphysical or inconsistent pressures/altitudes
 c ------------------------------------------------------------------
@@ -14761,7 +15058,8 @@ c               l_print = .true.
                 if(l_print) write(io8,*)'On list with temp in whole deg'
                 c_qc(ii)(10:10) = 'C'
 c
-c               Recompute temperature for ACARS or MDCRS reports
+ccccdak               Recompute temperature for ACARS or MDCRS reports
+c               Recompute temperature for TAMDAR or MDCRS reports
 c               (Since AIREPs are reported only to nearest degree,
 c                don't bother to recompute temperature--inadequate precision!)
 c               ---------------------------------------------------------------------
@@ -14784,9 +15082,10 @@ c                 ------------------------------------------------------
                       write(io8,*) '  Temperature not within bounds!!!'
                     endif
 c
-c                 If bad temperature occurred in an ACARS, MDCRS, or
+ccccdak                 If bad temperature occurred in an ACARS, MDCRS, or
+c                 If bad temperature occurred in an TAMDAR, MDCRS, or
 c                   AMDAR report, fix it
-c                 --------------------------------------------------
+c                 ---------------------------------------------------
                   elseif(l_ii_acars.or.l_ii_mdcrs.or.l_ii_amdar) then
                     ob_t(ii) = (ob_t(ii) - 273.16) * 10. + 273.16
                     l_print = .true.
@@ -14903,7 +15202,9 @@ cc     $     c_qc(ii)(6:6).ne.'I'.and.
 cc     $     c_qc(ii)(6:6).ne.'K') then
 c
 c          if(pres(ii).le.300.0.or.
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
 c     $       (pres(ii).le.400.0.and.alat(ii).gt.45.0)) then
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 c            if(ob_t(ii).le.173.15.or.ob_t(ii).ge.268.15) then
 c              l_print = .true.
 c              if(l_print) write(io8,*) 'Temperature bad by RAOB check'
@@ -14911,7 +15212,9 @@ c              if(l_print.and.c_qc(ii)(6:6).ne.'B')
 c     $          write(io8,*) '  Report not rejected by Moninger check'
 c            endif
 cc
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
 c          elseif(abs(alat(ii)).le.45.0) then
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 c            if(pres(ii).le.400.) then
 c              tmax = 268.15 + (pres(ii) - 300.) / 100. * 5.0
 c              if(ob_t(ii).le.173.15.or.ob_t(ii).ge.tmax) then
@@ -15053,6 +15356,7 @@ c              l_print = .true.
             else
               if(c_qc(ii)(2:2).eq.'-') c_qc(ii)(2:2) = '.'
             endif
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
 c
 c QC latitude
 c -----------
@@ -15075,6 +15379,7 @@ c ------------
             else
               if(c_qc(ii)(4:4).eq.'-') c_qc(ii)(4:4) = '.'
             endif
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 c
 c Set zero altitude to suspect
 c ----------------------------
@@ -15500,7 +15805,7 @@ c
      x,      c_qc(iip1),csort(iip1)
 c
  8001     format(i6,1x,a8,1x,a8,1x,a9,1x
-     x,      i7,1x,2f9.3,1x,f8.1,1x,f7.0,1x
+     x,      i7,1x,2f11.5,1x,f8.1,1x,f7.0,1x
      x,      f5.2,4(2(1x,f8.2),1x,i5)
      x,      1x,'!',a11,'!',1x,a25)
           write(io8,*)
@@ -15517,8 +15822,8 @@ c ---------------------------------
       write(io34,*) '(rejected reports not included subsequently'
       write(io34,*) '-------------------------------------------'
       write(io34,3001)
- 3001 format(' index  type    tail num   flight     time     lat'
-     x,      '      lon       pres  height '
+ 3001 format(' index  type    tail num   flight     time       lat'
+     x,      '        lon       pres  height '
      x,      't-prcn   temp     innov  ichk'
      x,      ' spec hum    innov  ichk'
      x,      '   ob_dir    innov  ichk'
@@ -15628,7 +15933,7 @@ c
      x,        ob_spd(ii),xiv_s(ii),ichk_s(ii)
      x,        c_qc(ii)
  3002       format(i6,1x,a8,1x,a8,1x,a9,1x
-     x,      i7,1x,2f9.3,1x,f8.1,1x,f7.0,1x
+     x,      i7,1x,2f11.5,1x,f8.1,1x,f7.0,1x
      x,      f5.2,4(2(1x,f8.2),1x,i5)
      x,      1x,'!',a11,'!')
           endif
@@ -15640,7 +15945,8 @@ c     Output tail number counts
 c     -------------------------
       write(io8,*) 
       write(io8,*) '  Tail numbers for reports with temp in whole deg'
-      write(io8,*) '  Tail Num  MDCRS  ACARS  AMDAR  AIREP  MAN  '
+ccccdak      write(io8,*) '  Tail Num  MDCRS  ACARS  AMDAR  AIREP  MAN  '
+      write(io8,*) '  Tail Num  MDCRS  TAMDAR AMDAR  AIREP  MAN  '
       write(io8,*) '  -------------------------------------------'
 c
       do mm=1,kreg
@@ -15653,7 +15959,8 @@ c
 c
       write(io8,*) 
       write(io8,*) '  Tail numbers for reports with bad winds'
-      write(io8,*) '  Tail Num  MDCRS  ACARS  AMDAR  AIREP  MAN  '
+ccccdak      write(io8,*) '  Tail Num  MDCRS  ACARS  AMDAR  AIREP  MAN  '
+      write(io8,*) '  Tail Num  MDCRS  TAMDAR AMDAR  AIREP  MAN  '
       write(io8,*) '  -------------------------------------------'
 c
       do mm=1,kreg
@@ -15668,7 +15975,8 @@ c
       write(*,*) 'Gross check data counts--',cdtg_an
       write(*,*) '-----------------------------------'
       write(*,'(1x,a55)')
-     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+ccccdak     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+     $ 'Type of check     MDCRS  TAMDAR   AMDAR   AIREP     man'
       write(*,'(1x,a55)')
      $ '--------------- ------- ------- ------- ------- -------'
       write(*,'('' Num considered '',5(1x,i7))')
@@ -15683,7 +15991,8 @@ c
       write(io34,*) 'Gross check data counts'
       write(io34,*) '-----------------------'
       write(io34,'(1x,a55)')
-     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+ccccdak     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+     $ 'Type of check     MDCRS  TAMDAR   AMDAR   AIREP     man'
       write(io34,'(1x,a55)')
      $ '--------------- ------- ------- ------- ------- -------'
       write(io34,'(''Num considered '',5(1x,i7))')
@@ -15698,7 +16007,8 @@ c
       write(io8,*) 'Gross check data counts'
       write(io8,*) '-----------------------'
       write(io8,'(1x,a55)')
-     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+ccccdak     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+     $ 'Type of check     MDCRS  TAMDAR   AMDAR   AIREP     man'
       write(io8,'(1x,a55)')
      $ '--------------- ------- ------- ------- ------- -------'
       write(io8,'(''Num considered '',5(1x,i7))')
@@ -15813,7 +16123,7 @@ c     -----------
       integer      idt(max_reps)       ! time in seconds to analysis time 
       character*8  c_acftreg(max_reps) ! aircraft registration (tail) number
       character*9  c_acftid(max_reps)  ! aircraft flight number
-      real         alat(max_reps)      ! latitude
+      real*8       alat(max_reps)      ! latitude
      $,            alon(max_reps)      ! longitude
       real         pres(max_reps)      ! pressure
      $,            ht_ft(max_reps)     ! height in feet
@@ -15866,12 +16176,14 @@ c     --------
      $,            ninc_bad(5)         ! number of reports with inconsistent positions
       integer      kbad(5)             ! counter for number of bad reports
      $,            kbadtot             ! counter for total number of bad reports
-      integer      nrep_Ac             ! number of acars reports considered
+ccccdak      integer      nrep_Ac             ! number of acars reports considered
+      integer      nrep_Ac             ! number of tamdar reports considered
      $,            nrep_Md             ! number of mdcrs reports considered
      $,            nrep_Ma             ! number of manual airep reports considered
      $,            nrep_Ar             ! number of airep reports considered
      $,            nrep_Am             ! number of amdar reports considered
-      integer      ninc_Ac             ! number of acars reports rejected
+ccccdak      integer      ninc_Ac             ! number of acars reports rejected
+      integer      ninc_Ac             ! number of tamdar reports rejected
      $,            ninc_Md             ! number of mdcrs reports rejected
      $,            ninc_Ma             ! number of manual airep reports rejected
      $,            ninc_Ar             ! number of airep reports rejected
@@ -15879,10 +16191,14 @@ c     --------
 c
 c     Instrument types
 c     ----------------
-      integer      i_acars             ! instrument type for acars
-     $,            i_acars_lvl         ! instrument type for acars--level flt
-     $,            i_acars_asc         ! instrument type for acars--ascent
-     $,            i_acars_des         ! instrument type for acars--descent
+ccccdak      integer      i_acars             ! instrument type for acars
+      integer      i_acars             ! instrument type for tamdar
+ccccdak     $,            i_acars_lvl         ! instrument type for acars--level flt
+     $,            i_acars_lvl         ! instrument type for tamdar--level flt
+ccccdak     $,            i_acars_asc         ! instrument type for acars--ascent
+     $,            i_acars_asc         ! instrument type for tamdar--ascent
+ccccdak     $,            i_acars_des         ! instrument type for acars--descent
+     $,            i_acars_des         ! instrument type for tamdar--descent
      $,            i_mdcrs             ! instrument type for mdcrs
      $,            i_mdcrs_lvl         ! instrument type for mdcrs--level flt
      $,            i_mdcrs_asc         ! instrument type for mdcrs--ascent
@@ -15924,17 +16240,17 @@ c
 c
       integer      ktype               ! ob type
 c
-      real         diff0               ! difference between points ii and iim1
-     $,            diffm1              ! difference between points iim1 and iip1
-     $,            alat_dif            ! difference in latitude
+      real*8       alat_dif            ! difference in latitude
      $,            alon0               ! longitude at point ii
      $,            alonm2              ! longitude at point iim2
      $,            alonp1              ! longitude at point iip1
      $,            alon_dif            ! difference in longitude
+      real         diff0               ! difference between points ii and iim1
+     $,            diffm1              ! difference between points iim1 and iip1
      $,            difdir              ! direction difference
-      real         alat_est            ! estimated latitude
+      real*8       alat_est            ! estimated latitude
      $,            alon_est            ! estimated longitude
-     $,            time_est            ! estimated time
+      real         time_est            ! estimated time
      $,            dist_tot            ! estimated distance between iim2 and iip1 points
      $,            dist_ii             ! estimated distance between "est" and ii points
      $,            dist_iim1           ! estimated distance between "est" and iim1 points
@@ -16017,6 +16333,7 @@ c ---------------------------------
      $     abs(ob_t(iistart)-ob_t(iiend)).lt.1.25.and.
      $     abs(ob_dir(iistart)-ob_dir(iiend)).lt.10.5.and.
      $     abs(ob_spd(iistart)-ob_spd(iiend)).lt.1.25) then
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
 c
 c         Check for position discrepancies
 c         --------------------------------
@@ -16028,6 +16345,7 @@ c
             dist_tot = gcirc_qc(alat(iistart),alon(iistart),
      $                          alat(iiend),  alon(iiend))
             dist_tot = dist_tot / 1000.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 c
             l_print = .true.
             if(l_print) then
@@ -16042,8 +16360,10 @@ c           --------------------------------------------------
               if(l_print) then
                 write(io8,*) 'points close--averaging'
               endif
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
               alat(iistart) = (alat(iistart)+alat(iiend))/2.0
               alon(iistart) = (alon(iistart)+alon(iiend))/2.0
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
               c_qc(iistart)(3:4) = 'RR'
               c_qc(iiend)(1:1) = 'W'
               c_qc(iiend)(3:4) = 'BB'
@@ -16057,8 +16377,10 @@ c
 c 
 c         Check for altitude discrepancies
 c         --------------------------------
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
           elseif((abs(alat(iistart)-alat(iiend)).lt.0.125.or.
      $            abs(alon(iistart)-alon(iiend)).lt.0.125).and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $           abs(ht_ft(iistart)-ht_ft(iiend)).gt.1000..and.
      $           idt(iistart).eq.idt(iiend)) then
 c
@@ -16076,8 +16398,10 @@ c
 c         Check for time discrepancies
 c         ----------------------------
           elseif(idt(iistart).ne.idt(iiend).and.
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
      $           abs(alat(iistart)-alat(iiend)).lt.0.125.and.
      $           abs(alon(iistart)-alon(iiend)).lt.0.125.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $           abs(ht_ft(iistart)-ht_ft(iiend)).lt.50.5) then
 c
             l_print = .true.
@@ -16133,7 +16457,7 @@ c         -----------------------------
      x,            ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,            ob_spd(ii),xiv_s(ii),ichk_s(ii)
      x,            c_qc(ii)
- 8002       format(i4,1x,i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x
+ 8002       format(i4,1x,i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f11.5,1x
      x,            f8.1,1x,f7.0
      x,            1x,f5.2,4(2(1x,f8.2),1x,i5),1x,'!',a11,'!')
           endif
@@ -16230,12 +16554,14 @@ c             -----------------------------------------
                 difdir = abs(ob_dir(iim1)-ob_dir(ii))
                 if(difdir.gt.180) difdir = 360. - difdir
               endif
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
 c
 c             Discrepancies in position
 c             -------------------------
               if(idt_dif.eq.0.and.
      $           (abs(alat(ii)-alat(iim1)).ge.0.5.or.
      $            abs(alon(ii)-alon(iim1)).ge.0.5) .and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $           abs(ht_ft(ii)-ht_ft(iim1)).lt.1.5) then
 c
 c               Check for short segments with stuck clock
@@ -16339,6 +16665,7 @@ c               windspeed difference w.r.t. next report
 c               ---------------------------------------------------
                 elseif(iip1.ne.0) then
 c
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(alat(ii).ne.alat(iim1).or.
      $               alon(ii).ne.alon(iim1)) then
                     diffm1 = gcirc_qc(alat(iim1),alon(iim1),
@@ -16348,6 +16675,7 @@ c
      $                               alat(iip1),alon(iip1))
                     diff0 = diff0 / 1000.
 c
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                   elseif(ob_t(ii).ne.ob_t(iim1)) then
                     diffm1 = abs(ob_t(iim1)-ob_t(iip1))
                     diff0 = abs(ob_t(ii)-ob_t(iip1))
@@ -16427,8 +16755,10 @@ c
 c               Check for position discrepancies
 c               --------------------------------
                 if(idt_dif.eq.0.and.
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
      $             (abs(alat(ii)-alat(iim1)).ge.0.125.or.
      $              abs(alon(ii)-alon(iim1)).ge.0.125) .and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $             abs(ht_ft(ii)-ht_ft(iim1)).lt.1.5) then
 c
                   l_print = .true.
@@ -16448,8 +16778,10 @@ c
                     if(l_print) then
                       write(io8,*) 'points close--averaging'
                     endif
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                     alat(ii) = (alat(ii)+alat(iim1))/2.0
                     alon(ii) = (alon(ii)+alon(iim1))/2.0
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                     c_qc(ii)(3:4) = 'RR'
                     c_qc(iim1)(1:1) = 'W'
                     c_qc(iim1)(3:4) = 'BB'
@@ -16457,6 +16789,7 @@ c
 c                 Otherwise, examine neighboring reports to decide which one to keep
 c                 ------------------------------------------------------------------ 
                   elseif(iim2.ne.0.and.iip1.ne.0) then
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                     alat_est = (alat(iip1)-alat(iim2))
      $                       / (idt(iip1)-idt(iim2))  
      $                       * (idt(ii)-idt(iim2)) 
@@ -16465,6 +16798,7 @@ c                 --------------------------------------------------------------
      $                       / (idt(iip1)-idt(iim2))  
      $                       * (idt(ii)-idt(iim2)) 
      $                       + alon(iim2)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 c
                     dist_tot = gcirc_qc(alat(iip1),alon(iip1),
      $                                  alat(iim2),alon(iim2))
@@ -16618,8 +16952,10 @@ c
 c               Check for duplicate with altitude error
 c               ---------------------------------------
                 elseif(idt_dif.eq.0.and.
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
      $                 abs(alat(iim1)-alat(ii)).lt.0.125.and.
      $                 abs(alon(iim1)-alon(ii)).lt.0.125.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $                 abs(ht_ft(iim1)-ht_ft(ii)).gt.1000.0) then
 c
                   l_print = .true.
@@ -16859,8 +17195,10 @@ c
 c               Check for duplicate with time error
 c               -----------------------------------
                 elseif(idt(iim1).ne.idt(ii).and.
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
      $                 abs(alat(iim1)-alat(ii)).lt.0.125.and.
      $                 abs(alon(iim1)-alon(ii)).lt.0.125.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $                 abs(ht_ft(iim1)-ht_ft(ii)).lt.50.5) then
 c
                   l_print = .true.
@@ -16885,6 +17223,7 @@ c                 Otherwise, examine neighboring reports to decide which one to 
 c                 ------------------------------------------------------------------ 
                   elseif(iim2.ne.0.and.iip1.ne.0) then
 c
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                     alat_dif = abs(alat(iip1)-alat(iim2))
                     alon0 = alon(ii)
                     alonm2 = alon(iim2)
@@ -16908,6 +17247,7 @@ c
      $                         / (alonp1-alonm2)
      $                         * (alon0-alonm2)
      $                         + float(idt(iim2))
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                     else
                       time_est = (float(idt(iip1)-idt(iim2)))
      $                         / (alat(iip1)-alat(iim2))
@@ -17152,8 +17492,8 @@ c ---------------------
         write(io35,*) 'Inconsistent positions'
         write(io35,*) '----------------------'
         write(io35,3001)
- 3001   format(' index  type    tail num   flight     time     lat'
-     x,      '      lon       pres  height '
+ 3001   format(' index  type    tail num   flight     time       lat'
+     x,      '        lon       pres  height '
      x,      't-prcn   temp     innov  ichk'
      x,      ' spec hum    innov  ichk'
      x,      '   ob_dir    innov  ichk'
@@ -17226,7 +17566,7 @@ c
      x,        ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,        ob_spd(ii),xiv_s(ii),ichk_s(ii)
      x,        c_qc(ii)
- 3002       format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x,f8.1,1x,f7.0
+ 3002       format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f11.5,1x,f8.1,1x,f7.0
      x,          1x,f5.2,4(2(1x,f8.2),1x,i5),1x,'!',a11,'!')
           endif
 c
@@ -17281,7 +17621,8 @@ c
       if(.not.l_operational) then
         write(io35,*)
         write(io35,*)'  Number of inc MDCRS    reps rejected = ',kbad(1)
-        write(io35,*)'  Number of inc ACARS    reps rejected = ',kbad(2)
+ccccdak        write(io35,*)'  Number of inc ACARS    reps rejected = ',kbad(2)
+        write(io35,*)'  Number of inc TAMDAR   reps rejected = ',kbad(2)
         write(io35,*)'  Number of inc AMDAR    reps rejected = ',kbad(3)
         write(io35,*)'  Number of inc AIREP    reps rejected = ',kbad(4)
         write(io35,*)'  Number of inc manAIREP reps rejected = ',kbad(5)
@@ -17291,7 +17632,8 @@ c
       write(io8,*) '  Reports with inconsistent positions--rejected'
       write(io8,*) '  ---------------------------------------------'
       write(io8,*)'  Number of inc MDCRS    reps rejected = ',kbad(1)
-      write(io8,*)'  Number of inc ACARS    reps rejected = ',kbad(2)
+ccccdak      write(io8,*)'  Number of inc ACARS    reps rejected = ',kbad(2)
+      write(io8,*)'  Number of inc TAMDAR   reps rejected = ',kbad(2)
       write(io8,*)'  Number of inc AMDAR    reps rejected = ',kbad(3)
       write(io8,*)'  Number of inc AIREP    reps rejected = ',kbad(4)
       write(io8,*)'  Number of inc manAIREP reps rejected = ',kbad(5)
@@ -17300,7 +17642,8 @@ c
       write(*,*) 'Inconsistent position check data counts--',cdtg_an
       write(*,*) '---------------------------------------------------'
       write(*,'(1x,a55)')
-     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+ccccdak     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+     $ 'Type of check     MDCRS  TAMDAR   AMDAR   AIREP     man'
       write(*,'(1x,a55)')
      $ '--------------- ------- ------- ------- ------- -------'
       write(*,'('' Num considered '',5(1x,i7))')
@@ -17314,7 +17657,8 @@ c
       write(io8,*) 'Inconsistent position check data counts'
       write(io8,*) '---------------------------------------'
       write(io8,'(1x,a55)')
-     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+ccccdak     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+     $ 'Type of check     MDCRS  TAMDAR   AMDAR   AIREP     man'
       write(io8,'(1x,a55)')
      $ '--------------- ------- ------- ------- ------- -------'
       write(io8,'(''Num considered '',5(1x,i7))')
@@ -17391,7 +17735,7 @@ c     -----------
       real         ht_ft(max_reps)     ! height in feet
       integer      iht0,iht1           ! integer height in feet
       integer      idt(max_reps)       ! time in seconds to analysis time
-      real         alat(max_reps)      ! latitude
+      real*8       alat(max_reps)      ! latitude
      $,            alon(max_reps)      ! longitude
       character*9  c_acftid(max_reps)  ! acft flight number
       character*8  c_acftreg(max_reps) ! acft tail number
@@ -17418,9 +17762,9 @@ c
      $,            iiafter             ! index from pointer array for following rep
      $,            iii                 ! index pointer for current report
      $,            iiim1               ! index pointer for previous report
-      real         alat_dif            ! latitude difference used to check ordering
+      real*8       alat_dif            ! latitude difference used to check ordering
      $,            alon_dif            ! longitude difference used to check ordering
-     $,            ht_max              ! maximum height in group with same time
+      real         ht_max              ! maximum height in group with same time
      $,            ht_min              ! minimum height in group with same time
      $,            ht_dif1,ht_dif2     ! height differences
 c
@@ -18068,7 +18412,7 @@ c     -----------
       integer      idt(max_reps)       ! time in seconds to analysis time 
       character*8  c_acftreg(max_reps) ! aircraft registration (tail) number
       character*9  c_acftid(max_reps)  ! aircraft flight number
-      real         alat(max_reps)      ! latitude
+      real*8       alat(max_reps)      ! latitude
      $,            alon(max_reps)      ! longitude
       real         pres(max_reps)      ! pressure
      $,            ht_ft(max_reps)     ! height in feet
@@ -18137,12 +18481,14 @@ c     --------
      $,            nord_wind(5)        ! number of reports with anomalous windspeeds
       integer      kbad(5)             ! counter for number of bad reports
      $,            kbadtot             ! counter for total number of bad reports
-      integer      nrep_Ac             ! number of acars reports considered
+ccccdak      integer      nrep_Ac             ! number of acars reports considered
+      integer      nrep_Ac             ! number of tamdar reports considered
      $,            nrep_Md             ! number of mdcrs reports considered
      $,            nrep_Ma             ! number of manual airep reports considered
      $,            nrep_Ar             ! number of airep reports considered
      $,            nrep_Am             ! number of amdar reports considered
-      integer      nord_Ac             ! number of acars reports rejected
+ccccdak      integer      nord_Ac             ! number of acars reports rejected
+      integer      nord_Ac             ! number of tamdar reports rejected
      $,            nord_Md             ! number of mdcrs reports rejected
      $,            nord_Ma             ! number of manual airep reports rejected
      $,            nord_Ar             ! number of airep reports rejected
@@ -18150,10 +18496,14 @@ c     --------
 c
 c     Instrument types
 c     ----------------
-      integer      i_acars             ! instrument type for acars
-     $,            i_acars_lvl         ! instrument type for acars--level flt
-     $,            i_acars_asc         ! instrument type for acars--ascent
-     $,            i_acars_des         ! instrument type for acars--descent
+ccccdak      integer      i_acars             ! instrument type for acars
+      integer      i_acars             ! instrument type for tamdar
+ccccdak     $,            i_acars_lvl         ! instrument type for acars--level flt
+     $,            i_acars_lvl         ! instrument type for tamdar--level flt
+ccccdak     $,            i_acars_asc         ! instrument type for acars--ascent
+     $,            i_acars_asc         ! instrument type for tamdar--ascent
+ccccdsk     $,            i_acars_des         ! instrument type for acars--descent
+     $,            i_acars_des         ! instrument type for tamdar--descent
      $,            i_mdcrs             ! instrument type for mdcrs
      $,            i_mdcrs_lvl         ! instrument type for mdcrs--level flt
      $,            i_mdcrs_asc         ! instrument type for mdcrs--ascent
@@ -18239,34 +18589,12 @@ c
      $,            itypep2             ! ob type for iip2 report
 c
       real         htdif_same          ! height difference considered negligible
-      real         ht_dif0             ! height difference (current-previous report)
-     $,            ht_difm1            ! height difference (two previous reports)
-     $,            ht_difm2            ! height difference (two reports before those)
-     $,            ht_difp1            ! height difference (following-current report)
-     $,            ht_difp2            ! height difference (two following reports)
-     $,            ht_difp3            ! height difference (two reports after those)
-     $,            ht_dif_wo0          ! height difference between iim1 and iip1 reports
-     $,            ht_dif_wop1         ! height difference between ii and iip2 reports
-     $,            ht_dif_wop2         ! height difference between iip1 and iip3 reports
-     $,            ht_dif_bad0         ! height difference between ii and last_bad reports
-     $,            ht_dif_badp1        ! height difference between iip1 and last_bad reports
-     $,            ht_dif_track        ! height difference between first and last reports
-     $,            alat_dif            ! latitude difference (current-previous report)
+      real*8       alat_dif            ! latitude difference (current-previous report)
      $,            alon_dif            ! longitude difference (current-previous report)
      $,            alat_min            ! minimum latitude for flight
      $,            alat_max            ! maximum latitude for flight
      $,            alon_min            ! minimum longitude for flight
      $,            alon_max            ! maximum longitude for flight
-     $,            dif_t               ! temperature difference (current-previous report)
-     $,            dif_dir             ! direction difference (current-previous report)
-     $,            dif_spd             ! speed difference (current-previous report)
-     $,            ht_ft0              ! height in current report
-     $,            ht_ftm1             ! height in previous report
-     $,            ht_ftm2             ! height at 2nd previous report
-     $,            ht_ftm3             ! height at 3rd previous report
-     $,            ht_ftp1             ! height at following report
-     $,            ht_ftp2             ! height at 2nd following report
-     $,            ht_ftp3             ! height at 3rd following report
      $,            alat0               ! latitude in current report
      $,            alatm1              ! latitude in previous report
      $,            alatm2              ! latitude at 2nd previous report
@@ -18281,6 +18609,28 @@ c
      $,            alonp1              ! longitude at following report
      $,            alonp2              ! longitude at 2nd following report
      $,            alonp3              ! longitude at 3rd following report
+      real         ht_dif0             ! height difference (current-previous report)
+     $,            ht_difm1            ! height difference (two previous reports)
+     $,            ht_difm2            ! height difference (two reports before those)
+     $,            ht_difp1            ! height difference (following-current report)
+     $,            ht_difp2            ! height difference (two following reports)
+     $,            ht_difp3            ! height difference (two reports after those)
+     $,            ht_dif_wo0          ! height difference between iim1 and iip1 reports
+     $,            ht_dif_wop1         ! height difference between ii and iip2 reports
+     $,            ht_dif_wop2         ! height difference between iip1 and iip3 reports
+     $,            ht_dif_bad0         ! height difference between ii and last_bad reports
+     $,            ht_dif_badp1        ! height difference between iip1 and last_bad reports
+     $,            ht_dif_track        ! height difference between first and last reports
+     $,            dif_t               ! temperature difference (current-previous report)
+     $,            dif_dir             ! direction difference (current-previous report)
+     $,            dif_spd             ! speed difference (current-previous report)
+     $,            ht_ft0              ! height in current report
+     $,            ht_ftm1             ! height in previous report
+     $,            ht_ftm2             ! height at 2nd previous report
+     $,            ht_ftm3             ! height at 3rd previous report
+     $,            ht_ftp1             ! height at following report
+     $,            ht_ftp2             ! height at 2nd following report
+     $,            ht_ftp3             ! height at 3rd following report
 c
 c      real         uwind0              ! u component for wind at ii point
 c     $,            vwind0              ! v component for wind at ii point
@@ -19305,10 +19655,12 @@ c             -----------------------------------------
               if(iim1.ne.0) then
                 alatm1 = alat(iim1)
                 alonm1 = alon(iim1)
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alon0.lt.90.0.and.alonm1.gt.270.0) 
      $            alonm1 = 360.0 - alonm1
                 if(alon0.gt.270.0.and.alonm1.lt.90.0) 
      $            alonm1 = 360.0 + alonm1
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 ht_ftm1 = ht_ft(iim1)
                 idtm1 = idt(iim1)
 c
@@ -19327,16 +19679,22 @@ c               ----------------------------------------------------------------
                 else
                   idt_dif0 = imiss
                 endif
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alat0 .ne.amiss.and.alon0 .ne.amiss.and.
      $             alatm1.ne.amiss.and.alonm1.ne.amiss.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $             idt_dif0.ne.imiss) then
                   udist0 = gcirc_qc(alat(iim1),alon(iim1),
      $                              alat(iim1),alon(ii  ))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alon(ii)-alon(iim1))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              udist0 = -udist0
                   vdist0 = gcirc_qc(alat(iim1),alon(iim1),
      $                              alat(ii  ),alon(iim1))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alat(ii)-alat(iim1))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              vdist0 = -vdist0
                   dist0  = gcirc_qc(alat(iim1),alon(iim1),
      $                              alat(ii  ),alon(ii  ))
@@ -19421,8 +19779,10 @@ c               -------------------------------------------------
                 endif
 c
               else
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 alatm1 = amiss
                 alonm1 = amiss
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 ht_ftm1 = amiss
                 idtm1 = amiss
 c                uwindm1 = amiss
@@ -19451,10 +19811,12 @@ c             -----------------------------------------
               if(iim2.ne.0.and.iim1.ne.0) then
                 alatm2 = alat(iim2)
                 alonm2 = alon(iim2)
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alon0.lt.90.0.and.alonm2.gt.270.0) 
      $            alonm2 = 360.0 - alonm2
                 if(alon0.gt.270.0.and.alonm2.lt.90.0) 
      $            alonm2 = 360.0 + alonm2
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 ht_ftm2 = ht_ft(iim2)
                 idtm2 = idt(iim2)
 c
@@ -19473,16 +19835,22 @@ c               ----------------------------------------------------------------
                 else
                   idt_difm1 = imiss
                 endif
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alatm2.ne.amiss.and.alonm2.ne.amiss.and.
      $             alatm1.ne.amiss.and.alonm1.ne.amiss.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $             idt_difm1.ne.imiss) then
                   udistm1 = gcirc_qc(alat(iim2),alon(iim2),
      $                               alat(iim2),alon(iim1))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alon(iim1)-alon(iim2))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              udistm1 = -udistm1
                   vdistm1 = gcirc_qc(alat(iim2),alon(iim2),
      $                               alat(iim1),alon(iim2))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alat(iim1)-alat(iim2))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              vdistm1 = -vdistm1
                   distm1  = gcirc_qc(alat(iim2),alon(iim2),
      $                               alat(iim1),alon(iim1))
@@ -19568,8 +19936,10 @@ c               ---------------------------------------------------
                 endif
 c
               else
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 alatm2 = amiss
                 alonm2 = amiss
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 ht_ftm2 = amiss
                 idtm2 = amiss
 c                uwindm2 = amiss
@@ -19595,8 +19965,10 @@ c
 c
 c             Set other variables to missing
 c             ------------------------------
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
               alatm3 = amiss
               alonm3 = amiss
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
               ht_ftm3 = amiss
               idtm3 = amiss
 c              uwindm3 = amiss
@@ -19624,10 +19996,12 @@ c             -----------------------------------------
               if(iip1.ne.0) then
                 alatp1 = alat(iip1)
                 alonp1 = alon(iip1)
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alon0.lt.90.0.and.alonp1.gt.270.0) 
      $            alonp1 = 360.0 - alonp1
                 if(alon0.gt.270.0.and.alonp1.lt.90.0) 
      $            alonp1 = 360.0 + alonp1
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 ht_ftp1 = ht_ft(iip1)
                 idtp1 = idt(iip1)
 c
@@ -19646,16 +20020,22 @@ c               ----------------------------------------------------------------
                 else
                   idt_difp1 = imiss
                 endif
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alat0 .ne.amiss.and.alon0 .ne.amiss.and.
      $             alatp1.ne.amiss.and.alonp1.ne.amiss.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $             idt_difp1.ne.imiss) then
                   udistp1 = gcirc_qc(alat(ii  ),alon(ii  ),
      $                               alat(ii  ),alon(iip1))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alon(iip1)-alon(ii))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              udistp1 = -udistp1
                   vdistp1 = gcirc_qc(alat(ii  ),alon(ii  ),
      $                               alat(iip1),alon(ii  ))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alat(iip1)-alat(ii))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              vdistp1 = -vdistp1
                   distp1  = gcirc_qc(alat(ii  ),alon(ii  ),
      $                               alat(iip1),alon(iip1))
@@ -19741,8 +20121,10 @@ c               -------------------------------------------------
                 endif
 c
               else
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 alatp1 = amiss
                 alonp1 = amiss
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 ht_ftp1 = amiss
                 idtp1 = amiss
 c                uwindp1 = amiss
@@ -19771,10 +20153,12 @@ c             -----------------------------------------
               if(iip2.ne.0) then
                 alatp2 = alat(iip2)
                 alonp2 = alon(iip2)
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alon0.lt.90.0.and.alonp2.gt.270.0) 
      $            alonp2 = 360.0 - alonp2
                 if(alon0.gt.270.0.and.alonp2.lt.90.0) 
      $            alonp2 = 360.0 + alonp2
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 ht_ftp2 = ht_ft(iip2)
                 idtp2 = idt(iip2)
 c
@@ -19787,8 +20171,10 @@ c                  vwindp2 = -cos(ob_dir(iip2)*d2r)*ob_spd(iip2)
 c                endif
 c
               else
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 alatp2 = amiss
                 alonp2 = amiss
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 ht_ftp2 = amiss
                 idtp2 = amiss
 c                uwindp2 = amiss
@@ -19804,16 +20190,22 @@ c               ----------------------------------------------------------------
                 else
                   idt_difp2 = imiss
                 endif
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alatp1.ne.amiss.and.alonp1.ne.amiss.and.
      $             alatp2.ne.amiss.and.alonp2.ne.amiss.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $             idt_difp2.ne.imiss) then
                   udistp2 = gcirc_qc(alat(iip1),alon(iip1),
      $                               alat(iip1),alon(iip2))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alon(iip2)-alon(iip1))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              udistp2 = -udistp2
                   vdistp2 = gcirc_qc(alat(iip1),alon(iip1),
      $                               alat(iip2),alon(iip1))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alat(iip2)-alat(iip1))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              vdistp2 = -vdistp2
                   distp2  = gcirc_qc(alat(iip1),alon(iip1),
      $                               alat(iip2),alon(iip2))
@@ -19919,8 +20311,10 @@ c
 c
 c             Set other variables to zero
 c             ---------------------------
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
               alatp3 = amiss
               alonp3 = amiss
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
               ht_ftp3 = amiss
               idtp3 = amiss
 c              uwindp3 = amiss
@@ -19955,16 +20349,22 @@ c               ----------------------------------------------------------------
                 else
                   idt_dif_wo0 = imiss
                 endif
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alatm1.ne.amiss.and.alonm1.ne.amiss.and.
      $             alatp1.ne.amiss.and.alonp1.ne.amiss.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $             idt_dif_wo0.ne.imiss) then
                   udist_wo0 = gcirc_qc(alat(iim1),alon(iim1),
      $                                 alat(iim1),alon(iip1))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alon(iip1)-alon(iim1))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              udist_wo0 = -udist_wo0
                   vdist_wo0 = gcirc_qc(alat(iim1),alon(iim1),
      $                                 alat(iip1),alon(iim1))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alat(iip1)-alat(iim1))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              vdist_wo0 = -vdist_wo0
                   dist_wo0  = gcirc_qc(alat(iim1),alon(iim1),
      $                                 alat(iip1),alon(iip1))
@@ -20078,16 +20478,22 @@ c               ----------------------------------------------------------------
                 else
                   idt_dif_wop1 = imiss
                 endif
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alat0 .ne.amiss.and.alon0 .ne.amiss.and.
      $             alatp2.ne.amiss.and.alonp2.ne.amiss.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $             idt_dif_wop1.ne.imiss) then
                   udist_wop1 = gcirc_qc(alat(ii  ),alon(ii  ),
      $                                  alat(ii  ),alon(iip2))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alon(iip2)-alon(ii))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              udist_wop1 = -udist_wop1
                   vdist_wop1 = gcirc_qc(alat(ii  ),alon(ii  ),
      $                                  alat(iip2),alon(ii  ))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alat(iip2)-alat(ii))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              vdist_wop1 = -vdist_wop1
                   dist_wop1  = gcirc_qc(alat(ii  ),alon(ii  ),
      $                                  alat(iip2),alon(iip2))
@@ -20220,22 +20626,28 @@ c               ----------------------------------------------------------------
                 else
                   idt_dif_bad0 = imiss
                 endif
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alat(last_bad).ne.amiss.and.
      $             alon(last_bad).ne.amiss.and.
      $             alat(last_bad_m1).ne.amiss.and.
      $             alon(last_bad_m1).ne.amiss.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $             idt_dif_bad0.ne.imiss) then
                   udist_bad0 = gcirc_qc(alat(last_bad_m1),
      $                                  alon(last_bad_m1),
      $                                  alat(last_bad_m1),
      $                                  alon(last_bad))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alon(last_bad)-alon(last_bad_m1))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              udist_bad0 = -udist_bad0
                   vdist_bad0 = gcirc_qc(alat(last_bad_m1),
      $                                  alon(last_bad_m1),
      $                                  alat(last_bad),
      $                                  alon(last_bad_m1))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alat(last_bad)-alat(last_bad_m1))*d2r).lt.0.0) 
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              vdist_bad0 = -vdist_bad0
                   dist_bad0  = gcirc_qc(alat(last_bad_m1),
      $                                  alon(last_bad_m1),
@@ -20356,17 +20768,23 @@ c               ----------------------------------------------------------------
                 else
                   idt_dif_badp1 = imiss
                 endif
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alatp1.ne.amiss.and.alonp1.ne.amiss.and.
      $             alat(last_bad).ne.amiss.and.
      $             alon(last_bad).ne.amiss.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $             idt_dif_badp1.ne.imiss) then
                   udist_badp1 = gcirc_qc(alat(last_bad),alon(last_bad),
      $                                   alat(last_bad),alon(iip1))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alon(iip1)-alon(last_bad))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              udist_badp1 = -udist_badp1
                   vdist_badp1 = gcirc_qc(alat(last_bad),alon(last_bad),
      $                                   alat(iip1    ),alon(last_bad))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alat(iip1)-alat(last_bad))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              vdist_badp1 = -vdist_badp1
                   dist_badp1  = gcirc_qc(alat(last_bad),alon(last_bad),
      $                                   alat(iip1),alon(iip1))
@@ -20480,6 +20898,7 @@ c             Compute magnitude of temperature, direction, and speed differences
 c             (constrain direction difference to be less than 180 deg)
 c             ------------------------------------------------------------------
               if(iip1.ne.0) then
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alat0.eq.amiss.or.alatp1.eq.amiss) then
                   alat_dif = amiss
                   alon_dif = amiss
@@ -20487,6 +20906,7 @@ c             ------------------------------------------------------------------
                   alat_dif = abs(alat0  - alatp1)
                   alon_dif = abs(alon0  - alonp1)
                   if(alon_dif.gt.180.) alon_dif = 360. - alon_dif
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 endif
                 if(ob_t(ii).eq.amiss.or.
      $             ob_t(iip1).eq.amiss) then
@@ -20519,10 +20939,12 @@ c
               iobfirst = iob
               iilast = iiend
               ioblast = iend
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
               alat_min =  9999.9
               alat_max = -9999.9
               alon_min =  9999.9
               alon_max = -9999.9
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 c
               idt_start = imiss
               idt_end = imiss
@@ -20548,8 +20970,10 @@ c --------------------------------------
               if(iip1.ne.0.and.
      $           l_ii_man_airep.and. 
      $           l_iip1_man_airep.and. 
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
      $           alat_dif.ne.amiss.and.alat_dif.lt.0.015.and.
      $           alon_dif.ne.amiss.and.alon_dif.lt.0.015.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $           ht_ft0.gt.21000.) then
 c
                 if((ht_difp2.ne.amiss.and.
@@ -21094,8 +21518,10 @@ c
 c               Check if ii report is a MDCRS report with zero latitude or longitude
 c               (rejects not saved for second flight check)
 c               --------------------------------------------------------------------
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 elseif((abs(alat(ii)).lt.0.005.or.
      $                  abs(alon(ii)).lt.0.005).and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $                 ((itype(ii).eq.i_mdcrs.and.
      $                   (itype(iip1).eq.i_mdcrs_asc.or.
      $                    itype(iip1).eq.i_mdcrs_des.or.
@@ -21105,8 +21531,10 @@ c               ----------------------------------------------------------------
      $                    itype(iip1).eq.i_acars_des.or.
      $                    itype(iip1).eq.i_acars_lvl)))) then
 c
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(abs(alat(ii)).lt.0.005) c_qc(ii)(3:3) = 'B'
                   if(abs(alon(ii)).lt.0.005) c_qc(ii)(4:4) = 'B'
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 c
                   iob = iob + 1
                   l_ii_pspd_ok = .false.
@@ -21123,8 +21551,10 @@ c
 c               Check if iip1 report is a MDCRS report with zero latitude or longitude
 c               (rejects not saved for second flight check)
 c               ----------------------------------------------------------------------
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 elseif((abs(alat(iip1)).lt.0.005.or.
      $                  abs(alon(iip1)).lt.0.005).and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $                 ((itype(iip1).eq.i_mdcrs.and.
      $                   (itype(ii).eq.i_mdcrs_asc.or.
      $                    itype(ii).eq.i_mdcrs_des.or.
@@ -21134,8 +21564,10 @@ c               ----------------------------------------------------------------
      $                    itype(ii).eq.i_acars_des.or.
      $                    itype(ii).eq.i_acars_lvl)))) then
 c
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(abs(alat(ii)).lt.0.005) c_qc(ii)(3:3) = 'B'
                   if(abs(alon(ii)).lt.0.005) c_qc(ii)(4:4) = 'B'
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 c
                   l_ii_pspd_ok = .false.
 c
@@ -21151,7 +21583,9 @@ c
 c               Check if ii report is an AMDAR report with rounded latitude
 c               (rejects not saved for second flight check)
 c               -----------------------------------------------------------
-                elseif(float(ifix(alat(ii))).eq.alat(ii).and.
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
+                elseif(float(int(alat(ii))).eq.alat(ii).and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $                 (itype(ii).eq.i_amdar.or.
      $                  itype(ii).eq.i_amdar_asc.or.
      $                  itype(ii).eq.i_amdar_des.or.
@@ -21182,7 +21616,9 @@ c
 c               Check if iip1 report is an AMDAR report with rounded latitude
 c               (rejects not saved for second flight check)
 c               -------------------------------------------------------------
-                elseif(float(ifix(alat(iip1))).eq.alat(iip1).and.
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
+                elseif(float(int(alat(iip1))).eq.alat(iip1).and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $                 (itype(ii).eq.i_amdar.or.
      $                  itype(ii).eq.i_amdar_asc.or.
      $                  itype(ii).eq.i_amdar_des.or.
@@ -21212,8 +21648,10 @@ c
 c               Check if ii report is an AMDAR report with the wrong sign on the longitude
 c               (rejects not saved for second flight check)
 c               --------------------------------------------------------------------------
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 elseif(alon(ii  ).lt.25.0.and.
      $                 alon(iip1).gt.335.0.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $                 (itype(ii).eq.i_amdar.or.
      $                  itype(ii).eq.i_amdar_asc.or.
      $                  itype(ii).eq.i_amdar_des.or.
@@ -21266,8 +21704,10 @@ c
 c               Check if iip1 report is an AMDAR report with the wrong sign on the longitude
 c               (rejects not saved for second flight check)
 c               ----------------------------------------------------------------------------
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 elseif(alon(iip1).lt.25.0.and.
      $                 alon(ii  ).gt.335.0.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $                 (itype(ii).eq.i_amdar.or.
      $                  itype(ii).eq.i_amdar_asc.or.
      $                  itype(ii).eq.i_amdar_des.or.
@@ -22827,7 +23267,7 @@ c
      x,            c_qc(iip2)
                 endif
 c
- 8002           format(i4,1x,i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x
+ 8002           format(i4,1x,i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f11.5,1x
      x,            f8.1,1x,f7.0
      x,            1x,f5.2,4(2(1x,f8.2),1x,i5),1x,'!',a11,'!')
               endif
@@ -22912,8 +23352,10 @@ c
 c           Save second flight only if it is long enough
 c           --------------------------------------------
             if(dist_2ndflt.gt.100 000.0.and.
+! vvvvvDAK-future change perhaps to account for incr. lat/lon precision
      $         alat(ii).ne.0.0.and.
      $         alat(iip1).ne.0.0) then
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 c
               write(io8,*) 'Re-testing second flight'
               write(io8,*)
@@ -23298,10 +23740,12 @@ c             -----------------------------------------
                 itypem1 = itype(iim1)
                 alatm1 = alat(iim1)
                 alonm1 = alon(iim1)
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alon0.lt.90.0.and.alonm1.gt.270.0) 
      $            alonm1 = 360.0 - alonm1
                 if(alon0.gt.270.0.and.alonm1.lt.90.0) 
      $            alonm1 = 360.0 + alonm1
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 ht_ftm1 = ht_ft(iim1)
                 idtm1 = idt(iim1)
 c
@@ -23320,16 +23764,22 @@ c               ----------------------------------------------------------------
                 else
                   idt_dif0 = imiss
                 endif
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alat0 .ne.amiss.and.alon0 .ne.amiss.and.
      $             alatm1.ne.amiss.and.alonm1.ne.amiss.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $             idt_dif0.ne.imiss) then
                   udist0 = gcirc_qc(alat(iim1),alon(iim1),
      $                              alat(iim1),alon(ii  ))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alon(ii)-alon(iim1))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              udist0 = -udist0
                   vdist0 = gcirc_qc(alat(iim1),alon(iim1),
      $                              alat(ii  ),alon(iim1))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alat(ii)-alat(iim1))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              vdist0 = -vdist0
                   dist0  = gcirc_qc(alat(iim1),alon(iim1),
      $                              alat(ii  ),alon(ii  ))
@@ -23366,8 +23816,10 @@ c
 c
               else
                 itypem1 = imiss
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 alatm1 = amiss
                 alonm1 = amiss
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 ht_ftm1 = amiss
                 idtm1 = amiss
 c                uwindm1 = amiss
@@ -23390,10 +23842,12 @@ c             -----------------------------------------
               if(iim2.ne.0) then
                 alatm2 = alat(iim2)
                 alonm2 = alon(iim2)
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alon0.lt.90.0.and.alonm2.gt.270.0) 
      $            alonm2 = 360.0 - alonm2
                 if(alon0.gt.270.0.and.alonm2.lt.90.0) 
      $            alonm2 = 360.0 + alonm2
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 ht_ftm2 = ht_ft(iim2)
                 idtm2 = idt(iim2)
 c
@@ -23412,16 +23866,22 @@ c               ----------------------------------------------------------------
                 else
                   idt_difm1 = imiss
                 endif
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alatm2.ne.amiss.and.alonm2.ne.amiss.and.
      $             alatm1.ne.amiss.and.alonm1.ne.amiss.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $             idt_difm1.ne.imiss) then
                   udistm1 = gcirc_qc(alat(iim2),alon(iim2),
      $                               alat(iim2),alon(iim1))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alon(iim1)-alon(iim2))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              udistm1 = -udistm1
                   vdistm1 = gcirc_qc(alat(iim2),alon(iim2),
      $                               alat(iim1),alon(iim2))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alat(iim1)-alat(iim2))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              vdistm1 = -vdistm1
                   distm1  = gcirc_qc(alat(iim2),alon(iim2),
      $                               alat(iim1),alon(iim1))
@@ -23457,8 +23917,10 @@ c
                 endif
 c
               else
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 alatm2 = amiss
                 alonm2 = amiss
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 ht_ftm2 = amiss
                 idtm2 = amiss
 c                uwindm2 = amiss
@@ -23481,10 +23943,12 @@ c             -----------------------------------------
               if(iim3.ne.0) then
                 alatm3 = alat(iim3)
                 alonm3 = alon(iim3)
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alon0.lt.90.0.and.alonm3.gt.270.0) 
      $            alonm3 = 360.0 - alonm3
                 if(alon0.gt.270.0.and.alonm3.lt.90.0) 
      $            alonm3 = 360.0 + alonm3
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 ht_ftm3 = ht_ft(iim3)
                 idtm3 = idt(iim3)
 c
@@ -23503,16 +23967,22 @@ c               ----------------------------------------------------------------
                 else
                   idt_difm2 = imiss
                 endif
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alatm3.ne.amiss.and.alonm3.ne.amiss.and.
      $             alatm2.ne.amiss.and.alonm2.ne.amiss.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $             idt_difm2.ne.imiss) then
                   udistm2 = gcirc_qc(alat(iim3),alon(iim3),
      $                               alat(iim3),alon(iim2))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alon(iim2)-alon(iim3))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              udistm2 = -udistm2
                   vdistm2 = gcirc_qc(alat(iim3),alon(iim3),
      $                               alat(iim2),alon(iim3))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alat(iim2)-alat(iim3))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              vdistm2 = -vdistm2
                   distm2  = gcirc_qc(alat(iim3),alon(iim3),
      $                               alat(iim2),alon(iim2))
@@ -23548,8 +24018,10 @@ c
                 endif
 c
               else
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 alatm3 = amiss
                 alonm3 = amiss
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 ht_ftm3 = amiss
                 idtm3 = amiss
 c                uwindm3 = amiss
@@ -23573,10 +24045,12 @@ c             -----------------------------------------
                 itypep1 = itype(iip1)
                 alatp1 = alat(iip1)
                 alonp1 = alon(iip1)
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alon0.lt.90.0.and.alonp1.gt.270.0) 
      $            alonp1 = 360.0 - alonp1
                 if(alon0.gt.270.0.and.alonp1.lt.90.0) 
      $            alonp1 = 360.0 + alonp1
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 ht_ftp1 = ht_ft(iip1)
                 idtp1 = idt(iip1)
 c
@@ -23595,16 +24069,22 @@ c               ----------------------------------------------------------------
                 else
                   idt_difp1 = imiss
                 endif
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alat0 .ne.amiss.and.alon0 .ne.amiss.and.
      $             alatp1.ne.amiss.and.alonp1.ne.amiss.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $             idt_difp1.ne.imiss) then
                   udistp1 = gcirc_qc(alat(ii  ),alon(ii  ),
      $                               alat(ii  ),alon(iip1))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alon(iip1)-alon(ii))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              udistp1 = -udistp1
                   vdistp1 = gcirc_qc(alat(ii  ),alon(ii  ),
      $                               alat(iip1),alon(ii  ))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alat(iip1)-alat(ii))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              vdistp1 = -vdistp1
                   distp1  = gcirc_qc(alat(ii  ),alon(ii  ),
      $                               alat(iip1),alon(iip1))
@@ -23641,8 +24121,10 @@ c
 c
               else
                 itypep1 = imiss
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 alatp1 = amiss
                 alonp1 = amiss
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 ht_ftp1 = amiss
                 idtp1 = amiss
 c                uwindp1 = amiss
@@ -23666,10 +24148,12 @@ c             -----------------------------------------
                 itypep2 = itype(iip2)
                 alatp2 = alat(iip2)
                 alonp2 = alon(iip2)
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alon0.lt.90.0.and.alonp2.gt.270.0) 
      $            alonp2 = 360.0 - alonp2
                 if(alon0.gt.270.0.and.alonp2.lt.90.0) 
      $            alonp2 = 360.0 + alonp2
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 ht_ftp2 = ht_ft(iip2)
                 idtp2 = idt(iip2)
 c
@@ -23681,8 +24165,10 @@ c                  uwindp2 = -sin(ob_dir(iip2)*d2r)*ob_spd(iip2)
 c                  vwindp2 = -cos(ob_dir(iip2)*d2r)*ob_spd(iip2)
 c                endif
               else
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 alatp2 = amiss
                 alonp2 = amiss
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 ht_ftp2 = amiss
                 idtp2 = amiss
 c                uwindp2 = amiss
@@ -23698,16 +24184,22 @@ c               ----------------------------------------------------------------
                 else
                   idt_difp2 = imiss
                 endif
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alatp1.ne.amiss.and.alonp1.ne.amiss.and.
      $             alatp2.ne.amiss.and.alonp2.ne.amiss.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $             idt_difp2.ne.imiss) then
                   udistp2 = gcirc_qc(alat(iip1),alon(iip1),
      $                               alat(iip1),alon(iip2))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alon(iip2)-alon(iip1))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              udistp2 = -udistp2
                   vdistp2 = gcirc_qc(alat(iip1),alon(iip1),
      $                               alat(iip2),alon(iip1))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alat(iip2)-alat(iip1))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              vdistp2 = -vdistp2
                   distp2  = gcirc_qc(alat(iip1),alon(iip1),
      $                               alat(iip2),alon(iip2))
@@ -23760,10 +24252,12 @@ c             -----------------------------------------
               if(iip3.ne.0) then
                 alatp3 = alat(iip3)
                 alonp3 = alon(iip3)
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alon0.lt.90.0.and.alonp3.gt.270.0) 
      $            alonp3 = 360.0 - alonp3
                 if(alon0.gt.270.0.and.alonp3.lt.90.0) 
      $            alonp3 = 360.0 + alonp3
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 ht_ftp3 = ht_ft(iip3)
                 idtp3 = idt(iip3)
 c
@@ -23775,8 +24269,10 @@ c                  uwindp3 = -sin(ob_dir(iip3)*d2r)*ob_spd(iip3)
 c                  vwindp3 = -cos(ob_dir(iip3)*d2r)*ob_spd(iip3)
 c                endif
               else
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 alatp3 = amiss
                 alonp3 = amiss
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                 ht_ftp3 = amiss
                 idtp3 = amiss
 c                uwindp3 = amiss
@@ -23792,16 +24288,22 @@ c               ----------------------------------------------------------------
                 else
                   idt_difp3 = imiss
                 endif
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alatp2.ne.amiss.and.alonp2.ne.amiss.and.
      $             alatp3.ne.amiss.and.alonp3.ne.amiss.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $             idt_difp3.ne.imiss) then
                   udistp3 = gcirc_qc(alat(iip2),alon(iip2),
      $                               alat(iip2),alon(iip3))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alon(iip3)-alon(iip2))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              udistp3 = -udistp3
                   vdistp3 = gcirc_qc(alat(iip2),alon(iip2),
      $                               alat(iip3),alon(iip2))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alat(iip3)-alat(iip2))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              vdistp3 = -vdistp3
                   distp3  = gcirc_qc(alat(iip2),alon(iip2),
      $                               alat(iip3),alon(iip3))
@@ -23861,16 +24363,22 @@ c               ----------------------------------------------------------------
                 else
                   idt_dif_wo0 = imiss
                 endif
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alatm1.ne.amiss.and.alonm1.ne.amiss.and.
      $             alatp1.ne.amiss.and.alonp1.ne.amiss.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $             idt_dif_wo0.ne.imiss) then
                   udist_wo0 = gcirc_qc(alat(iim1),alon(iim1),
      $                                 alat(iim1),alon(iip1))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alon(iip1)-alon(iim1))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              udist_wo0 = -udist_wo0
                   vdist_wo0 = gcirc_qc(alat(iim1),alon(iim1),
      $                                 alat(iip1),alon(iim1))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alat(iip1)-alat(iim1))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              vdist_wo0 = -vdist_wo0
                   dist_wo0  = gcirc_qc(alat(iim1),alon(iim1),
      $                                 alat(iip1),alon(iip1))
@@ -23928,16 +24436,22 @@ c               ----------------------------------------------------------------
                 else
                   idt_dif_wop1 = imiss
                 endif
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alat0 .ne.amiss.and.alon0 .ne.amiss.and.
      $             alatp2.ne.amiss.and.alonp2.ne.amiss.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $             idt_dif_wop1.ne.imiss) then
                   udist_wop1 = gcirc_qc(alat(ii  ),alon(ii  ),
      $                                  alat(ii  ),alon(iip2))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alon(iip2)-alon(ii))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              udist_wop1 = -udist_wop1
                   vdist_wop1 = gcirc_qc(alat(ii  ),alon(ii  ),
      $                                  alat(iip2),alon(ii  ))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alat(iip2)-alat(ii))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              vdist_wop1 = -vdist_wop1
                   dist_wop1  = gcirc_qc(alat(ii  ),alon(ii  ),
      $                                  alat(iip2),alon(iip2))
@@ -23995,16 +24509,22 @@ c               ----------------------------------------------------------------
                 else
                   idt_dif_wop2 = imiss
                 endif
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 if(alatp1.ne.amiss.and.alonp1.ne.amiss.and.
      $             alatp3.ne.amiss.and.alonp3.ne.amiss.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $             idt_dif_wop2.ne.imiss) then
                   udist_wop2 = gcirc_qc(alat(iip1),alon(iip1),
      $                                  alat(iip1),alon(iip3))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alon(iip3)-alon(iip1))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              udist_wop2 = -udist_wop2
                   vdist_wop2 = gcirc_qc(alat(iip1),alon(iip1),
      $                                  alat(iip3),alon(iip1))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(sin((alat(iip3)-alat(iip1))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $              vdist_wop2 = -vdist_wop2
                   dist_wop2  = gcirc_qc(alat(iip1),alon(iip1),
      $                                  alat(iip3),alon(iip3))
@@ -24086,10 +24606,12 @@ c
                 iobfirst = iob
                 iilast = iiend
                 ioblast = iend
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                 alat_min =  9999.9
                 alat_max = -9999.9
                 alon_min =  9999.9
                 alon_max = -9999.9
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 c
 c               Loop over flight to find end of current segment
 c               -----------------------------------------------
@@ -24428,19 +24950,25 @@ c                 --------------------------------------------------------------
                     idt_dif_track = imiss
                   endif
 c
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                   if(alat(iifirst).ne.amiss.and.
      $               alon(iifirst).ne.amiss.and.
      $               alat(iilast) .ne.amiss.and.
      $               alon(iilast) .ne.amiss.and.
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $               idt_dif_track.ne.imiss) then
 c
                     udist_track = gcirc_qc(alat(iilast),alon(iilast),
      $                                     alat(iilast),alon(iifirst))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                     if(sin((alon(iilast)-alon(iifirst))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $                 udist_track = -udist_track
                     vdist_track = gcirc_qc(alat(iilast),alon(iilast),
      $                                     alat(iifirst),alon(iilast))
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
                     if(sin((alat(iilast)-alat(iifirst))*d2r).lt.0.0)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      $                vdist_track = -vdist_track
                     dist_track  = gcirc_qc(alat(iilast),alon(iilast),
      $                                     alat(iifirst),alon(iifirst))
@@ -25867,15 +26395,18 @@ c                 ------------------------------------------------------------
 c                    write(io8,*) 
 c                    write(io8,*) 'Suspect time is ok'
 c
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
 c                 Latitude is ok if latitude for both neighboring reports is nonzero
 c                 ------------------------------------------------------------------
                   elseif(c_qc(ii)(3:3).eq.'S'.and.
-     $                   (ifix(alatm1*100.).ne.0.0.and.
-     $                    ifix(alatp1*100.).ne.0.0)) then
+     $                   (int(alatm1*100.).ne.0.0.and.
+     $                    int(alatp1*100.).ne.0.0)) then
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                     c_qc(ii)(3:3) = '.'
 c                    write(io8,*) 
 c                    write(io8,*) 'Suspect latitude is ok'
 c
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
 c                 Longitude in AMDAR report is ok if longitude for either neighboring
 c                   report is nonzero
 c                 -------------------------------------------------------------------
@@ -25884,18 +26415,21 @@ c                 --------------------------------------------------------------
      $                    itype(ii).eq.i_amdar_des.or.
      $                    itype(ii).eq.i_amdar_lvl.or.
      $                    itype(ii).eq.i_amdar).and.
-     $                   (ifix(alonm1*100.).ne.0.0.or.
-     $                    ifix(alonp1*100.).ne.0.0)) then
+     $                   (int(alonm1*100.).ne.0.0.or.
+     $                    int(alonp1*100.).ne.0.0)) then
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                     c_qc(ii)(4:4) = '.'
 c                    write(io8,*) 
 c                    write(io8,*) 'Suspect AMDAR longitude is ok'
 c
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
 c                 Longitude in other reports is ok if longitude for both neighboring
 c                   report is nonzero
 c                 ------------------------------------------------------------------
                   elseif(c_qc(ii)(4:4).eq.'S'.and.
-     $                   (ifix(alonm1*100.).ne.0.0.and.
-     $                    ifix(alonp1*100.).ne.0.0)) then
+     $                   (int(alonm1*100.).ne.0.0.and.
+     $                    int(alonp1*100.).ne.0.0)) then
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
                     c_qc(ii)(4:4) = '.'
 c                    write(io8,*) 
 c                    write(io8,*) 'Suspect longitude is ok'
@@ -26802,8 +27336,8 @@ c     ---------------------
         write(io36,*)'Ordering errors'
         write(io36,*)'---------------'
         write(io36,3001)
- 3001   format(' index  type    tail num   flight     time     lat'
-     x,      '      lon       pres  height '
+ 3001   format(' index  type    tail num   flight     time       lat'
+     x,      '        lon       pres  height '
      x,      't-prcn   temp     innov  ichk'
      x,      ' spec hum    innov  ichk'
      x,      '   ob_dir    innov  ichk'
@@ -26876,7 +27410,7 @@ c
      x,        ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,        ob_spd(ii),xiv_s(ii),ichk_s(ii)
      x,        c_qc(ii)
- 3002       format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x,f8.1,1x,f7.0
+ 3002       format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f11.5,1x,f8.1,1x,f7.0
      x,          1x,f5.2,4(2(1x,f8.2),1x,i5),1x,'!',a11,'!')
           endif
 c
@@ -26956,7 +27490,8 @@ c
       if(.not.l_operational) then
         write(io36,*)
         write(io36,*) '  Number of MDCRS    reps rej by ord = ',kbad(1)
-        write(io36,*) '  Number of ACARS    reps rej by ord = ',kbad(2)
+ccccdak        write(io36,*) '  Number of ACARS    reps rej by ord = ',kbad(2)
+        write(io36,*) '  Number of TAMDAR   reps rej by ord = ',kbad(2)
         write(io36,*) '  Number of AMDAR    reps rej by ord = ',kbad(3)
         write(io36,*) '  Number of AIREP    reps rej by ord = ',kbad(4)
         write(io36,*) '  Number of manAIREP reps rej by ord = ',kbad(5)
@@ -26966,7 +27501,8 @@ c
       write(io8,*) '  Reports with ordering errors--rejected'
       write(io8,*) '  --------------------------------------'
       write(io8,*) '  Number of MDCRS    reps rej by ord = ',kbad(1)
-      write(io8,*) '  Number of ACARS    reps rej by ord = ',kbad(2)
+ccccdak      write(io8,*) '  Number of ACARS    reps rej by ord = ',kbad(2)
+      write(io8,*) '  Number of TAMDAR   reps rej by ord = ',kbad(2)
       write(io8,*) '  Number of AMDAR    reps rej by ord = ',kbad(3)
       write(io8,*) '  Number of AIREP    reps rej by ord = ',kbad(4)
       write(io8,*) '  Number of manAIREP reps rej by ord = ',kbad(5)
@@ -26975,7 +27511,8 @@ c     Output tail number counts
 c     -------------------------
       write(io8,*) 
       write(io8,*) '  Tail numbers for reports with anomalous winds'
-      write(io8,*) '  Tail Num  MDCRS  ACARS  AMDAR  AIREP  MAN  '
+ccccdak      write(io8,*) '  Tail Num  MDCRS  ACARS  AMDAR  AIREP  MAN  '
+      write(io8,*) '  Tail Num  MDCRS  TAMDAR AMDAR  AIREP  MAN  '
       write(io8,*) '  ---------------------------------------------'
 c
       do mm=1,kreg
@@ -26990,7 +27527,8 @@ c
       write(io8,*) 'Ordering check data counts'
       write(io8,*) '--------------------------'
       write(io8,'(1x,a55)')
-     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+ccccdak     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+     $ 'Type of check     MDCRS  TAMDAR   AMDAR   AIREP     man'
       write(io8,'(1x,a55)')
      $ '--------------- ------- ------- ------- ------- -------'
       write(io8,'(''Num considered '',5(1x,i7))')
@@ -27073,7 +27611,7 @@ c     -----------
       integer      idt(max_reps)       ! time in seconds to analysis time 
       character*8  c_acftreg(max_reps) ! aircraft registration (tail) number
       character*9  c_acftid(max_reps)  ! aircraft flight number
-      real         alat(max_reps)      ! latitude
+      real*8       alat(max_reps)      ! latitude
      $,            alon(max_reps)      ! longitude
       real         pres(max_reps)      ! pressure
      $,            ht_ft(max_reps)     ! height in feet
@@ -27138,12 +27676,14 @@ c     --------
      $,            nsus_roll(5)        ! number of reports with bad roll angles
       integer      kbad(5)             ! counter for number of bad reports
      $,            kbadtot             ! counter for total number of bad reports
-      integer      nrep_Ac             ! number of acars reports considered
+ccccdak      integer      nrep_Ac             ! number of acars reports considered
+      integer      nrep_Ac             ! number of tamdar reports considered
      $,            nrep_Md             ! number of mdcrs reports considered
      $,            nrep_Ma             ! number of manual airep reports considered
      $,            nrep_Ar             ! number of airep reports considered
      $,            nrep_Am             ! number of amdar reports considered
-      integer      nsus_Ac             ! number of acars reports rejected
+ccccdak      integer      nsus_Ac             ! number of acars reports rejected
+      integer      nsus_Ac             ! number of tamdar reports rejected
      $,            nsus_Md             ! number of mdcrs reports rejected
      $,            nsus_Ma             ! number of manual airep reports rejected
      $,            nsus_Ar             ! number of airep reports rejected
@@ -27151,10 +27691,14 @@ c     --------
 c
 c     Instrument types
 c     ----------------
-      integer      i_acars             ! instrument type for acars
-     $,            i_acars_lvl         ! instrument type for acars--level flt
-     $,            i_acars_asc         ! instrument type for acars--ascent
-     $,            i_acars_des         ! instrument type for acars--descent
+ccccdak      integer      i_acars             ! instrument type for acars
+      integer      i_acars             ! instrument type for tamdar
+ccccdak     $,            i_acars_lvl         ! instrument type for acars--level flt
+     $,            i_acars_lvl         ! instrument type for tamdar--level flt
+ccccdak     $,            i_acars_asc         ! instrument type for acars--ascent
+     $,            i_acars_asc         ! instrument type for tamdar--ascent
+ccccdak     $,            i_acars_des         ! instrument type for acars--descent
+     $,            i_acars_des         ! instrument type for tamdar--descent
      $,            i_mdcrs             ! instrument type for mdcrs
      $,            i_mdcrs_lvl         ! instrument type for mdcrs--level flt
      $,            i_mdcrs_asc         ! instrument type for mdcrs--ascent
@@ -27498,7 +28042,7 @@ c
      x,            ob_spd(iip1),xiv_s(iip1),ichk_s(iip1)
      x,            c_qc(iip1)
               endif
- 8002         format(i4,1x,i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x
+ 8002         format(i4,1x,i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f11.5,1x
      x,            f8.1,1x,f7.0
      x,            1x,f5.2,4(2(1x,f8.2),1x,i5),1x,'!',a11,'!')
             endif
@@ -27592,8 +28136,8 @@ c     ---------------------
         write(io37,*) 'Suspect data check'
         write(io37,*) '------------------'
         write(io37,3001)
- 3001   format(' index  type    tail num   flight     time     lat'
-     x,      '      lon       pres  height '
+ 3001   format(' index  type    tail num   flight     time       lat'
+     x,      '        lon       pres  height '
      x,      't-prcn   temp     innov  ichk'
      x,      ' spec hum    innov  ichk'
      x,      '   ob_dir    innov  ichk'
@@ -27666,7 +28210,7 @@ c
      x,        ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,        ob_spd(ii),xiv_s(ii),ichk_s(ii)
      x,        c_qc(ii)
- 3002       format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x,f8.1,1x,f7.0
+ 3002       format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f11.5,1x,f8.1,1x,f7.0
      x,          1x,f5.2,4(2(1x,f8.2),1x,i5),1x,'!',a11,'!')
           endif
 c
@@ -27736,7 +28280,8 @@ c
       if(.not.l_operational) then
         write(io37,*)
         write(io37,*) '  Number of MDCRS    reps rej by sus = ',kbad(1)
-        write(io37,*) '  Number of ACARS    reps rej by sus = ',kbad(2)
+ccccdak        write(io37,*) '  Number of ACARS    reps rej by sus = ',kbad(2)
+        write(io37,*) '  Number of TAMDAR   reps rej by sus = ',kbad(2)
         write(io37,*) '  Number of AMDAR    reps rej by sus = ',kbad(3)
         write(io37,*) '  Number of AIREP    reps rej by sus = ',kbad(4)
         write(io37,*) '  Number of manAIREP reps rej by sus = ',kbad(5)
@@ -27746,7 +28291,8 @@ c
       write(io8,*) '  Reports with suspect data errors--rejected'
       write(io8,*) '  ------------------------------------------'
       write(io8,*) '  Number of MDCRS    reps rej by sus = ',kbad(1)
-      write(io8,*) '  Number of ACARS    reps rej by sus = ',kbad(2)
+ccccdak      write(io8,*) '  Number of ACARS    reps rej by sus = ',kbad(2)
+      write(io8,*) '  Number of TAMDAR   reps rej by sus = ',kbad(2)
       write(io8,*) '  Number of AMDAR    reps rej by sus = ',kbad(3)
       write(io8,*) '  Number of AIREP    reps rej by sus = ',kbad(4)
       write(io8,*) '  Number of manAIREP reps rej by sus = ',kbad(5)
@@ -27755,7 +28301,8 @@ c     Output tail number counts
 c     -------------------------
       write(io8,*) 
       write(io8,*) '  Tail numbers for reps with rejected zero winds'
-      write(io8,*) '  Tail Num  MDCRS  ACARS  AMDAR  AIREP  MAN  '
+ccccdak      write(io8,*) '  Tail Num  MDCRS  ACARS  AMDAR  AIREP  MAN  '
+      write(io8,*) '  Tail Num  MDCRS  TAMDAR AMDAR  AIREP  MAN  '
       write(io8,*) '  ----------------------------------------------'
 c
       do mm=1,kreg
@@ -27770,7 +28317,8 @@ c
       write(io8,*) 'Suspect data check counts'
       write(io8,*) '-------------------------'
       write(io8,'(1x,a55)')
-     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+ccccdak     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+     $ 'Type of check     MDCRS  TAMDAR   AMDAR   AIREP     man'
       write(io8,'(1x,a55)')
      $ '--------------- ------- ------- ------- ------- -------'
       write(io8,'(''Num considered '',5(1x,i7))')
@@ -27851,7 +28399,7 @@ c     -----------
       integer      idt(max_reps)       ! time in seconds to analysis time 
       character*8  c_acftreg(max_reps) ! aircraft registration (tail) number
       character*9  c_acftid(max_reps)  ! aircraft flight number
-      real         alat(max_reps)      ! latitude
+      real*8       alat(max_reps)      ! latitude
      $,            alon(max_reps)      ! longitude
       real         pres(max_reps)      ! pressure
      $,            ht_ft(max_reps)     ! height in feet
@@ -27897,12 +28445,14 @@ c     Counters
 c     --------
       integer      kbad(5)             ! counter for number of bad reports
      $,            kbadtot             ! counter for total number of bad reports
-      integer      nrep_Ac             ! number of acars reports considered
+ccccdak      integer      nrep_Ac             ! number of acars reports considered
+      integer      nrep_Ac             ! number of tamdar reports considered
      $,            nrep_Md             ! number of mdcrs reports considered
      $,            nrep_Ma             ! number of manual airep reports considered
      $,            nrep_Ar             ! number of airep reports considered
      $,            nrep_Am             ! number of amdar reports considered
-      integer      nlst_Ac             ! number of acars reports rejected
+ccccdak      integer      nlst_Ac             ! number of acars reports rejected
+      integer      nlst_Ac             ! number of tamdar reports rejected
      $,            nlst_Md             ! number of mdcrs reports rejected
      $,            nlst_Ma             ! number of manual airep reports rejected
      $,            nlst_Ar             ! number of airep reports rejected
@@ -27914,10 +28464,14 @@ c
 c
 c     Instrument types
 c     ----------------
-      integer      i_acars             ! instrument type for acars
-     $,            i_acars_lvl         ! instrument type for acars--level flt
-     $,            i_acars_asc         ! instrument type for acars--ascent
-     $,            i_acars_des         ! instrument type for acars--descent
+ccccdak      integer      i_acars             ! instrument type for acars
+      integer      i_acars             ! instrument type for tamdar
+ccccdak     $,            i_acars_lvl         ! instrument type for acars--level flt
+     $,            i_acars_lvl         ! instrument type for tamdar--level flt
+ccccdak     $,            i_acars_asc         ! instrument type for acars--ascent
+     $,            i_acars_asc         ! instrument type for tamdar--ascent
+ccccdak     $,            i_acars_des         ! instrument type for acars--descent
+     $,            i_acars_des         ! instrument type for tamdar--descent
      $,            i_mdcrs             ! instrument type for mdcrs
      $,            i_mdcrs_lvl         ! instrument type for mdcrs--level flt
      $,            i_mdcrs_asc         ! instrument type for mdcrs--ascent
@@ -28053,7 +28607,7 @@ c
      x,            ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,            ob_spd(ii),xiv_s(ii),ichk_s(ii)
      x,            c_qc(ii)
- 8002         format(i4,1x,i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x
+ 8002         format(i4,1x,i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f11.5,1x
      x,            f8.1,1x,f7.0
      x,            1x,f5.2,4(2(1x,f8.2),1x,i5),1x,'!',a11,'!')
             endif
@@ -28167,8 +28721,8 @@ c     ---------------------
         write(io38,*) 'Reject list check'
         write(io38,*) '-----------------'
         write(io38,3001)
- 3001   format(' index  type    tail num   flight     time     lat'
-     x,      '      lon       pres  height '
+ 3001   format(' index  type    tail num   flight     time       lat'
+     x,      '        lon       pres  height '
      x,      't-prcn   temp     innov  ichk'
      x,      ' spec hum    innov  ichk'
      x,      '   ob_dir    innov  ichk'
@@ -28236,7 +28790,7 @@ c
      x,        ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,        ob_spd(ii),xiv_s(ii),ichk_s(ii)
      x,        c_qc(ii)
- 3002       format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x,f8.1,1x,f7.0
+ 3002       format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f11.5,1x,f8.1,1x,f7.0
      x,          1x,f5.2,4(2(1x,f8.2),1x,i5),1x,'!',a11,'!')
           endif
 c
@@ -28307,7 +28861,8 @@ c
       if(.not.l_operational) then
         write(io38,*)
         write(io38,*) '  Number of MDCRS    reps rej by lst = ',kbad(1)
-        write(io38,*) '  Number of ACARS    reps rej by lst = ',kbad(2)
+ccccdak        write(io38,*) '  Number of ACARS    reps rej by lst = ',kbad(2)
+        write(io38,*) '  Number of TAMDAR   reps rej by lst = ',kbad(2)
         write(io38,*) '  Number of AMDAR    reps rej by lst = ',kbad(3)
         write(io38,*) '  Number of AIREP    reps rej by lst = ',kbad(4)
         write(io38,*) '  Number of manAIREP reps rej by lst = ',kbad(5)
@@ -28317,7 +28872,8 @@ c
       write(io8,*) '  Reports on reject list--rejected'
       write(io8,*) '  --------------------------------'
       write(io8,*) '  Number of MDCRS    reps rej by lst = ',kbad(1)
-      write(io8,*) '  Number of ACARS    reps rej by lst = ',kbad(2)
+ccccdak      write(io8,*) '  Number of ACARS    reps rej by lst = ',kbad(2)
+      write(io8,*) '  Number of TAMDAR   reps rej by lst = ',kbad(2)
       write(io8,*) '  Number of AMDAR    reps rej by lst = ',kbad(3)
       write(io8,*) '  Number of AIREP    reps rej by lst = ',kbad(4)
       write(io8,*) '  Number of manAIREP reps rej by lst = ',kbad(5)
@@ -28326,7 +28882,8 @@ c     Output tail number counts
 c     -------------------------
       write(io8,*) 
       write(io8,*) '  Tail numbers on reject list for winds'
-      write(io8,*) '  Tail Num  MDCRS  ACARS  AMDAR  AIREP  MAN  '
+ccccdak      write(io8,*) '  Tail Num  MDCRS  ACARS  AMDAR  AIREP  MAN  '
+      write(io8,*) '  Tail Num  MDCRS  TAMDAR AMDAR  AIREP  MAN  '
       write(io8,*) '  ----------------------------------------------'
 c
       do mm=1,kreg
@@ -28339,7 +28896,8 @@ c
 c
       write(io8,*) 
       write(io8,*) '  Tail numbers on reject list for temperatures'
-      write(io8,*) '  Tail Num  MDCRS  ACARS  AMDAR  AIREP  MAN  '
+ccccdak      write(io8,*) '  Tail Num  MDCRS  ACARS  AMDAR  AIREP  MAN  '
+      write(io8,*) '  Tail Num  MDCRS  TAMDAR AMDAR  AIREP  MAN  '
       write(io8,*) '  ----------------------------------------------'
 c
       do mm=1,kreg
@@ -28354,7 +28912,8 @@ c
       write(io8,*) 'Reject list counts'
       write(io8,*) '------------------'
       write(io8,'(1x,a55)')
-     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+ccccdak     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+     $ 'Type of check     MDCRS  TAMDAR   AMDAR   AIREP     man'
       write(io8,'(1x,a55)')
      $ '--------------- ------- ------- ------- ------- -------'
       write(io8,'(''Num considered '',5(1x,i7))')
@@ -28475,7 +29034,9 @@ c ###################################################################
 c                            function gcirc_qc
 c ###################################################################
 c
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
       function gcirc_qc(rlat1,rlon1,rlat2,rlon2)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 c
 c This function computes great circle distances using the Haversine formula.
 c Reference: http://www.census.gov/cgi-bin/geo/gisfaq?Q5.1
@@ -28488,25 +29049,25 @@ c
       parameter (radius = 6371229.)                     ! earth's radius in m
 c
       real         gcirc_qc            ! great circle distance
-      real         rlat1               ! first latitude (degrees)
+      real*8       rlat1               ! first latitude (degrees)
      $,            rlat2               ! second latitude (degrees)
      $,            rlon1               ! first longitude (degrees)
      $,            rlon2               ! second longitude (degrees)
-      real         dlon                ! difference in longitude / 2 (radians)
+      real*8       dlon                ! difference in longitude / 2 (radians)
      $,            dlat                ! difference in latitude / 2 (radians)
-     $,            arg                 ! argument for the arcsin
+      real*8       arg                 ! argument for the arcsin
 c
       dlon = (rlon2 - rlon1) * deg_rad * 0.5
       dlat = (rlat2 - rlat1) * deg_rad * 0.5
 c
 c What if longitudes are equal?
 c -----------------------------
-      if(ifix(rlon1*100.0).eq.ifix(rlon2*100.0)) then
+      if(int(rlon1*100.0).eq.int(rlon2*100.0)) then
         gcirc_qc = radius * abs(rlat2 - rlat1) * deg_rad
 c
 c What if latitudes are equal?
 c ----------------------------
-      elseif(ifix(rlat1*100.0).eq.ifix(rlat2*100.0)) then
+      elseif(int(rlat1*100.0).eq.int(rlat2*100.0)) then
         arg = abs(cos(rlat1*deg_rad) * sin(dlon))
         gcirc_qc = radius * 2.0 * asin(min(1.0,arg))
 c
@@ -28594,7 +29155,7 @@ c     -----------
       integer      idt(max_reps)       ! time in seconds to analysis time 
       character*8  c_acftreg(max_reps) ! aircraft registration (tail) number
       character*9  c_acftid(max_reps)  ! aircraft flight number
-      real         alat(max_reps)      ! latitude
+      real*8       alat(max_reps)      ! latitude
      $,            alon(max_reps)      ! longitude
       real         pres(max_reps)      ! pressure
      $,            ht_ft(max_reps)     ! height in feet
@@ -28652,10 +29213,14 @@ c
       integer      kbad(6)             ! counter for number of bad reports
      $,            kbadtot             ! counter for total number of bad reports
 c
-      integer      i_acars             ! instrument type for acars
-     $,            i_acars_lvl         ! instrument type for acars--level flt
-     $,            i_acars_asc         ! instrument type for acars--ascent
-     $,            i_acars_des         ! instrument type for acars--descent
+ccccdak      integer      i_acars             ! instrument type for acars
+      integer      i_acars             ! instrument type for tamdar
+ccccdak     $,            i_acars_lvl         ! instrument type for acars--level flt
+     $,            i_acars_lvl         ! instrument type for tamdar--level flt
+ccccdak     $,            i_acars_asc         ! instrument type for acars--ascent
+     $,            i_acars_asc         ! instrument type for tamdar--ascent
+ccccdak     $,            i_acars_des         ! instrument type for acars--descent
+     $,            i_acars_des         ! instrument type for tamdar--descent
      $,            i_mdcrs             ! instrument type for mdcrs
      $,            i_mdcrs_lvl         ! instrument type for mdcrs--level flt
      $,            i_mdcrs_asc         ! instrument type for mdcrs--ascent
@@ -28671,12 +29236,14 @@ c
      $,            i_amdar_asc         ! instrument type for amdar--ascent
      $,            i_amdar_des         ! instrument type for amdar--descent
 c
-      integer      nrep_Ac             ! number of acars reports considered
+ccccdak      integer      nrep_Ac             ! number of acars reports considered
+      integer      nrep_Ac             ! number of tamdar reports considered
      $,            nrep_Md             ! number of mdcrs reports considered
      $,            nrep_Ma             ! number of manual airep reports considered
      $,            nrep_Ar             ! number of airep reports considered
      $,            nrep_Am             ! number of amdar reports considered
-     $,            nbad_Ac             ! number of bad acars
+ccccdak     $,            nbad_Ac             ! number of bad acars
+     $,            nbad_Ac             ! number of bad tamdar
      $,            nbad_Md             ! number of bad mdcrs
      $,            nbad_Ma             ! number of bad manual aireps
      $,            nbad_Ar             ! number of bad aireps
@@ -28831,7 +29398,8 @@ c
         write(io8,*) 'Distribution of reports by type and minute'
         write(io8,*) '------------------------------------------'
         write(io8,*) 
-     $    'min   MDCRS  ACARS  AMDAR  AIREP   YRXX  voice    innov'
+ccccdak     $    'min   MDCRS  ACARS  AMDAR  AIREP   YRXX  voice    innov'
+     $    'min   MDCRS  TAMDAR AMDAR  AIREP   YRXX  voice    innov'
         write(io8,*) 
      $    '---- ------ ------ ------ ------ ------ ------ --------'
       endif
@@ -28875,8 +29443,8 @@ c
         write(io31,*) 'Spike reports'
         write(io31,*) '-------------'
         write(io31,3001)
- 3001   format(' index  type    tail num   flight     time     lat'
-     x,        '      lon       pres  height '
+ 3001   format(' index  type    tail num   flight     time       lat'
+     x,        '        lon       pres  height '
      x,        't-prcn   temp     innov  ichk'
      x,        ' spec hum    innov  ichk'
      x,        '   ob_dir    innov  ichk'
@@ -28941,7 +29509,8 @@ c
             elseif(kk.eq.2) then
               if(l_print) then
                 write(io8,*)
-                write(io8,*) 'Spike in ACARS data at min = ',i_min
+ccccdak                write(io8,*) 'Spike in ACARS data at min = ',i_min
+                write(io8,*) 'Spike in TAMDAR data at min = ',i_min
                 write(io8,*) '----------------------------------'
               endif
             elseif(kk.eq.3) then
@@ -29064,7 +29633,7 @@ c
      x,               ob_dir(ii),xiv_d(ii),ichk_d(ii)
      x,               ob_spd(ii),xiv_s(ii),ichk_s(ii)
      x,               c_qc(ii)
- 3002               format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x
+ 3002               format(i6,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f11.5,1x
      x,               f8.1,1x,f7.0,1x,f5.2,4(2(1x,f8.2),1x,i5),1x
      x,               '!',a11,'!')
                   endif
@@ -29089,7 +29658,8 @@ c     -----------------
         write(io31,*)'  Number of spike MDCRS    reps rejected = '
 cc smb     $,                   kbad(1)
      $,                   nbad_Md 
-        write(io31,*)'  Number of spike ACARS    reps rejected = '
+ccccdak        write(io31,*)'  Number of spike ACARS    reps rejected = '
+        write(io31,*)'  Number of spike TAMDAR   reps rejected = '
 cc smb     $,                   kbad(2)
      $,                   nbad_Ac
         write(io31,*)'  Number of spike AMDAR    reps rejected = '
@@ -29109,7 +29679,8 @@ c
       write(io8,*)'  Number of spike MDCRS    reps rejected = '
 cc smb     $,                   kbad(1)
      $,                   nbad_Md
-      write(io8,*)'  Number of spike ACARS    reps rejected = '
+ccccdak      write(io8,*)'  Number of spike ACARS    reps rejected = '
+      write(io8,*)'  Number of spike TAMDAR   reps rejected = '
 cc smb     $,                   kbad(2)
      $,                   nbad_Ac
       write(io8,*)'  Number of spike AMDAR    reps rejected = '
@@ -29128,7 +29699,8 @@ c     ---------------------
       write(*,*) 'Spike check data counts--',cdtg_an
       write(*,*) '-----------------------------------'
       write(*,'(1x,a55)')
-     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+ccccdak     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+     $ 'Type of check     MDCRS  TAMDAR   AMDAR   AIREP     man'
       write(*,'(1x,a55)')
      $ '--------------- ------- ------- ------- ------- -------'
       write(*,'('' Num considered '',5(1x,i7))')
@@ -29142,7 +29714,8 @@ c
       write(io8,*) 'Spike check data counts'
       write(io8,*) '-----------------------'
       write(io8,'(1x,a55)')
-     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+ccccdak     $ 'Type of check     MDCRS   ACARS   AMDAR   AIREP     man'
+     $ 'Type of check     MDCRS  TAMDAR   AMDAR   AIREP     man'
       write(io8,'(1x,a55)')
      $ '--------------- ------- ------- ------- ------- -------'
       write(io8,'(''Num considered '',5(1x,i7))')
@@ -29192,10 +29765,14 @@ c
      x , 136,   'AMD',        'amdar_asc'      !      AMDAR ascending profile
      x , 137,   'AMD',        'amdar_des'      !      AMDAR descending profile
      x ,  38,   'AMD',        'amdar_lvl'      !      AMDAR level flight
-     x ,  40,   'ACR',        'acars'          ! Automated aircraft (ACARS) prior to acars_qc
-     x , 141,   'ACR',        'acars_asc'      !      ACARS ascending profile
-     x , 142,   'ACR',        'acars_des'      !      ACARS descending profile
-     x ,  43,   'ACR',        'acars_lvl'      !      ACARS level flight
+ccccdak     x ,  40,   'ACR',        'acars'          ! Automated aircraft (ACARS) prior to acars_qc
+     x ,  40,   'ACR',        'acars'          ! Automated aircraft (TAMDAR) prior to acars_qc
+ccccdak     x , 141,   'ACR',        'acars_asc'      !      ACARS ascending profile
+     x , 141,   'ACR',        'acars_asc'      !      TAMDAR ascending profile
+ccccdak     x , 142,   'ACR',        'acars_des'      !      ACARS descending profile
+     x , 142,   'ACR',        'acars_des'      !      TAMDAR descending profile
+ccccdak     x ,  43,   'ACR',        'acars_lvl'      !      ACARS level flight
+     x ,  43,   'ACR',        'acars_lvl'      !      TAMDAR level flight
      x ,  45,   'MCR',        'mdcrs'          ! Automated aircraft (MDCRS) prior to acars_qc
      x , 146,   'MCR',        'mdcrs_asc'      !      MDCRS ascending profile
      x , 147,   'MCR',        'mdcrs_des'      !      MDCRS descending profile
@@ -29264,10 +29841,14 @@ c
      x , 136,   'AMD',        'amdar_asc'      !      AMDAR ascending profile
      x , 137,   'AMD',        'amdar_des'      !      AMDAR descending profile
      x ,  38,   'AMD',        'amdar_lvl'      !      AMDAR level flight
-     x ,  40,   'ACR',        'acars'          ! Automated aircraft (ACARS) prior to acars_qc
-     x , 141,   'ACR',        'acars_asc'      !      ACARS ascending profile
-     x , 142,   'ACR',        'acars_des'      !      ACARS descending profile
-     x ,  43,   'ACR',        'acars_lvl'      !      ACARS level flight
+ccccdak     x ,  40,   'ACR',        'acars'          ! Automated aircraft (ACARS) prior to acars_qc
+     x ,  40,   'ACR',        'acars'          ! Automated aircraft (TAMDAR) prior to acars_qc
+ccccdak     x , 141,   'ACR',        'acars_asc'      !      ACARS ascending profile
+     x , 141,   'ACR',        'acars_asc'      !      TAMDAR ascending profile
+ccccdak     x , 142,   'ACR',        'acars_des'      !      ACARS descending profile
+     x , 142,   'ACR',        'acars_des'      !      TAMDAR descending profile
+ccccdak     x ,  43,   'ACR',        'acars_lvl'      !      ACARS level flight
+     x ,  43,   'ACR',        'acars_lvl'      !      TAMDAR level flight
      x ,  45,   'MCR',        'mdcrs'          ! Automated aircraft (MDCRS) prior to acars_qc
      x , 146,   'MCR',        'mdcrs_asc'      !      MDCRS ascending profile
      x , 147,   'MCR',        'mdcrs_des'      !      MDCRS descending profile

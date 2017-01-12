@@ -1,6 +1,379 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+obsproc_prep release 3.8.0 --> released Jan 12, 2017
+                           --> implemented ??? ??, 2017
+
+files:
+   obsproc_prep/fix/prepobs_anow.bufrtable
+   obsproc_prep/fix/prepobs_cqc_statbge
+   obsproc_prep/fix/prepobs_landc
+ M obsproc_prep/fix/prepobs_prep.bufrtable
+   obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
+   obsproc_prep/fix/syndat_weight
+   obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
+   obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
+   obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
+   obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
+   obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
+   obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
+   obsproc_prep/sorc/prepobs_listheaders.fd/makefile
+   obsproc_prep/sorc/prepobs_monoprepbufr.fd/makefile
+   obsproc_prep/sorc/prepobs_monoprepbufr.fd/monoprepbufr.f90
+   obsproc_prep/sorc/prepobs_mpcopybufr.fd/makefile
+   obsproc_prep/sorc/prepobs_mpcopybufr.fd/mpcopybufr.f90
+   obsproc_prep/sorc/prepobs_oiqcbufr.fd/makefile
+   obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
+   obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
+   obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_noprof.f
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/output_acqc_prof.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/pietc.f90
+   obsproc_prep/sorc/prepobs_prepacqc.fd/pkind.f90
+   obsproc_prep/sorc/prepobs_prepacqc.fd/pmat.f90
+   obsproc_prep/sorc/prepobs_prepacqc.fd/pmat2.f90
+   obsproc_prep/sorc/prepobs_prepacqc.fd/pmat3.f90
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/prepacqc.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/pspl.f90
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_mer.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/sub2mem_um.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/tranQCflags.f
+   obsproc_prep/sorc/prepobs_prepanow.fd/makefile
+   obsproc_prep/sorc/prepobs_prepanow.fd/prepanow.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
+ M obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/makefile
+ M obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
+   obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
+   obsproc_prep/sorc/prepobs_prevents.fd/makefile
+   obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
+   obsproc_prep/sorc/prepobs_profcqc.fd/makefile
+   obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
+   obsproc_prep/sorc/syndat_syndata.fd/makefile
+   obsproc_prep/sorc/syndat_syndata.fd/syndata.f
+   obsproc_prep/sorc/build.sh
+   obsproc_prep/sorc/clean.sh
+   obsproc_prep/sorc/install.sh
+   obsproc_prep/sorc/load_libs.rc
+   obsproc_prep/sorc/README.build
+   obsproc_prep/sorc/setlibs.rc
+   obsproc_prep/ush/prepobs_cqcbufr.sh
+   obsproc_prep/ush/prepobs_cqcvad.sh
+ M obsproc_prep/ush/prepobs_makeprepbufr.sh
+   obsproc_prep/ush/prepobs_oiqcbufr.sh
+   obsproc_prep/ush/prepobs_prepacqc.sh
+   obsproc_prep/ush/prepobs_prevents.sh
+   obsproc_prep/ush/prepobs_profcqc.sh
+   obsproc_prep/ush/prepobs_syndata.sh
+
+( M - modified)
+
+
+ USH script changes:
+   prepobs_makeprepbufr.sh:
+    - Corrected non-critical logical bugs introduced in v3.6.0.
+    - Corrected errors in docblock and comments introduced in v3.6.0.
+    - Updated logic such that when tropical cyclone relocation has not run, a
+      first guess is required, the network is gfs or gdas, but the cycle time is
+      not 00, 06, 12 or 18z, no attempt will be made to obtain a guess 3-hrs
+      before and after cycle time (since it can fail).  Instead this is treated
+      the same as any 3- or 1-hrly cycle run (like rap, e.g.) meaning two guess
+      files will be obtained at the spanning 3 hour interval around any cycle
+      time not a multiple of 3 hrs.
+      BENEFIT: Allows future hourly WAM model to run properly.
+
+ Source code changes:
+   prepobs_prepdata:
+      prepdata.f (main program):
+       - Processes three new aircraft types (if in "aircft" dump):
+           - TAMDAR aircraft data from Panasonic/AirDAT originating from BUFR
+             (if in "aircft" dump).
+              - Gets report type (TYP) 134/234.
+              - Gets report subtype (TSB) of 1 to distinguish them from legacy
+                TAMDAR reports which had the default TSB value 0.
+              - Encodes instantaneous altitude rate (IALR) into PREPBUFR file.
+              - The default value for the highest altitude for which a report
+                will be processed (above this level all variables get QM=15) is
+                increased from 3050 to 16500 meters.
+                BENEFIT: Provides capability to process the full vertical
+                         profile of reports (made available by ARINC
+                         01/17/2017). All networks use the defualt value.
+             BENEFIT: New. Will be tested for eventual use by the operational
+                      GSI. The legacy, MADIS-based TAMDAR data can still be
+                      handled for historical runs (these have not been available
+                      since 2011).
+           - Korean AMDAR originating from BUFR (if in "aircft" dump).
+              - Gets report type (TYP) 131/231.
+             BENEFIT: Additional source of AMDAR data, will immediately be
+                      assimilated by operational GSI if in "aircft" dump.
+           - All AMDAR types other than European, Canadian and Korean
+             originating from BUFR (referred to as "Catch-all" AMDAR)
+             (if in "aircft" dump).
+              - Gets report type (TYP) 131/231.
+              - Encodes aircraft flight number (ACID) into PREPBUFR file.
+             BENEFIT: These are gradually replacing the AMDAR-format AMDAR
+                      reports as the TAC to BUFR migration proceeeds.  These
+                      contain many reports currently not found in AMDAR-format.
+                      These will be immediately assimilated by operational GSI
+                      if in "aircft" dump.
+       - Processes AMDAR ["Catch-all" (if in "aircft" dump) and Euopean] and
+         MCDRS reports originating from new version 7 (v7) BUFR.
+         BENEFIT: v7 BUFR is the international standard.  ARINC will switch to
+                  providing this for the above types after this release is
+                  implemented.  The changes here are such that both legacy BUFR
+                  and v7 BUFR can be handled by this code.
+       - New BUFRLIB routine NEMSPECS is integrated into code.
+         BENEFIT: Facilitates easier handling of future precision increases.
+       - Fixed a bug which allowed an aircraft report "mass piece" to be encoded
+         into the PREPBUFR file in cases when everything was missing other than
+         the restriction indicators (mnemonics RSRD and EXPRSRD).
+         BENEFIT: Prevents a failure downstream in PREPACQC.  {Fortunately this
+                  has never occurred to date because AMDAR reports (only type
+                  restricted) have never had both a missing temperature and
+                  wind.}
+       - Changed nomenclature: ASDAR becomes AMDAR; E-ADAS becomes EAMDAR; ACARS
+         becomes MDCRS; TAMDAR from MADIS becomes TAMDARM; TAMDAR from
+         Panasonic/AirDAT (BUFR) becomes TAMDARB; CAN-AMDAR becomes CAMDAR;
+         KOR-AMDAR becomes KAMDAR.
+       - Reset default values for namelist switches AWINDO, JAWIND, JAMASS,
+         IACFTL and AIFNOW to more accurately reflect the values read in from
+         parm cards for most networks.
+         BENEFIT: Facilitates cases where an obsproc_<network> release occurs
+                  prior to an obsproc_prep release (e.g., for a model upgrade)
+                  but the obsproc_prep release will be implemented first (e.g.,
+                  to handle upstream format/data changes).  If the number of
+                  aircraft types in the obsproc_<network> release is less than
+                  that in the obsproc_prep release, the former can just use the
+                  defaults for the above switches (set in the prepdata program)
+                  and seamlessly move with the later array changes rather than
+                  specifying these switches in prepdata parm cards with array
+                  sizes not matching those in obsproc_prep and having to be
+                  updated in the middle of model upgrade testing at the point
+                  when obsproc_prep is implemented. 
+       - Reads new output real, double-precision argument array OBS8_8 of length
+         2 in calls to IW3UNPBF and W3UNPKB7 (see changes to these subroutines
+         below).  This returns latitude and longitude for each report which is
+         then carried through code as R*8 variables ALAT_8 and ALON_8 before
+         being encoded into PREPBUFR file in mnemonics YOB (lat) and XOB (lon)
+         (and in lowest level drift lat/lon, YDR and XDR, resp.).
+         BENEFIT: Replaces lat/lon returned in RDATA(1:2) in calls to IW3UNPBF
+                  and W3UNPKB7 which are at machine precison, and HDR(2:3)
+                  carried through code also at machine precision (normally R*4).
+                  {RDATA(1:2) is still returned and will be used as input lat/
+                  lon only in rare event that OBS8_8(1:2) are missing.} Now that
+                  many reports in the dumps store lat/lon at 0.001 or even
+                  0.00001 degree precision, and now that PREPBUFR encodes YOB/
+                  YDR and XOB/XDR at 0.00001 degree precision, this change will
+                  ensure that lat/lon is always accurate to 0.00001 degrees in
+                  PREPBUFR files.
+       - Diagnostic output in some print statements formatted to accommodate
+         increased precision in latitude and longitude now found in many types
+         of reports in input dump files. These hi-res lat/lon values are now
+         encoded into the PREPBUFR files (see change to fixed file
+         prepobs_prep.bufrtable below).
+          - Replace machine length lat/lon {HDR(3), HDR(2)} with R*8 lat/lon
+            (ALAT_8, ALON_8) in these print statements.
+         BENEFIT: Values are now precise to 10**5 degrees.
+      iw3unpbf.f (subroutine) (all but last change are primarily in function
+      R05UBF):
+       - Read in and store moisture from E-AMDAR aircraft type.
+         BENEFIT: Will be tested for eventual assimilation.
+       - Processes three new aircraft types (if in "aircft" dump):
+           - TAMDAR aircraft data from Panasonic/AirDAT originating from BUFR
+             (dumped from tank b004/xx010) (if in "aircft" dump).
+              - Gets dump report subtype 10.
+              - Stores instantaneous altitude rate (read from IALR) in cat.8
+                c.f. 932 (.001 x m/sec).
+              - Accounts for missing bulletin header (BUHD) and originator
+                (BORG) and does not attempt to store these in output C*11
+                CBULLX.
+              - Stores tail number as report id.
+              - Temperature obtained from mnemonic TMDBST in dump file.
+                Moisture obtained from mnemonic RAWHU.
+              - Will not set temperature QM to purge if wind QM is set to purge
+                by SDM.
+              - Stores type of commercial aircraft (read from ACTP) in header
+                reserve character (*8) word 2.
+              - Stores observer identification (read from OBSVR) in bytes 1-4 of
+                header reserve character (*8) word 1.
+              - Quality marks for temperature (TQM) and wind (WQM) output from
+                this subroutine are derived from quality information provided by
+                QMRKH fields in the input dump reports if not previously purged
+                by the SDM. The quality mark for moisture is derived from the
+                "percent confidence" (PCCF) field provided in the dump reports
+                if not previously purged by the SDM.
+                   - Always set moisture quality mark (QQM) to 13 if temperature
+                     quality mark (TQM) was set to 13 earlier (regardless of
+                     value for PCCF).
+             BENEFIT: See prepdata.f.
+           - Korean AMDAR originating from BUFR (dumped from tank b004/xx011)
+             (if in "aircft" dump).
+              - Gets dump report subtype 11.
+              - Stores tail number as report id.
+             BENEFIT: See prepdata.f.
+           - All AMDAR types other than European, Canadian and Korean
+             originating from BUFR (referred to as "Catch-all" AMDAR) (dumped
+             from tank b004/xx103) (if in "aircft" dump).
+              - Gets dump report subtype 103.
+              - Stores tail number as report id.
+              - Stores flight number (read from ACID) in header reserve
+                character (*8) word 2 (if ACID is missing, stores all blanks
+                here).  If tail number is missing and this is not, store flight
+                number as report id.
+             BENEFIT: See prepdata.f.
+       - Processes AMDAR ["Catch-all" (if in "aircft" dump) and Euopean] and
+         MCDRS reports originating from new version 7 (v7) BUFR.  (Can still
+         process reports from legacy BUFR.)
+            - Since v7 MDCRS no longer report pressure, must calculate it from
+              report altitude via US Std. Atmos. function in order to estimate
+              dew point to perform a gross check on moisture data. Also used for
+              this same purpose for E-AMDARs now that their moisture can be
+              processed and for new TAMDARs which also have moisture.
+            - Adjusted code to accommodate the more-detailed phase of flight
+              information for v7 BUFR stored in mnemonic DPOF in dump files,
+              rather than the less-detailed version stored in mnemonic POAF in
+              the legacy BUFR dump files.  Logic added to translate DPOF values
+              into POAF prior to storing in cat.8 c.f. 914.  Downstream codes
+              still expect this to contain less-detailed phase of flight
+              information as defined by POAF.
+       - All references to E-ADAS have been changed to E-AMDAR.
+       - In final height level assignment for aircraft reports, a check for
+         FLVLST (flight-level, std. resolution) is added but this is given
+         lowest priority amongst the height/altitude variables checked. Needed
+         because This is the only height variable stored by new Korean and
+         "Catch-all" AMDAR types.  It is also stored for the new TAMDAR reports
+         (defined as GPS altitude), but HMSL (defined as pressure altitude) is
+         also stored for these and is used for final height asignment for
+         TAMDARs (FLVLST is currently not stored in output for TAMDARs).
+       - Added new output real, double-precision argument array OBS8_8 of length
+         2 to return full-precision latitude and longitude for a report.
+         BENEFIT: Although lat and lon are returned in OBS(1:2) these are at
+                  machine precison, which is normally R*4.  Now that many
+                  reports in the dumps store lat/lon at 0.001 or even 0.00001
+                  degree precision, and now that PREPBUFR encodes YOB (lat) and
+                  XOB (lon) at 0.00001 degree precision, this change will ensure
+                  that lat/lon is always accurate to 0.00001 degrees in all
+                  downstream processing.
+      w3unpkb7.f (subroutine):
+       - Added new output real, double-precision argument array RDATA8_8 of
+         length 2 to return full-precision latitude and longitude for a report.
+         BENEFIT: See BENEFIT for last change in subroutine iw3unpbf.f above.
+   prepobs_prepacqc:
+      prepacqc.f (main program):
+       - Increased the value of parameter MAXFLT from 7500 to 12500.
+         BENEFIT: Allows quality control routines to process added flights now
+                  that more aircraft reports are processed.
+       - Nomenclature change: replaced "MDCRS/ACARS" with just "MDCRS".
+       - The format for all print statements containing latitude and longitude
+         changed to print to 5 decimal places.
+      prepacqc.f (main program),acftobs_qc.f,input_acqc.f,output_acqc_noprof.f,
+      output_acqc_prof.f (subroutines):
+       - Variables holding latitude and longitude data now double precision
+         since XOB and YOB in PREPBUFR file now scaled to 10**5 (was 10**2) to
+         handle new v7 AMDAR and MDCRS reports which have this higher precision.
+         BENEFIT: Retains exact precison here. Improves QC processing.
+                  - Note: QC here can be improved further by changing logic in
+                          many places to account for the increased precision.
+                          This needs to be investigated.
+      acftobs_qc.f (subroutine):
+       - All printout changes the term "ACARS" to "TAMDAR" (TAMDARs processed
+         under category "ACARS" for stratifying statistics since latter not
+         used).  All Comments changed from "ACARS" to "TAMDAR".
+       - The format for all print statements containing latitude and longitude
+         changed to print to 5 decimal places.
+       - Intrinsic function "ifix" replaced with "int" for cases where the
+         argument is now a real*8 lat or lon (else compiler error if "ifix"
+         operates on a real*8 argument).
+      input_acqc.f (subroutine):
+       - Nomenclature change: replaced "MDCRS/ACARS" with just "MDCRS".
+       - New LATAM AMDARs contain an encrypted flight number (in addition to a
+         tail number, all other AMDARs have only a tail number which is copied
+         into flight number). This is read in and used in QC processing.
+         BENEFIT: Improves track-checking and other QC for LATAM AMDARs.
+      output_acqc_noprof.f, output_acqc_prof.f, sub2mem_mer.f (subroutines):
+       - Nomenclature change: replaced "MDCRS/ACARS" with just "MDCRS".
+       - The format for all print statements containing latitude and longitude
+         changed to print to 5 decimal places.
+
+ Fixed file changes:
+   prepobs_prep.bufrtable:
+    - Added operator descriptors around mnemonics "XOB YOB" in Table D sequence
+      "HEADR", around mnemonics "XDR YDR" in Table D sequence "DRFTINFO", around
+      mnemonic "XORG" in Table D sequence "LONCORSQ" and around mnemonic "YORG"
+      in Table D sequence "LATCORSQ" in order to increase precision from 10**2
+      deg lat/lon to 10**5.
+      BENEFIT: Many reports in dump files now encode lat/lon precise to greater
+               than 10**2 degrees.  This change will allow that increased
+               precision to carry over to the PREPBUFR files.  Operator
+               descriptors allow mnemonics XOB, YOB, XDR, YDR, XORG and YORG to
+               be retained.  Thus no changes are needed in downstream codes that
+               read PREPBUFR files.
+ 
+
+ Output changes:
+ ---------------
+  (For specific network changes see " Output changes" in Release Notes for that
+   network, if that network executes this version of obsproc_prep.)
+
+
+ Libraries:
+ ----------
+   w3nco   2.0.6 (all)
+   bufr   11.1.0 (all)
+   w3emc   2.2.0 (prepobs_cqcbufr, prepobs_prepacpf, prepobs_prepacqc,
+                  prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   bacio   2.0.1 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   sp      2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   sigio   1.0.1 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+
+   * all libs except sigio are WCOSS phase2 disk (/nwprod2/*) versions
+
+
+ Build Instructions:
+ -------------------
+   - See sorc/README.build
+
+
+ Preimplementation Testing Requirements:
+ ---------------------------------------
+   There are no jobs in obsproc_prep.  Jobs executing this version of
+   obsproc_prep will be tested.
+
+
+ Dissemination:
+ --------------
+   See information about dissemination in the release notes for
+   obsproc_<NETWORK> packages which execute this version of obsproc_prep.
+
+
+ Special Instructions:
+ ---------------------
+   This is part of OBSPROC.v6.5.0.
+   This must be implemented simultaneously with the implementations of:
+      v2.2.0 of obsproc_cdas,
+      v3.3.0 of obsproc_dump,
+      v2.3.0 of obsproc_dump_post,
+      v2.4.0 of obsproc_global,
+      v2.3.0 of obsproc_nam,
+      v2.3.0 of obsproc_rap,
+      v2.2.0 of obsproc_rtma,
+      v2.2.0 of obsproc_utma.
+
+   Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
+   needed.
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 obsproc_prep release 3.7.0 --> released Sep 1, 2016
-                           --> implemented  ?  ??, 2016
+                           --> implemented Sep 27, 2016
 
 files:
    obsproc_prep/fix/prepobs_anow.bufrtable
@@ -102,7 +475,7 @@ files:
 
  Source code changes:
    build.sh in sorc directory:
-    - Increased liklihood of consistent builds by purging currently loaded
+    - Increased likelihood of consistent builds by purging currently loaded
       environment modules and loading specific compiler module.  The
       default ibmpe module is then loaded for codes that might need it.
     - Switch from using setlibs.rc to load_libs.rc (which loads library
@@ -178,7 +551,7 @@ files:
  Libraries:
  ----------
    w3nco   2.0.6 (all)
-   bufr   11.1.0 (all) (previously 10.2.5)
+   bufr   11.1.0 (all)
    w3emc   2.2.0 (prepobs_cqcbufr, prepobs_prepacpf, prepobs_prepacqc,
                   prepobs_prepdata, prepobs_prevents, syndat_syndata)
    bacio   2.0.1 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
@@ -195,8 +568,8 @@ files:
 
  Preimplementation Testing Requirements:
  ---------------------------------------
-   There are no jobs in obsproc_dump_post.  All jobs executing this version of
-   obsproc_dump_post should be tested.
+   There are no jobs in obsproc_prep.  Jobs executing this version of
+   obsproc_prep will be tested.
 
 
  Dissemination:
@@ -335,6 +708,8 @@ files:
       reports (TYP=512).  
       BENEFIT: Provides single location for data supporting cloud ceiling
                ANALYSIS IN RTMA/URMA NETWORKS.
+    - Added a printout of the BUFRLIB version in use (though a call to BUFRLIB
+      routine BVERS).
 
  Fixed file changes:
    prepobs_prep.bufrtable:
@@ -672,6 +1047,19 @@ files:
 
  Preimplementation Testing Requirements:
  ---------------------------------------
+   There are no jobs in obsproc_prep.  Jobs executing this version of
+   obsproc_prep will be tested.
+
+
+ Dissemination:
+ --------------
+   See information about dissemination in the release notes for
+   obsproc_<NETWORK> packages which execute this version of obsproc_prep.
+
+
+ Special Instructions:
+ ---------------------
+   This is part of OBSPROC.v5.0.0.
    This must be implemented either simultaneously with or after the
    implementation of:
       v2.6.0 of obsproc_satingest.
@@ -688,22 +1076,6 @@ files:
       v2.0.4 of obsproc_urma,
       v1.1.0 of radar_reflectivity_ref2grb,
       v1.2.0 of obsproc_shared/bufr_dumplist.
-
-   There are no jobs in obsproc_prep.  Jobs executing this version of
-   obsproc_prep will be tested.
-
-
- Dissemination:
- --------------
-   See information about dissemination in the release notes for
-   obsproc_<NETWORK> packages which execute this version of obsproc_prep.
-
-
- Special Instructions:
- ---------------------
-   This is part of OBSPROC.v5.0.0.
-   This must be implemented simultaneously with the implementation of
-   v2.1.1 of obsproc_global.
 
    Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
    needed.

@@ -625,8 +625,8 @@
 |          |                                                                   |
 | ASCATW   | HEADR   CAT  SAID   CTCN WVCQ   BSCD  LKCS <P___INFO>  <W___INFO> |
 |          |                                                                   |
-| HEADR    | SID     XOB   YOB   DHR   ELV   TYP   T29   TSB   ITP   SQN       |
-| HEADR    | PROCN   RPT   TCOR <RSRD_SEQ>                                     |
+| HEADR    | SID   207003    XOB    YOB    207000    DHR    ELV    TYP    T29  |
+| HEADR    | TSB   ITP       SQN    PROCN  RPT       TCOR   <RSRD_SEQ>         |
 |          |                                                                   |
 | PRSLEVEL | CAT    <P___INFO>  <Q___INFO>  <T___INFO>  <Z___INFO>  <W___INFO> |
 | PRSLEVEL |        <DRFTINFO>  [W1_EVENT]                                     |
@@ -657,7 +657,7 @@
 | CTP_INFO | [CTPEVENT]    TOCC GCDTT  <CTPBACKG>  <CTPPOSTP>                  |
 | SST_INFO | [SSTEVENT]    MSST        <SSTBACKG>  <SSTPOSTP>  <DBSS_SEQ>      |
 | BTMPINFO | ELEV          SOEL OZON    TMSK        CLAM                       |
-| DRFTINFO | XDR           YDR  HRDR                                           |
+| DRFTINFO | 207003  XDR  YDR  207000   HRDR                                   |
 | SCATINFO | A1  A2  A3  B1  B2  B3  S1  S2  S3  E1  E2  E3                    |
 |          |                                                                   |
 | TURB1SEQ | TRBX                                                              |
@@ -695,8 +695,8 @@
 | ACID_SEQ | ACID                                                              |
 | AFIC_SEQ | AFIC       HBOI    HTOI                                           |
 | TURB3SEQ | DGOT       HBOT    HTOT                                           |
-| LATCORSQ | YORG       YCOR                                                   |
-| LONCORSQ | XORG       XCOR                                                   |
+| LATCORSQ | 207003     YORG    207000   YCOR                                  |
+| LONCORSQ | 207003     XORG    207000   XCOR                                  |
 | CLOU3SEQ | CEILING                                                           |
 | APDS_SEQ | BEARAZ     ELEV    APDS     APDE                                  |
 |          |                                                                   |
@@ -778,6 +778,8 @@
 | TCOR     |    0 |           0 |   3 | CODE TABLE               |-------------|
 |          |      |             |     |                          |-------------|
 | YOB      |    2 |       -9000 |  15 | DEG N                    |-------------|
+* YOB  stored   5 *    -9000000 *  25 *                                        *
+|          |      |             |     |                          |-------------|
 | BEARAZ   |    2 |           0 |  16 | DEGREE TRUE              |-------------|
 | ATRN     |    0 |           0 |  11 | NUMERIC                  |-------------|
 |          |      |             |     |                          |-------------|
@@ -788,6 +790,7 @@
 *            range -180 to +180 degrees, where east is + and west is -         *
 *            (it can still be held here in 16 bits)                            *
 | XOB      |    2 |      -18000 |  16 | DEG E                    |-------------|
+* XOB  stored   5 *   -18000000 *  26 *                                        *
 |          |      |             |     |                          |-------------|
 | VSSO     |    0 |           0 |   6 | CODE TABLE               |-------------|
 | ACAV     |    0 |           0 |  16 | NUMERIC                  |-------------|
@@ -829,12 +832,18 @@
 |          |      |             |     |                          |-------------|
 | CHNM     |    0 |           0 |   6 | NUMERIC                  |-------------|
 | YORG     |    2 |       -9000 |  15 | DEG N                    |-------------|
+* YORG stored   5 *    -9000000 *  25 *                                        *
+|          |      |             |     |                          |-------------|
 | YCOR     |    0 |           0 |   3 | CODE TABLE               |-------------|
 | YDR      |    2 |       -9000 |  15 | DEG N                    |-------------|
+* YDR  stored   5 *    -9000000 *  25 *                                        *
 |          |      |             |     |                          |-------------|
 | XORG     |    2 |      -18000 |  16 | DEG E                    |-------------|
+* XORG stored   5 *   -18000000 *  26 *                                        *
+|          |      |             |     |                          |-------------|
 | XCOR     |    0 |           0 |   3 | CODE TABLE               |-------------|
 | XDR      |    2 |      -18000 |  16 | DEG E                    |-------------|
+* XDR  stored   5 *   -18000000 *  26 *                                        *
 |          |      |             |     |                          |-------------|
 | ELEV     |    2 |       -9000 |  15 | DEGREE                   |-------------|
 | SOEL     |    2 |       -9000 |  15 | DEGREE                   |-------------|

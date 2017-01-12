@@ -1,7 +1,7 @@
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:  W3UNPKB7
-C   PRGMMR: Whiting          ORG: EMC         DATE: 2016-08-15
+C   PRGMMR: KEYSER           ORG: NP22        DATE: 2016-11-30
 C
 C ABSTRACT: THIS SUBROUTINE DECODES A SINGLE REPORT FROM BUFR MESSAGES
 C   IN AN NCEP BUFR DATA FILE.  CURRENTLY WIND PROFILER {EXCEPT FOR,
@@ -219,10 +219,23 @@ C     list so as to allow its use in testing for whether reports are
 C     from new GNSS ground-based data streams (subset=NC012004); this 
 C     replaces potentially ambiguous test on missing TDEL data from 
 C     previous GPS-IPW data streams.
+C 2016-11-30  D. A. KEYSER --
+C     Added new output real, double-precision argument array RDATA8_8 of
+C     length 2 to return full-precision latitude and longitude for a
+C     report.
+C     BENEFIT: Although lat and lon are returned in RDATA(1:2) these are
+C              at machine precison, which is normally R*4.  Now that
+C              many reports in the dumps store lat/lon at 0.001 or even
+C              0.00001 degree precision, and now that PREPBUFR encodes
+C              YOB (lat) and XOB (lon) at 0.00001 degree precision, this
+C              change will ensure that lat/lon is always accurate to
+C              0.00001 degrees in all downstream processing.
+C
 C
 C
 C USAGE:    CALL W3UNPKB7(IDATE,IHE,IHL,LUNIT,RDATA,STNID,DSNAME,
-C                         RDATA2,IDSDAT,IDSDMP_8,SUBSET,SUBSKP,IRET)
+C                         RDATA2,RDATA8_8,IDSDAT,IDSDMP_8,SUBSET,SUBSKP,
+C                         IRET)
 C   INPUT ARGUMENT LIST:
 C     IDATE    - 4-WORD ARRAY HOLDING "CENTRAL" DATE TO PROCESS
 C              - (YYYY, MM, DD, HH)
@@ -280,6 +293,8 @@ C              - BELOW FOR IRET=1 CASE)
 C     RDATA2   - 25-WORD ARRAY CONTAINING ADDITIONAL REPORT DATA NOT
 C              - PRESENT IN RDATA ARRAY (DECODED DIRECTLY FROM BUFR)
 C              - (SEE REMARKS 6 FOR CONTENT)
+C     RDATA8_8 - 2-WORD REAL*8 ARRAY CONTAINING ADDITIONAL REPORT DATA
+C                (LATITUDE AND LONGITUDE) (SEE REMARKS 7 FOR CONTENT)
 C     IDSDAT   - INTEGER DATA SET CENTER DATE IN FORM YYYYMMDDHH (SAME
 C              - FOR ALL REPORTS IN A COMMON INPUT DATA SET - SEE
 C              - OUTPUT ARGUMENT LIST BELOW FOR IRET=1 CASE)
@@ -380,9 +395,11 @@ C    5) CONTENTS OF AN UNPACKED REPORT IN THE "RDATA" ARRAY (MISSING
 C       INTEGER DATA ARE SET TO IMISS (99999); MISSING REAL DATA ARE
 C       SET TO XMISS (99999.)
 C
-C     (NOTE: DOES NOT INCLUDE STATION IDENTIFICATION AND "RDATA2"
-C            ARRAY OUTPUT - SEE OUTPUT ARGUMENT "STNID" ABOVE AND
-C            "RDATA2" CONTENTS IN REMARKS 6. BELOW)
+C     (NOTE: DOES NOT INCLUDE STATION IDENTIFICATION AND "RDATA2" ARRAY
+C            OUTPUT; LATITUDE AND LONGITUDE IN RDATA(1:2) ARE ALSO
+C            OUTPUT IN REAL*8 IN "RDATA8_8" - SEE OUTPUT ARGUMENT
+C            "STNID" ABOVE, "RDATA2" CONTENTS IN REMARKS 6. BELOW AND
+C            "RDATA8_8" CONTENTS IN REMARKS 7. BELOW)
 C
 C   ***************************************************************
 C   WORD   CONTENT                   UNIT                 FORMAT
@@ -744,13 +761,24 @@ C    25    TOTAL CLOUD COVER                        0-21-010 PERCENT
 C
 C
 C
+C    7) CONTENTS OF AN UNPACKED REPORT IN THE "RDATA8_8" ARRAY
+C       (ALL VALUES ARE IN REAL*8`FORMAT; MISSING DATA ARE SET TO
+C        "BMISS")
+C
+C   WORD   CONTENT                            UNIT
+C   ----   --------------------------------   -------------------
+C     1    LATITUDE                           DEGREES (N+,S-)
+C     2    LONGITUDE                          DEGREES (E+,W-)
+C
+C
+C
 C ATTRIBUTES:
 C   LANGUAGE: FORTRAN 90
 C   MACHINE:  NCEP WCOSS
 C
 C$$$
       SUBROUTINE W3UNPKB7(IDATE,IHE,IHL,LUNIT,RDATA,STNID,DSNAME,RDATA2,
-     $ IDSDAT,IDSDMP_8,SUBSET,SUBSKP,IRET)
+     $ rdata8_8,IDSDAT,IDSDMP_8,SUBSET,SUBSKP,IRET)
 
 C  Include parameters common to more than one subroutine
 C  -----------------------------------------------------
@@ -760,7 +788,7 @@ C  -----------------------------------------------------
       CHARACTER*8 STNID,SUBSET,DSNAME,CBUFR
 
       REAL        RINC_O(5),RINC_I(5),RDATA2(25),RDATA(*),RDATX(IDMAX)
-      REAL(8)     RDATA2_8(25)
+      REAL(8)     RDATA2_8(25),rdata8_8(2)
       REAL(8)     BMISS,GETBMISS
 
       INTEGER     IDATE(4),LSDATE(4),IDATA(IDMAX),JDATE(8)
@@ -818,7 +846,7 @@ C  THIS SUBR. WAS CALLED, PRINT NEW HEADER, SET JRET = 1
          LUNITL = LUNIT
          JRET = 1
          PRINT 101, LUNIT
-  101    FORMAT(//' ---> W3UNPKB7: WCOSS VERSION 08/15/2016: NCEP ',
+  101    FORMAT(//' ---> W3UNPKB7: WCOSS VERSION 11/30/2016: NCEP ',
      $    'BUFR DATA SET READ FROM UNIT ',I4/)
 
          BMISS = GETBMISS()
@@ -1121,7 +1149,8 @@ C  (REWIND DATA FILE AND RETURN W/ IRET=2)
 C INITIALIZE THE OUTPUT ARRAY
       CALL UNPKB702(RDATA,STNID,ITP)
 C STORE THE HEADER INFORMATION INTO UNPACKED QUASI-IW3UNPBF FORMAT
-      CALL UNPKB703(LUNIT,RDATA,STNID,SUBSET,ITP,IRET)
+      rdata8_8 = bmiss
+      CALL UNPKB703(LUNIT,RDATA,rdata8_8,STNID,SUBSET,ITP,IRET)
 C IRET.GE.3 MEANS RPT NOT RETURNED DUE TO MISSING DATA IN HEADR (RETURN)
       IF(IRET.GE.3)  GO TO 99
       IF(ITP.EQ.1.OR.ITP.EQ.2.OR.ITP.EQ.3)  THEN
@@ -1858,7 +1887,7 @@ C          (could be expanded somewhat w/o changing "IDMAX" if need be)
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    UNPKB703
-C   PRGMMR: D. A. KEYSER     ORG: NP22       DATE: 2014-03-13
+C   PRGMMR: D. A. KEYSER     ORG: NP22       DATE: 2016-11-30
 C
 C ABSTRACT: FOR REPORT (SUBSET) READ OUT OF BUFR MESSAGE (PASSED IN
 C   INTERNALLY VIA BUFRLIB STORAGE), CALLS BUFRLIB ROUTINE TO DECODE
@@ -1928,13 +1957,26 @@ C     584)
 C 2014-03-13  D. A. KEYSER -- MODIFIED TO HANDLE VAD WINDS FROM LEVEL
 C     2 DECODER (SUBSET "NC002017") {IN ADDITION TO THOSE FROM RADAR
 C     CODED MESSAGE (SUBSET "NC002008")}
+C 2016-11-30  D. A. KEYSER --
+C     Added new output real, double-precision argument array RDATA8_8 of
+C     length 2 to return full-precision latitude and longitude for a
+C     report.
+C     BENEFIT: Although lat and lon are returned in RDATA(1:2) these are
+C              at machine precison, which is normally R*4.  Now that
+C              many reports in the dumps store lat/lon at 0.001 or even
+C              0.00001 degree precision, and now that PREPBUFR encodes
+C              YOB (lat) and XOB (lon) at 0.00001 degree precision, this
+C              change will ensure that lat/lon is always accurate to
+C              0.00001 degrees in all downstream processing.
 C
-C USAGE:    CALL UNPKB703(LUNIT,RDATA,STNID,SUBSET,ITP,IRET)
+C USAGE:    CALL UNPKB703(LUNIT,RDATA,RDATA8_8,STNID,SUBSET,ITP,IRET)
 C   INPUT ARGUMENT LIST:
 C     LUNIT    - FORTRAN UNIT NUMBER FOR INPUT DATA FILE
 C     RDATA    - SINGLE REPORT IN A QUASI-IW3UNPBF UNPACKED FORMAT WITH
 C              - ALL DATA INITIALIZED AS MISSING (NOTE: DOES NOT
 C              - INCLUDE STATION ID)
+C     RDATA8_8 - 2-WORD REAL*8 ARRAY CONTAINING ADDITIONAL REPORT DATA
+C                (LATITUDE AND LONGITUDE) (SEE REMARKS 7 FOR CONTENT)
 C     STNID    - CHARACTER*8 SINGLE REPORT STATION IDENTIFICATION (UP
 C              - TO 8 CHARACTERS, LEFT-JUSTIFIED - HERE INITIALIZED AS
 C              - EITHER BLANKS OR "????????")
@@ -1967,7 +2009,7 @@ C   LANGUAGE: FORTRAN 90
 C   MACHINE:  NCEP WCOSS
 C
 C$$$
-      SUBROUTINE UNPKB703(LUNIT,RDATA,STNID,SUBSET,ITP,IRET)
+      SUBROUTINE UNPKB703(LUNIT,RDATA,rdata8_8,STNID,SUBSET,ITP,IRET)
 
 C  Include parameters common to more than one subroutine
 C  -----------------------------------------------------
@@ -1980,7 +2022,7 @@ C  -----------------------------------------------------
       CHARACTER*60 HDRSTR
       INTEGER  IDATA(IDMAX),KOUNTG(3,0:3),IRPTYP(12)
       LOGICAL  SKIP_CAT12
-      REAL(8) HDR_8(12),RPID_8,VAR_8,BMISS
+      REAL(8) HDR_8(12),RPID_8,VAR_8,BMISS,rdata8_8(2)
       REAL  HDR(12),RDATA(*),RDATX(IDMAX)
       COMMON /PKB7AA/BMISS
       COMMON /PKB7BB/KDATE(8),LDATE(8),KTIMCH,IPRINT,SKIP_CAT12
@@ -2038,17 +2080,18 @@ C  LATITUDE
  
       M = 1
       N = 1
-      if(hdr(m).ge.xmiss)  then
+      if(hdr_8(m).ge.bmiss)  then
          call ufbint(lunit,HDR_8(m),12,1,nlev,'CLATH')
          hdr(m) = hdr_8(m)
       end if
-      IF(IPRINT.GT.1)  PRINT 199, HDR(M),M
-  199 FORMAT(5X,'HDR HERE IS: ',F17.4,'; INDEX IS: ',I3)
-      IF(HDR(M).LT.XMISS)  THEN
-cfix? IF(HDR(M).LT.YMISS)  THEN
+      IF(IPRINT.GT.1)  PRINT 199, hdr_8(M),M
+  199 FORMAT(5X,'HDR_8 HERE IS: ',F18.5,'; INDEX IS: ',I3)
+      IF(hdr_8(M).LT.bmiss)  THEN
          RDATX(N) = HDR(M)
          IF(IPRINT.GT.1)  PRINT 198, N,RDATX(N)
   198 FORMAT(5X,'RDATA(',I5,') STORED AS: ',F10.2)
+         rdata8_8(1) = hdr_8(M)
+         if(iprint.gt.1)  print *, 'RDATA8_8(1) STORED AS: ',rdata8_8(1)
       ELSE
          IRET = 3
          PRINT 102
@@ -2064,13 +2107,12 @@ C  LONGITUDE
  
       M = 2
       N = 2
-      if(hdr(m).ge.xmiss)  then
+      if(hdr_8(m).ge.bmiss)  then
          call ufbint(lunit,HDR_8(m),12,1,nlev,'CLONH')
          hdr(m) = hdr_8(m)
       end if
-      IF(IPRINT.GT.1)  PRINT 199, HDR(M),M
-      IF(HDR(M).LT.XMISS)  THEN
-cfix? IF(HDR(M).LT.YMISS)  THEN
+      IF(IPRINT.GT.1)  PRINT 199, hdr_8(M),M
+      IF(hdr_8(M).LT.bmiss)  THEN
 
 C Important: According to BUFR Manual, CLON (0-06-002) - represented
 C  here by "HDR(M)" - should be in units of Degrees West - and East +
@@ -2080,6 +2122,8 @@ C  So we use the following conversion to work in either case ...
          RDATX(N) = 360. - MOD(360.-HDR(M),360.)
          IF(RDATX(N).EQ.360.0)  RDATX(N) = 0.0
          IF(IPRINT.GT.1)  PRINT 198, N,RDATX(N)
+         rdata8_8(2) = hdr_8(M)
+         if(iprint.gt.1)  print *, 'RDATA8_8(2) STORED AS: ',rdata8_8(2)
       ELSE
          IRET = 3
          PRINT 104

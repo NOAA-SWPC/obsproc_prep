@@ -2,7 +2,7 @@ c$$$ Main Program Documentation Block
 c   BEST VIEWED WITH 94-CHARACTER WIDTH WINDOW
 c
 c Main Program: PREPOBS_PREPACQC
-c   Programmer: D. Keyser       Org: NP22       Date: 2015-04-17
+c   Programmer: D. Keyser       Org: NP22       Date: 2016-12-09
 c
 c Abstract: Performs the NRL aircraft data quality control on all types of reports (AIREP,
 c   PIREP, AMDAR, TAMDAR, MDCRS).  Replaces the previous routine of the same name originally
@@ -188,7 +188,34 @@ c                       2) Previously, halfgate was set to be 30 for the data pr
 c                          don't have second information in time, but a tighter value of 10
 c                          for the data profiles that do have second information in time. Now
 c                          halfgate is relaxed to be 30 for the data profiles that do have
-c                          complete time information. 
+c                          complete time information.
+c 2016-11-09  C. Hill -----
+c                 - Increased the maximum number of flights that can be processed, "MAXFLT",
+c                   from 7500 to 12500 to resolve >90% warning.
+c 2016-12-09  D. Keyser  --
+c                 - Nomenclature change: replaced "MDCRS/ACARS" with just "MDCRS".
+c                 - New LATAM AMDARs contain an encrypted flight number (in addition to a tail
+c                   number, all other AMDARs have only a tail number which is copied into
+c                   flight number). Read this in and use in QC processing.
+c                   BENEFIT: Improves track-checking and other QC for LATAM AMDARs.
+c                 - Since "ACARS" as referred to in NRL QC kernal (acftobs_qc.f) is not used
+c                   there and we earlier decided to use this to provide a separate category
+c                   for TAMDARs in the NRL QC kernal (for stratifying statistics), all
+c                   printout in acftobs_qc.f changes the term "ACARS" to "TAMDAR".  In
+c                   addition, all comments now refer to "TAMDAR" instead of "ACARS".
+c                 - Variables holding latitude and longitude data (including arrays "alat" and
+c                   "alon" passed between subroutines) now double precision. XOB and YOB in
+c                   PREPBUFR file now scaled to 10**5 (was 10**2) to handle new v7 AMDAR and
+c                   MDCRS reports which have this higher precision.
+c                   BENEFIT: Retains exact precison here. Improves QC processing.
+c                      - Note: QC here can be improved further by changing logic in many
+c                              places to account for the increased precision. This needs to be
+c                              investigated.  For now, locations in code where this seems
+c                              possible are noted by the spanning comments:
+c                    ! vvvv DAK-future change perhaps to account for incr. lat/lon precision
+c                    ! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
+c                      - The format for all print statements containing latitude and longitude
+c                        changed to print to 5 decimal places.
 c
 c Usage:
 c   Input files:
@@ -365,7 +392,7 @@ calloc                                 !  allocation should = nrpts4QC_pre)
 c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
       integer    maxflt               ! maximum number of flights allowed (inside NRL QC)
-      parameter (maxflt = 7500)
+      parameter (maxflt = 12500)
       character*6  cmaxflt            ! character form of maxflt
 
       integer    imiss                ! NRL integer missing value flag
@@ -424,9 +451,9 @@ c -------------------------------------------------------------
                                       !  code
 
       integer      itype(max_reps)     ! instrument (aircraft) type
-      real         alat(max_reps)      ! latitude
+      real*8       alat(max_reps)      ! latitude
      +,            alon(max_reps)      ! longitude
-     +,            pres(max_reps)      ! pressure
+      real         pres(max_reps)      ! pressure
      +,            ht_ft(max_reps)     ! altitude in feet
       integer      idt(max_reps)       ! time in seconds to anal. time (- before, + after)
       integer      idp(max_reps)       ! surface pressure change at ob location (not created
@@ -468,7 +495,7 @@ c -------------------------------------------------------------
      +,            nchk_s(max_reps)    ! NCEP QC flag for wind speed ob
      +,            phase(max_reps)     ! phase of flight for aircraft
 
-      logical      l_minus9c(max_reps) ! true for MDCRS/ACARS -9C temperatures
+      logical      l_minus9c(max_reps) ! true for MDCRS -9C temperatures
 
 c Pointers
 c --------
@@ -702,8 +729,8 @@ c add these in place of above declar. in event of future switch to dynamic memor
 calloc  character*11,allocatable :: c_qc(:)
 calloc  character*25,allocatable :: csort(:)
 calloc  integer,allocatable :: itype(:)
-calloc  real,   allocatable :: alat(:)
-calloc  real,   allocatable :: alon(:)
+calloc  real*8, allocatable :: alat(:)
+calloc  real*8, allocatable :: alon(:)
 calloc  real,   allocatable :: pres(:)
 calloc  real,   allocatable :: ht_ft(:)
 calloc  integer,allocatable :: idt(:)
@@ -850,11 +877,11 @@ c ******************************************************************************
 
 c Start program
 c -------------
-      call w3tagb('PREPOBS_PREPACQC',2015,107,1927,'NP22')
+      call w3tagb('PREPOBS_PREPACQC',2016,344,1927,'NP22')
 
       write(*,*)
       write(*,*) '************************************************'
-      write(*,*) 'Welcome to PREPOBS_PREPACQC, version 2015-04-17 '
+      write(*,*) 'Welcome to PREPOBS_PREPACQC, version 2016-12-09 '
       call system('date')
       write(*,*) '************************************************'
       write(*,*)
@@ -1241,7 +1268,7 @@ c --------------------------------
      +                   xiv_t(iob),ichk_t(iob),ob_q(iob),xiv_q(iob),
      +                   ichk_q(iob),ob_dir(iob),xiv_d(iob),ichk_d(iob),
      +                   ob_spd(iob),xiv_s(iob),ichk_s(iob),idp(iob)
- 8073 format(i5,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f9.3,1x,f8.1,1x,f7.0,1x,
+ 8073 format(i5,1x,a8,1x,a8,1x,a9,1x,i7,1x,2f11.5,1x,f8.1,1x,f7.0,1x,
      +       f5.2,4(2(1x,f8.2),1x,i5),1x,i4)
           write(*,*)
           kidt = 999999
@@ -1283,6 +1310,7 @@ c ------------------------------------------------------------------------------
           endif
         endif
  
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
         if(alat(iob).eq.amiss) then
           c_lat = '99999'
         else
@@ -1322,6 +1350,7 @@ c ------------------------------------------------------------------------------
           endif
           write(c_lon,'(i6)') ilon
         endif
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
  
         c_type = c_insty_ob(itype(iob))
 
@@ -1377,8 +1406,10 @@ ccccc+                               //c_ht_ft(1:5)
 ccccc+                               //c_idt(1:6)
      +                               //c_idt(1:6)           ! time
      +                               //c_ht_ft(1:5)         ! altitude
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
      +                               //c_lat(1:5)           ! latitude
      +                               //c_lon(1:6)           ! longitude
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
 
       enddo
  
@@ -1532,14 +1563,21 @@ c ------------------------------------------------------------------------------
      +             "tail #''s")')
 
         write(51,*)
-        write(51,'(" AMDAR reports (all types) report only a tail # - ",
-     +             "this is stored as both flight # and tail # for ",
-     +             "NRLACQC sorting - the PREPBUFR file continues to ",
+        write(51,'(" All AMDAR reports except LATAM report only a tail",
+     +            " # - this is stored as both flight # and tail # for",
+     +             " NRLACQC sorting - the PREPBUFR file continues to ",
      +             "encode only tail # (stored in ''SID'')")')
         write(51,*)
-        write(51,'(" MDCRS/ACARs reports from ARINC report both a tail",
-     +             " # and a flight # - these are used as reported for",
-     +             " NRLACQC sorting - the PREPBUFR file continues to ",
+        write(51,'(" AMDAR reports from LATAM report both a tail # and",
+     +             " a flight # - these are used as reported for ",
+     +             "NRLACQC sorting - the PREPBUFR file continues to ",
+     +             "encode both tail # and flight # (as ''SID'' and ",
+     +             "''ACID'',")')
+        write(51,*) 'resp.)'
+        write(51,*)
+        write(51,'(" MDCRS reports from ARINC report both a tail # and",
+     +             " a flight # - these are used as reported for ",
+     +             "NRLACQC sorting - the PREPBUFR file continues to ",
      +             "encode both tail # and flight # (as ''SID'' and ",
      +             "''ACID'',")')
         write(51,*) 'resp.)'
@@ -1547,13 +1585,13 @@ c ------------------------------------------------------------------------------
         write(51,*)
         write(51,3001)
  3001   format(173x,'! _PREPBUFR_QMs_!NRLACQC_REASON_CODE'/' index ',
-     +         'flight    tail num itype pof    lat    lon   time  ',
-     +         'hght   pres temp/ichk spec_h/ichk  wspd/ichk wdir/ichk',
-     +         ' t-prec !__qc_flag__!_______________csort_wbad',
-     +         '_______________! Pq Zq Tq Qq Wq!Prc Zrc Trc Qrc Wrc'/
-     +         '------ --------- -------- ----- ---  ----- ------ ',
-     +         '------ ----- ------ --------- ----------- ----------',
-     +         ' --------- ------ !-----------!',
+     +         'flight    tail num itp ph      lat       lon    ',
+     +         'time  hght   pres  temp/chk spec_h/chk  wspd/chk ',
+     +         'wdir/chk t-prec !__qc_flag__!_______________',
+     +         'csort_wbad_______________! Pq Zq Tq Qq Wq!Prc Zrc Trc ',
+     +         'Qrc Wrc'/'------ --------- -------- --- --  ',
+     +         '-------- --------- ------ ----- ------ --------- ',
+     +         '---------- --------- -------- ------ !-----------!',
      +         '----------------------------------------! -- -- -- ',
      +         '-- --!--- --- --- --- ---')
 
@@ -1581,8 +1619,8 @@ c9005       format(' WRC too large = ',i10)
           endif
 	enddo
 
- 8001 format(i6,1x,a9,1x,a8,2x,i4,3x,i1,2f7.2,1x,i6,1x,i5,1x,f6.1,1x,
-     +       f6.2,i3,1x,f7.2,1x,i3,1x,f6.1,1x,i3,2x,i4,1x,i3,1x,f6.2,1x,
+ 8001 format(i6,1x,a9,1x,a8,i4,1x,i2,2f10.5,1x,i6,1x,i5,1x,f6.1,1x,
+     +       f6.2,i3,1x,f7.2,i3,1x,f6.1,i3,2x,i4,i3,1x,f6.2,1x,
      +       '!',a11,'!',a40,'!',5(1x,i2.2),'!',i3.3,4(1x,i3.3))
 
 c Close data listing file

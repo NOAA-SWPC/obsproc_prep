@@ -1,15 +1,15 @@
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    IW3UNPBF
-C   PRGMMR: KEYSER           ORG: NP22       DATE: 2015-03-09
+C   PRGMMR: KEYSER           ORG: NP22       DATE: 2017-01-11
 C
 C ABSTRACT: READS AND UNPACKS ONE REPORT FROM INPUT NCEP BUFR DUMP
 C   FILE INTO SPECIFIED FORMAT.  FUNCTION RETURNS THE UNPACKED REPORT
 C   TO THE CALLING PROGRAM IN THE ARRAY 'OBS' AS WELL AS IN VARIABLES
-C   'STNID', 'CRES1', 'CRES2', 'OBS2' AND 'OBS3'.  IT ALSO RETURNS
-C   INFORMATION ABOUT THE INPUT DATA SET ITSELF (NAME, CENTER DATE,
-C   DUMP TIME) AND THE BUFR MESSAGE TYPE.  VARIOUS CONTINGENCIES ARE
-C   COVERED BY RETURN VALUE OF THE FUNCTION AND PARAMETER 'IER' -
+C   'STNID', 'CRES1', 'CRES2', 'OBS2', 'OBS3' AND 'OBS8_8'.  IT ALSO
+C   RETURNS INFORMATION ABOUT THE INPUT DATA SET ITSELF (NAME, CENTER
+C   DATE, DUMP TIME) AND THE BUFR MESSAGE TYPE.  VARIOUS CONTINGENCIES
+C   ARE COVERED BY RETURN VALUE OF THE FUNCTION AND PARAMETER 'IER' -
 C   FUNCTION AND IER HAVE SAME VALUE.  REPEATED CALLS OF FUNCTION WILL
 C   RETURN A SEQUENCE OF UNPACKED REPORTS.  THE CALLING PROGRAM MAY
 C   SWITCH TO A NEW 'NUNIT' AT ANY TIME, THAT DATASET WILL THEN BE READ
@@ -174,7 +174,7 @@ C 2004-02-02  D. A. KEYSER -- ADDED ABILITY TO PROCESS MOBILE SURFACE
 C     LAND SYNOPTIC REPORTS OUT OF ADPSFC DUMP FILE [INCL. STN. ELEV
 C     Q.M. WHICH IS STORED IN OUTPUT HEADER WORD 12 (PREV. MISSING AND
 C     IS STILL MISSING FOR ALL OTHER DATA TYPES)]; ADDED ABILITY TO
-C     PROCESS E-ADAS AIRCRAFT REPORTS OUT OF THE AIRCFT DUMP FILE;
+C     PROCESS E-AMDAR AIRCRAFT REPORTS OUT OF THE AIRCFT DUMP FILE;
 C     ADDED INFO. NOT PREVIOUSLY DECODED FOR MESONET DATA FROM MSONET
 C     DUMP FILE {INCL. ID STRINGS FOR PROVIDER AND SUB-PROVIDER STORED
 C     IN RESERVE WORDS 1 AND 2, RESP. (CHARACTER)}; ACCOUNTS FOR
@@ -287,7 +287,7 @@ C     WINDS) (BUFR CODE TABLE 0-33-203) IN CAT. 8 CODE FIGURE 358;
 C     EXPANDED ARRAYS OBS3 FROM (5,255,5) TO (5,255,7) AND NOBS3 FROM
 C     (5) TO (7) TO ACCOUNT FOR PROCESSING OF ADDITIONAL MULTIPLE-LEVEL
 C     SENSIBLE WEATHER ELEMENTS CONTAINING AIRFRAME ICING (RECCOS,
-C     PIREPS, E-ADAS, CANADIAN AMDAR, TAMDAR) AND DEGREE OF TURBULENCE
+C     PIREPS, E-AMDAR, CANADIAN AMDAR, TAMDAR) AND DEGREE OF TURBULENCE
 C     (RECCOS AND ALL AIRCRAFT) INFORMATION (SEE REMARKS), THE LATTER
 C     REPLACES STORAGE OF SINGLE DEGREE OF TURBULENCE VALUE WHICH HAD
 C     BEEN IN CAT. 8, CODE FIGURE 916; ALL CALLS TO UFBINT TO RETURN
@@ -396,10 +396,85 @@ C     data (only) (all blanks for all other data types for now). (Note:
 C     Previously, WMO bulletin originator had been stored in characters
 C     1-4 of header reserve character word 1 and bulletin header was
 C     not stored.)
+C 2016-02-09  S. MELCHIOR -- Adjusted code to accommodate the
+C     processing of two new aircraft data types: Korean AMDAR (BUFR)
+C     and Catch-All AMDAR (BUFR).  Either pre-version 7 BUFR or new
+C     version 7 BUFR for Catch-All AMDAR, MDCRS and E-AMDAR can be
+C     handled.  Adjustments are primarily in function R05UBF. Added two
+C     functions to estimate pressure using indicated altitude and U.S.
+C     Standard Atmosphere.  The pressure is used to estimate dew point
+C     temperature to perform a gross check on moisture data.  The
+C     estimated pressures are not considered reported pressure and
+C     remain missing in the encoded report. Details and clarification
+C     were added explaining how height information is obtained for
+C     different aircraft data types. Adjusted setting of report subtype
+C     (ISTP) to read the last three integers of the subset rather than
+C     the last two integers.  This preserves the difference between
+C     legacy TAC format AMDAR tank and new BUFR format "Catch-All" tank
+C     (e.g. 004003 and 004103). Phase of flight information for version
+C     7 BUFR data is stored in a different mnemonic (DPOF) than
+C     pre-version 7 BUFR version (POAF).  The values do not exactly
+C     correlate.  Logic was added to translate DPOF values into POAF
+C     values since downstream codes still expect POAF.  All references
+C     to E-ADAS have been changed to E-AMDAR.
+C     {Note: Some modifications made to handle new Panasonic (AirDAT)
+C            TAMDAR.  This needs further testing.}
+C 2016-07-28  C. Hill --
+C     Added capability to process BUFR(v4) TAMDAR data, as provided by
+C     Panasonic/AirDat since November 2015. HMSL (pressure altitude) is
+C     given precedence over FLVLST (GPS altitude) in defining flight
+C     level height (ELEV) and in calcuating pressure values, consistent
+C     with other aircraft data types and performed without adversely
+C     affecting ELEV assignment of the other aircraft data types.
+C     Quality marks for temperature and wind are derived from quality
+C     information provided by QMRKH fields in the reports. The quality
+C     mark for moisture is derived from the "percent confidence" (PCCF)
+C     field provided in the reports. {Additional fields of FLVLST and
+C     IALR (instantaneous altitude rate) are available and may be
+C     considered for future inclusion in PREPBUFR files.}
+C 2016-11-25  D. A. KEYSER --
+C     Changes in processing of TAMDAR data provided by Panasonic/AirDat
+C     (TAMDARB):
+C       - Stores instantaneous altitude rate (read from IALR) in cat.8
+C         c.f. 932 (.001 x m/sec).
+C       - Stores type of commercial aircraft (read from ACTP) in header
+C         reserve character (*8) word 2.
+C       - Stores observer identification (read from OBSVR) in bytes 1-4
+C         of header reserve character (*8) word 1.
+C       - Cleaned up logic which reads in BORG and BUHD (sets to all
+C         blanks since these are missing for TAMDARB data). Also store
+C         all blanks in output character (*11) CBULLX in this case.
+C       - Bug fixes, mostly minor.  Most serious one was logic not
+C         honoring incoming TQM/WQM/QQM other than 2 in transformation
+C         of TAMDAR QMRKH/PCCF into updated TQM/WQM/QQM (from 2016-07-28
+C         update).
+C       - Treat these like MDCRS in that an SDM purge on wind QM does
+C         NOT force a purge also on temperature QM (this is still done
+C         for all other aircraft types).
+C     Changes in processing of Catch-All AMDAR (BUFR) data:
+C       - Stores flight number (read from ACID) in header reserve
+C         character (*8) word 2 (if ACID is missing, stores all blanks
+C         here).
+C 2016-11-30  D. A. KEYSER --
+C     Added new output real, double-precision argument array OBS8_8 of
+C     length 2 to return full-precision latitude and longitude for a
+C     report.
+C     BENEFIT: Although lat and lon are returned in OBS(1:2) these are
+C              at machine precison, which is normally R*4.  Now that
+C              many reports in the dumps store lat/lon at 0.001 or even
+C              0.00001 degree precision, and now that PREPBUFR encodes
+C              YOB (lat) and XOB (lon) at 0.00001 degree precision, this
+C              change will ensure that lat/lon is always accurate to
+C              0.00001 degrees in all downstream processing.
+C 2017-01-11  C. Hill --
+C     For TAMDARB reports, always set moisture quality mark (QQM) to 13
+C     if temperature quality mark (TQM) was set to 13 earlier in subr.
+C     R05UBF .
+C              
 C
 C
 C USAGE:    II = IW3UNPBF(NUNIT, OBS, STNID, CRES1, CRES2, CBULL, OBS2,
-C                         OBS3, NOBS3, DSNAME, IDSDAT, IDSDMP_8,
+C                         OBS3, NOBS3, OBS8_8, DSNAME, IDSDAT, IDSDMP_8,
 C                         SUBSET_r, SUBSKP, IER)
 C   INPUT ARGUMENT LIST:
 C     NUNIT    - FORTRAN UNIT NUMBER FOR SEQUENTIAL DATA SET CONTAINING
@@ -466,6 +541,8 @@ C     NOBS3    - 7-WORD ARRAY CONTAINING NUMBER OF LEVELS OF DATA
 C                IN THE OBS3(X,Y,1), OBS3(X,Y,2), OBS3(X,Y,3),
 C                OBS3(X,Y,4), OBS3(X,Y,5), OBS3(X,Y,6) AND OBS3(X,Y,7)
 C                ARRAYS (SEE REMARKS)
+C     OBS8_8   - 2-WORD REAL*8 ARRAY CONTAINING ADDITIONAL REPORT DATA
+C                (LATITUDE AND LONGITUDE) (SEE REMARKS FOR CONTENT)
 C     DSNAME   - CHARACTER*8 DATA SET NAME (SAME FOR ALL REPORTS IN
 C                A COMMON INPUT DATA SET - SEE REMARKS FOR IER=1)
 C     IDSDAT   - INTEGER DATA SET CENTER DATE IN FORM YYYYMMDDHH (SAME
@@ -501,9 +578,9 @@ C REMARKS:
 C     THE RETURN FLAGS IN IER (AND FUNCTION IW3UNPBF ITSELF) ARE:
 C          =   0  OBSERVATION READ AND UNPACKED INTO LOCATIONS 'OBS',
 C                   'STNID', 'CRES1', 'CRES2', 'CBULL', 'OBS2', 'OBS3',
-C                   'DSNAME', 'IDSDAT', AND 'IDSDMP_8'.  SEE REMARKS
-C                   BELOW FOR CONTENTS. NEXT CALL TO IW3UNPBF WILL
-C                   RETURN NEXT OBSERVATION IN DATA SET.
+C                   'OBS8_8', 'DSNAME', 'IDSDAT', AND 'IDSDMP_8'.  SEE
+C                   REMARKS BELOW FOR CONTENTS. NEXT CALL TO IW3UNPBF
+C                   WILL RETURN NEXT OBSERVATION IN DATA SET.
 C          =   1  INFORMATION ABOUT THE BUFR DATASET IS RETURNED IN
 C                   THE OUTPUT ARGUMENTS DSNAME, IDSDAT, IDSDMP_8 (SEE
 C                   OUTPUT ARGUMENT LIST ABOVE)
@@ -528,7 +605,7 @@ C                        TOP OF NCEP BUFR DUMP FILE, OR SOME OTHER
 C                        PROBLEM IN DECODING ONE OR MORE REPORTS IN AN
 C                        NCEP BUFR DUMP FILE.
 C                  NO USEFUL INFORMATION IN 'OBS', 'STNID', 'CRES1',
-C                  'CRES2', 'CBULL', 'OBS2', 'OBS3', 'DSNAME',
+C                  'CRES2', 'CBULL', 'OBS2', 'OBS3', 'OBS8_8', 'DSNAME',
 C                  'IDSDAT', AND 'IDSDMP_8' ARRAYS.  CALLING PROGRAM
 C                  CAN CHOOSE TO STOP WITH NON-ZERO CONDITION CODE OR
 C                  RESET 'NUNIT' TO POINT TO A NEW DATA SET (IN WHICH
@@ -543,9 +620,10 @@ C                MISSING REAL DATA ARE SET TO XMISS (99999.)}
 C
 C     (NOTE: DOES NOT INCLUDE STATION IDENTIFICATION, CHARACTER RESERVE
 C            WORD 1, CHARACTER RESERVE WORD 2, "CBULL", "OBS2" AND
-C            "OBS3" ARRAY OUTPUT - SEE OUTPUT ARGUMENTS "STNID",
-C            "CRES1", "CRES2" AND "CBULL" ABOVE AND "OBS2", AND "OBS3"
-C            CONTENTS BELOW)
+C            "OBS3" ARRAY OUTPUT; LATITUDE AND LONGITUDE IN OBS(1:2) ARE
+C            ALSO OUTPUT IN REAL*8 IN "OBS8_8"  - SEE OUTPUT ARGUMENTS
+C            "STNID", "CRES1", "CRES2" AND "CBULL" ABOVE AND "OBS2",
+C            "OBS3" AND "OBS8_8" CONTENTS BELOW)
 C
 C   ***************************************************************
 C   WORD   CONTENT                   UNIT                 FORMAT
@@ -634,14 +712,19 @@ C                 =  1 - AIREP FORMAT AIRCRAFT
 C                 =  2 - PIREP FORMAT AIRCRAFT
 C                 =  3 - AMDAR FORMAT ASDAR/ACARS AIRCRAFT
 C                 =  4 - MDCRS ACARS AIRCRAFT (ARINC -> NCEP)
-C                 =  6 - E-ADAS AIRCRAFT {EUROPEAN AMDAR (ASDAR/ACARS)
+C                 =  6 - E-AMDAR AIRCRAFT {EUROPEAN AMDAR (ASDAR/ACARS)
 C                         DATA ORIGINALLY IN BUFR}
 C                 =  7 - MDCRS ACARS AIRCRAFT (ARINC -> AFWA -> NCEP)
-C                 =  8 - TAMDAR-Mesaba AIRCRAFT
+C                 =  8 - MADIS/TAMDAR-Mesaba AIRCRAFT
 C                 =  9 - CANADIAN AMDAR AIRCRAFT (ASDAR/ACARS DATA
 C                         ORIGINALLY IN BUFR)
-C                 = 12 - TAMDAR-PenAir AIRCRAFT
-C                 = 13 - TAMDAR-Chautauqua AIRCRAFT
+C                 = 10 - TAMDAR {FROM PANASONIC(AirDAT), DATA ORIGINALLY
+C                        IN BUFR}, HEREAFTER REFERRED TO AS TAMDARB
+C                 = 11 - KOREAN AMDAR AIRCRAFT (DATA ORIGINALLY IN BUFR)
+C                 = 12 - MADIS/TAMDAR-PenAir AIRCRAFT
+C                 = 13 - MADIS/TAMDAR-Chautauqua AIRCRAFT
+C                 = 103 - CATCH-ALL AMDAR AIRCRAFT (DATA ORIGINALLY IN
+C                         BUFR)
 C             RECONNAISSANCE/DROPWINSONDE (DUMP REPORT TYPE 31), WHERE:
 C                 =  1 - RECONNAISSANCE AIRCRAFT
 C                 =  2 - DROPWINSONDE
@@ -955,9 +1038,9 @@ C                   WITHOUT FORECAST CONSISTENCY TEST (SATELLITE WINDS)
 C                   (%) (BUFR CODE TABLE 0-33-198)
 C           358 - PERCENT CONFIDENCE BASED ON NESDIS EXPECTED ERROR
 C                   (SATELLITE WINDS) (%) (BUFR CODE TABLE 0-33-203)
-C           914 - AMDAR FORMAT, MDCRS ACARS, E-ADAS OR CANADIAN AMDAR
+C           914 - AMDAR FORMAT, MDCRS ACARS, E-AMDAR OR CANADIAN AMDAR
 C                    AIRCRAFT PHASE OF FLIGHT (BUFR CODE TABLE 0-08-004)
-C           915 - AMDAR FORMAT, MDCRS ACARS. E-ADAS OR CANADIAN AMDAR
+C           915 - AMDAR FORMAT, MDCRS ACARS. E-AMDAR OR CANADIAN AMDAR
 C                    AIRCRAFT  PRECISION OF TEMPERATURE OBSERVATION IN
 C                    0.01*DEG. K
 C           926 - MDCRS ACARS TURBULENCE INDEX FOR PERIOD T-1 MINUTE TO
@@ -972,6 +1055,7 @@ C           930 - TAMDAR TURBULENCE INDEX (BUFR CODE TABLE 0-11-235)
 C                  INDICATOR 2 CONTAINS TURBULENCE INDEX QUALITY MARKER
 C                  (0-15)
 C           931 - TAMDAR ROLL ANGLE FLAG (BUFR CODE TABLE 0-02-199)
+C           932 - INSTANTANEOUS ALTITUDE RATE IN .001*METERS/SECOND
 C
 C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
@@ -1118,7 +1202,23 @@ C    (X)
 C   ----   --------------------------------   -------------------
 C     1    DEGREE OF TURBULENCE               BUFR CODE TBL "0 11 031"
 C     2    HEIGHT OF BASE OF TURBULENCE       METERS
-C     3    HEIGHT OF TOP OF TURBULENCE        METERS 
+C     3    HEIGHT OF TOP OF TURBULENCE        METERS
+C
+C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C
+C          CONTENTS OF UNPACKED REPORT DATA IN THE "OBS8_8" ARRAY
+C                       (ALL VALUES IN REAL*8 FORMAT)
+C                    (MISSING DATA ARE SET TO "BMISS")
+C
+C   ***************************************************************
+C   WORD   CONTENT                            UNIT
+C   ----   --------------------------------   -------------------
+C     1    LATITUDE                           DEGREES (N+,S-)
+C     2    LONGITUDE                          DEGREES (E+,W-)
+C
+C
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C
 C
 C ATTRIBUTES:
@@ -1127,7 +1227,7 @@ C   MACHINE:  NCEP WCOSS
 C
 C$$$
       FUNCTION IW3UNPBF(LUNIT,OBS,STNID,CRES1,CRES2,CBULL,OBS2,OBS3,
-     $ NOBS3,DSNAME,IDSDAT,IDSDMP_8,SUBSET_r,SUBSKP,IER)
+     $ NOBS3,obs8_8,DSNAME,IDSDAT,IDSDMP_8,SUBSET_r,SUBSKP,IER)
  
       PARAMETER (NUMCAT=8, LEVLIM=300)
 
@@ -1163,7 +1263,7 @@ C$$$
 
       INTEGER(8) IDSDMP_8,IDSDAX_8,IDSDMX_8
 
-      REAL(8)  BMISS,GETBMISS
+      REAL(8)  BMISS,GETBMISS,obs8_8(2)
 
       LOGICAL  SUBSKP(0:255,0:200)
 
@@ -1254,7 +1354,7 @@ C  THE JWFILE INDICATOR: =0 IF UNOPENED; =2 IF OPENED AND NCEP BUFR
 C  ----------------------------------------------------------------
  
       IF(JWFILE(LUNIT).EQ.0) THEN
-         PRINT'(" ===> IW3UNPBF - WCOSS VERSION: 03-09-2015")'
+         PRINT'(" ===> IW3UNPBF - WCOSS VERSION: 01-11-2017")'
 
 C  DETERMINE MACHINE WORD LENGTH (BYTES) FOR BOTH INTEGERS AND REALS
 C  -----------------------------------------------------------------
@@ -1315,7 +1415,7 @@ C   this type/subtype with reports present for the diagnostic print
             END IF
             GO TO 60
          END IF
-         IERR = I02UBF(LUNIT,OBS,OBS2,OBS3,NOBS3,SUBSKP,IER)
+         IERR = I02UBF(LUNIT,OBS,OBS2,OBS3,NOBS3,obs8_8,SUBSKP,IER)
          IF(IERR.EQ.1) THEN
             PRINT'(" IW3UNPBF - OPENED AN NCEP BUFR FILE IN UNIT ",I0)',
      $       LUNIT
@@ -1338,7 +1438,7 @@ C   this type/subtype with reports present for the diagnostic print
             IW3UNPBF = 999
          END IF
       ELSE IF(JWFILE(LUNIT).EQ.2) THEN
-         IF(I02UBF(LUNIT,OBS,OBS2,OBS3,NOBS3,SUBSKP,IER).NE.0)
+         IF(I02UBF(LUNIT,OBS,OBS2,OBS3,NOBS3,obs8_8,SUBSKP,IER).NE.0)
      $    JWFILE(LUNIT) = 0
          IF(IER.GT.0) CALL CLOSBF(LUNIT)
          IF(IER.EQ.2.OR.IER.EQ.3)  THEN
@@ -1517,7 +1617,7 @@ C   this type/subtype with reports present for the diagnostic print
 C***********************************************************************
 C***********************************************************************
 C***********************************************************************
-      FUNCTION I02UBF(LUNIT,OBS,OBS2,OBS3,NOBS3,SUBSKP,IER)
+      FUNCTION I02UBF(LUNIT,OBS,OBS2,OBS3,NOBS3,obs8_8,SUBSKP,IER)
  
       PARAMETER (MAXOBS=3500)
 
@@ -1530,6 +1630,7 @@ C***********************************************************************
       CHARACTER*6  C01UBF
       DIMENSION    OBS(MAXOBS),OBS2(43),OBS3(5,255,7),NOBS3(7),JDATE(5),
      $ JDUMP(5)
+      real(8)    obs8_8(2)
       INTEGER(8) IDSDAX_8,IDSDMX_8,JDUMP_8(5)
       LOGICAL  SUBSKP(0:255,0:200)
  
@@ -1691,7 +1792,8 @@ C   this type/subtype with reports present for the diagnostic print
             GO TO 1
          END IF
    20    CONTINUE
-         IF(IRET.EQ.0) I02UBF = R01UBF(SUBSET,LUNIT,OBS,OBS2,OBS3,NOBS3)
+         IF(IRET.EQ.0) I02UBF = R01UBF(SUBSET,LUNIT,OBS,OBS2,OBS3,NOBS3,
+     $    obs8_8)
          IF(IRET.NE.0) I02UBF = 2
          IF(I02UBF.EQ.-9999)  GO TO 7822
          IER = I02UBF
@@ -1754,11 +1856,12 @@ C***********************************************************************
 C***********************************************************************
 C***********************************************************************
 C***********************************************************************
-      FUNCTION R01UBF(SUBSET,LUNIT,OBS,OBS2,OBS3,NOBS3)
+      FUNCTION R01UBF(SUBSET,LUNIT,OBS,OBS2,OBS3,NOBS3,obs8_8)
  
       CHARACTER*(*) SUBSET
       CHARACTER*6   C01UBF,ADPSUB
       DIMENSION     OBS(*),OBS2(43),OBS3(5,255,7),NOBS3(7)
+      real*8        obs8_8(2)
 
       SAVE
  
@@ -1768,15 +1871,15 @@ C  -------------------------------------------------------
       R01UBF = 4
       ADPSUB = C01UBF(SUBSET)
       IF(ADPSUB .EQ. 'ADPUPA')  THEN
-         R01UBF = R03UBF(LUNIT,OBS,OBS2,OBS3,NOBS3)
+         R01UBF = R03UBF(LUNIT,OBS,OBS2,OBS3,NOBS3,obs8_8)
       ELSE  IF(ADPSUB(1:3).EQ.'AIR')  THEN
-         R01UBF = R05UBF(LUNIT,OBS,OBS2,OBS3,NOBS3)
+         R01UBF = R05UBF(LUNIT,OBS,OBS2,OBS3,NOBS3,obs8_8)
       ELSE  IF(ADPSUB .EQ. 'SATWND')  THEN
-         R01UBF = R06UBF(LUNIT,OBS,OBS2,OBS3,NOBS3)
+         R01UBF = R06UBF(LUNIT,OBS,OBS2,OBS3,NOBS3,obs8_8)
       ELSE  IF(ADPSUB .EQ. 'SPSSMI')  THEN
-         R01UBF = R07UBF(LUNIT,OBS,OBS2,OBS3,NOBS3)
+         R01UBF = R07UBF(LUNIT,OBS,OBS2,OBS3,NOBS3,obs8_8)
       ELSE
-         R01UBF = R04UBF(LUNIT,OBS,OBS2,OBS3,NOBS3)
+         R01UBF = R04UBF(LUNIT,OBS,OBS2,OBS3,NOBS3,obs8_8)
       END IF
 
       RETURN
@@ -2692,7 +2795,7 @@ C+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 C***********************************************************************
 C***********************************************************************
 C***********************************************************************
-      FUNCTION R03UBF(LUNIT,OBS,OBS2,OBS3,NOBS3)
+      FUNCTION R03UBF(LUNIT,OBS,OBS2,OBS3,NOBS3,obs8_8)
 C     ---> PROCESSES ADPUPA DATA (002/*, 004/005)
  
       PARAMETER (NUMCAT=8, LEVLIM=300)
@@ -2714,7 +2817,7 @@ C     ---> PROCESSES ADPUPA DATA (002/*, 004/005)
       CHARACTER*8  SUBSET,SID,RSV1,RSV2
       REAL(8)  RID_8,HDR_8(12),VSG_8(255),OBS2_8(43),OBS3_8(5,255,7),
      $ RCT_8(5,255),ARR_8(10,255),RAT_8(255),RMORE_8(4),RGP10_8(255),
-     $ PRGP10_8(255),RPMSL_8,RPSAL_8,BMISS,AMINIMUM_8
+     $ PRGP10_8(255),RPMSL_8,RPSAL_8,BMISS,AMINIMUM_8,obs8_8(2)
       DIMENSION  OBS(*),OBS2(43),OBS3(5,255,7),NOBS3(7),RCT(5,255),
      $ ARR(10,255), RAT(255),RMORE(4),RGP10(255),PRGP10(255),P2(255),
      $ P8(255),P16(255)
@@ -2743,12 +2846,14 @@ C  ---------------------------------------------------------------------
       R03UBF = 0
  
 C  STORE SINGLE LEVEL REPORT DATA DIRECTLY INTO OBS2 ARRAY AND
-C   MULTIPLE LEVEL REPORT DATA DIRECTLY INTO OBS3 ARRAY
-C  -----------------------------------------------------------
+C   MULTIPLE LEVEL REPORT DATA DIRECTLY INTO OBS3,
+C   DOUBLE-PRECISION SINGLE LEVEL REPORT DATA DIRECTLY INTO OBS8_8 ARRAY
+C  ---------------------------------------------------------------------
 
       OBS2_8 = BMISS
       OBS3_8 = BMISS
       NOBS3  = 0
+      obs8_8 = bmiss
       CALL UFBINT(LUNIT,OBS2_8( 1),2,1,IRET,'RSRD EXPRSRD')
       CALL UFBINT(LUNIT,OBS2_8( 4),1,1,IRET,'SST1')
       IF(IBFMS(OBS2_8(4)).EQ.0)  OBS2_8(41) = 2.0
@@ -2899,6 +3004,9 @@ cpppppppppp
             RETURN
          END IF
       END IF
+
+      obs8_8(1) = hdr_8(3)
+      obs8_8(2) = hdr_8(2)
 
       XOB = HDR(2)
       YOB = HDR(3)
@@ -3449,7 +3557,7 @@ C  --------------------------------
 C***********************************************************************
 C***********************************************************************
 C***********************************************************************
-      FUNCTION R04UBF(LUNIT,OBS,OBS2,OBS3,NOBS3)
+      FUNCTION R04UBF(LUNIT,OBS,OBS2,OBS3,NOBS3,obs8_8)
 C     ---> PROCESSES SURFACE AND MESONET DATA (000/*, 001/*, 255/*)
  
       COMMON/IUBFAA/BMISS
@@ -3467,7 +3575,7 @@ C     ---> PROCESSES SURFACE AND MESONET DATA (000/*, 001/*, 255/*)
       INTEGER ITIWM(0:15)
       REAL(8) RID_8,UFBINT_8,OBS2_8(43),OBS3_8(5,255,7),RRVSTG_8(255),
      $ RPRVSTG_8(255),HDR_8(20),RCT_8(5,255),SOLR_8(3,255),
-     $ TOPC_8(5,255),RMSO_8(2),RQCD_8,BMISS,AMINIMUM_8
+     $ TOPC_8(5,255),RMSO_8(2),RQCD_8,BMISS,AMINIMUM_8,obs8_8(2)
       DIMENSION  OBS(*),OBS2(43),OBS3(5,255,7),NOBS3(7),HDR(20),
      $ RCT(5,255),RRSV(5),SOLR(3,255),TOPC(5,255)
       EQUIVALENCE  (RID_8,SID),(RRVSTG_8,PRVSTG),(RPRVSTG_8,SPRVSTG),
@@ -3484,13 +3592,15 @@ C     ---> PROCESSES SURFACE AND MESONET DATA (000/*, 001/*, 255/*)
 
       R04UBF = 0
 
-C  STORE SINGLE LEVEL REPORT DATA DIRECTLY INTO OBS2 ARRAY AND
-C   MULTIPLE LEVEL REPORT DATA DIRECTLY INTO OBS3 ARRAY
-C  -----------------------------------------------------------
+C  STORE SINGLE LEVEL REPORT DATA DIRECTLY INTO OBS2 ARRAY,
+C   MULTIPLE LEVEL REPORT DATA DIRECTLY INTO OBS3 ARRAY AND
+C   DOUBLE-PRECISION SINGLE LEVEL REPORT DATA DIRECTLY INTO OBS8_8 ARRAY
+C  ---------------------------------------------------------------------
 
       OBS2_8 = BMISS
       OBS3_8 = BMISS
       NOBS3  = 0
+      obs8_8 = bmiss
       CALL UFBINT(LUNIT,OBS2_8(1),2,1,IRET,'RSRD EXPRSRD')
       CALL UFBINT(LUNIT,OBS2_8(4),1,1,IRET,'SST1')
       IF(IBFMS(OBS2_8(4)).EQ.0)  OBS2_8(41) = 2.0
@@ -3614,21 +3724,23 @@ C  -----------------------------------------------
 C  IN EARLY 2004, MESONETS WILL CONVERT TO HIGH-RESOLUTION LAT/LON
 C  ---------------------------------------------------------------
 
-      IF(HDR(2).GE.BMISS)  THEN
+      IF(HDR_8(2).GE.BMISS)  THEN
          CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'CLONH')
-         HDR(2)=UFBINT_8
+         HDR_8(2)=UFBINT_8
       END IF
-      IF(HDR(3).GE.BMISS)  THEN
+      IF(HDR_8(3).GE.BMISS)  THEN
          CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'CLATH')
-         HDR(3)=UFBINT_8
+         HDR_8(3)=UFBINT_8
       END IF
+      obs8_8(1) = hdr_8(3)
+      obs8_8(2) = hdr_8(2)
 
       CALL UFBINT(LUNIT,RCT_8, 5,255,NRCT,RCSTR);RCT=RCT_8
       IF(HDR(5).GE.BMISS) HDR(5) = 0
       RCTIM = NINT(RCT(1,1))+NINT(RCT(2,1))/60.
       RID_8 = HDR_8(1)
-      XOB   = HDR(2)
-      YOB   = HDR(3)
+      XOB   = HDR_8(2)
+      YOB   = HDR_8(3)
       RHR   = BMISS
       IF(HDR(4).LT.BMISS)  RHR = NINT(HDR(4))+NINT(HDR(5))/60.
       ELV   = HDR(6)
@@ -4006,8 +4118,8 @@ C  ------------------------------------------------------------------
 C***********************************************************************
 C***********************************************************************
 C***********************************************************************
-      FUNCTION R05UBF(LUNIT,OBS,OBS2,OBS3,NOBS3)
-C     ---> PROCESSES AIRCRAFT DATA (004/001-004, 004/006-009)
+      FUNCTION R05UBF(LUNIT,OBS,OBS2,OBS3,NOBS3,obs8_8)
+C     ---> PROCESSES AIRCRAFT DATA (004/001-004, 004/006-011, 004/103)
 
       COMMON/IUBFAA/BMISS
       COMMON/IUBFBB/KNDX,KSKACF(8),KSKUPA,KSKSFC,KSKSAT,KFLSAT(12),
@@ -4024,15 +4136,17 @@ C     ---> PROCESSES AIRCRAFT DATA (004/001-004, 004/006-009)
       CHARACTER*500 CRAWRX
       CHARACTER*11  CBULLX
       CHARACTER*8  SUBSET,SID,RSV1,RSV2,CRAW(255),ACID,QCD,CBUHD,
-     $ CBORG
+     $ CBORG,actp,obsvr
       REAL(8) RID_8,UFBINT_8,RNS_8,OBS2_8(43),OBS3_8(5,255,7),
-     $ RACID_8,RTAM_8(2),RTAM_WDIR_8,RQCD_8,BULL_8(2)
+     $ RACID_8,RTAM_8(2),RTAM_WDIR_8,RQCD_8,BULL_8(2),RTAMB_8(7),
+     $ ractp_8,robsvr_8,obs8_8(2)
       REAL(8) HDR_8(20),RCT_8(5,255),ARR_8(10,255),RAW_8(255),TRBX_8(5),
-     $ ROLF_8,BMISS,AMINIMUM_8,AMAXIMUM_8
+     $ ROLF_8,BMISS,AMINIMUM_8,AMAXIMUM_8,rialr_8
       DIMENSION    OBS(*),OBS2(43),OBS3(5,255,7),NOBS3(7),HDR(20),
      $ RCT(5,255),ARR(10,255),TRBX(5)
       EQUIVALENCE  (RID_8,SID),(RAW_8,CRAW),(RACID_8,ACID),
-     $ (RQCD_8,QCD),(BULL_8(1),CBORG),(BULL_8(2),CBUHD)
+     $ (RQCD_8,QCD),(BULL_8(1),CBORG),(BULL_8(2),CBUHD),(ractp_8,actp),
+     $ (robsvr_8,obsvr)
 
       SAVE
  
@@ -4042,7 +4156,7 @@ C     ---> PROCESSES AIRCRAFT DATA (004/001-004, 004/006-009)
       DATA RCSTR/'RCHR RCMI RCTS                              '/
  
       DATA IMISS/99999/,XMISS/99999./
- 
+
 C FCNS HGTF_HI, HGTF_LO CALC. Z FROM P < 226.3MB AND P > 226.3MB; RESP
 C  (U.S. STANDARD ATMOSPHERE)
 
@@ -4061,15 +4175,24 @@ C  ---------------------------------------------------------------------
       ES(T) = 6.1078 * EXP((17.269 * (T - 273.16))/((T - 273.16)+237.3))
       QFRMTP(T,P) = (0.622 * ES(T))/(P - (0.378 * ES(T)))
 
+C  Fcns below estimate pressure (mb) using indicated altitude (m) via
+C  U.S. Std. Atmos. Est. for Z <= 11,000 and Z > 11,000 respectively
+C  ------------------------------------------------------------------
+
+      PR(Z) = 1013.25 * (((288.15 - (.0065 * Z))/288.15)**5.256)
+      PRS(Z) = 226.3 * EXP(1.576106E-4 * (11000. - Z))
+
       R05UBF = 0
- 
-C  STORE SINGLE LEVEL REPORT DATA DIRECTLY INTO OBS2 ARRAY AND
-C   MULTIPLE LEVEL REPORT DATA DIRECTLY INTO OBS3 ARRAY
-C  -----------------------------------------------------------
+
+C  STORE SINGLE LEVEL REPORT DATA DIRECTLY INTO OBS2 ARRAY,
+C   MULTIPLE LEVEL REPORT DATA DIRECTLY INTO OBS3 ARRAY AND
+C   DOUBLE-PRECISION SINGLE LEVEL REPORT DATA DIRECTLY INTO OBS8_8 ARRAY
+C  ---------------------------------------------------------------------
 
       OBS2_8 = BMISS
       OBS3_8 = BMISS
       NOBS3  = 0
+      obs8_8 = bmiss
       CALL UFBINT(LUNIT,OBS2_8,2,1,IRET,'RSRD EXPRSRD')
                                                          ! All AIRCRAFT
       CALL UFBINT(LUNIT,OBS3_8(1,1,7),5,255,IRET,'DGOT HBOT HTOT')
@@ -4098,10 +4221,12 @@ C  -----------------------------------------------------------
       ELSE IF(SUBSET.EQ.'NC004004')  THEN                !  MDCRS ACARS
          CALL UFBINT(LUNIT,OBS2_8(42),1,1,IRET,'MSTQ')
       END IF
-      IF(SUBSET.EQ.'NC004002'.OR.SUBSET.EQ.'NC004006'.OR.SUBSET.EQ.
-     $ 'NC004009'.OR.SUBSET.EQ.'NC004010')  THEN
-                        ! PIREPs, E-ADAS, Canadian AMDAR, AirDAT/TAMDAR
+      IF(SUBSET.EQ.'NC004002'.OR.SUBSET.EQ.'NC004006'.OR.
+     $   SUBSET.EQ.'NC004009'.OR.SUBSET.EQ.'NC004010')  THEN
+                        ! PIREPs, E-AMDAR, Canadian AMDAR, TAMDARB
          CALL UFBINT(LUNIT,OBS3_8(1,1,6),5,255,IRET,'AFIC HBOI HTOI')
+                                     ! For TAMDAR only AFIC is present
+                                     ! and only in older AirDAT
          IF(IRET.EQ.1) THEN ! reset iret from 1 to 0 if all obs missing
                             !  (iret can be 1 even if all obs missing)
             AMINIMUM_8 = MIN(OBS3_8(1,1,6),OBS3_8(2,1,6),OBS3_8(3,1,6))
@@ -4119,17 +4244,19 @@ C  -----------------------------------------------
  
       CALL UFBINT(LUNIT,HDR_8,20,  1,IRET,HDSTR);HDR(2:)=HDR_8(2:)
 
-C  E-ADAS, CANADIAN AMDAR AND TAMDAR HAVE HIGH-RESOLUTION LAT/LON
-C  --------------------------------------------------------------
+C  If low res lat/lon missing, report likely contains hi res lat/lon
+C  -----------------------------------------------------------------
 
-      IF(HDR(2).GE.BMISS)  THEN
+      IF(HDR_8(2).GE.BMISS)  THEN
          CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'CLONH')
-         HDR(2)=UFBINT_8
+         HDR_8(2)=UFBINT_8
       END IF
-      IF(HDR(3).GE.BMISS)  THEN
+      IF(HDR_8(3).GE.BMISS)  THEN
          CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'CLATH')
-         HDR(3)=UFBINT_8
+         HDR_8(3)=UFBINT_8
       END IF
+      obs8_8(1) = hdr_8(3)
+      obs8_8(2) = hdr_8(2)
 
       IF(IRET.EQ.0)  SID = '        '
       CALL UFBINT(LUNIT,RCT_8, 5,255,NRCT,RCSTR);RCT=RCT_8
@@ -4137,8 +4264,8 @@ C  --------------------------------------------------------------
       IF(HDR(6).GE.BMISS) HDR(6) = 0
       RCTIM = NINT(RCT(1,1))+NINT(RCT(2,1))/60.
       RID_8 = HDR_8(1)
-      XOB   = HDR(2)
-      YOB   = HDR(3)
+      XOB   = HDR_8(2)
+      YOB   = HDR_8(3)
       RHR   = BMISS
       IF(HDR(4).LT.BMISS) RHR = (NINT(HDR(4)) + ((NINT(HDR(5)) * 60.) +
 cvvvvvdak port
@@ -4150,67 +4277,115 @@ caaaaadak port
  
 C  TRY TO FIND THE FLIGHT LEVEL HEIGHT
 C  -----------------------------------
- 
-      CALL UFBINT(LUNIT,HDR_8,20,1,IRET,'PSAL FLVL IALT PRLC HEIT HMSL')
+
+      CALL UFBINT(LUNIT,HDR_8,20,1,IRET,
+     $ 'PSAL FLVL IALT PRLC HEIT HMSL FLVLST')
       HDR=HDR_8
+ 
+C If this type reports pressure (PRLC) store it here -- PREPDATA uses
+C  this for pressure (currently applies to pre-v7 BUFR MDCRS and MADIS/
+C  TAMDAR only)
+C   -- in this case PREPDATA uses a pressure-altitude derived from PRLC
+C      via standard atmosphere function unless line
+C           "IF(HDR(3).LT.BMISS)  ELEV = HDR(3)"
+C      below is uncommented, in which case PREPDATA uses IALT (altitude)
+C      (if reported) as pressure-altitude (IALT is the only height
+C      type reported for MDCRS, both pre- and post-v7 BUFR; it is not
+C      reported for MADIS/TAMDAR, in fact no height type is reported for
+C      MADIS/TAMDAR)
+C-----------------------------------------------------------------------
+C Otherwise, if this type does not report pressure (PRLC) but does
+C  report PSAL (pressure altitude), PREPDATA uses reported PSAL as
+C  pressure-altitude (currently applies to AMDAR format only, both PSAL
+C  and FLVL are included but in most cases FLVL is missing, PSAL is
+C  never missing and where PSAL and FLVL are both non-missing they are
+C  identical)
+C  PREPDATA later derives pressure from PSAL via standard atmosphere
+C  function
+C-----------------------------------------------------------------------
+C Otherwise, if this type does not report pressure (PRLC) but does
+C  report FLVL (flight level), PREPDATA uses reported FLVL as pressure-
+C  altitude (currently applies to AIREP/PIREP format only, both PSAL
+C  and FLVL are included but only FLVL is non-missing)
+C  PREPDATA later derives pressure from FLVL via standard atmosphere
+C  function
+C-----------------------------------------------------------------------
+C Otherwise, if this type does not report pressure (PRLC) but does
+C  report FLVLST (flight level), PREPDATA uses reported FLVLST as
+C  pressure-altitude {currently applies to Korean AMDAR, catch-all
+C  AMDAR (from BUFR feed)}
+C  PREPDATA later derives pressure from FLVLST via standard atmosphere
+C  function
+C
+C  2016-07-27  C. Hill --
+C         - PAC/AirDat has confirmed HMSL is pressure-altitude for
+C           the TAMDAR dataset, and should be used to derive pressure
+C           values. FLVLST is GPS altitude for TAMDAR.
+C         - For the previous UFBINT statement, FLVLST is reordered after
+C           PRLC, HEIT, and HMSL, as HEIT and HMSL are both missing for
+C           Korean AMDAR and catch-all AMDAR, and are therefore skipped.
+C         - The order of precedence in defining ELEV is:
+C           PRLC, IALT, PSAL, FLVL, HEIT, HMSL, and FLVLST
+C-----------------------------------------------------------------------
+C Otherwise, if this type does not report pressure (PRLC) but does
+C  report IALT (altitude), PREPDATA uses reported IALT as pressure-
+C  altitude (currently applies to post-v7 BUFR MDCRS only)
+C  PREPDATA later derives pressure from IALT via standard atmosphere
+C  function
+C-----------------------------------------------------------------------
+C Otherwise, if this type does not report pressure (PRLC) but does
+C  report HEIT (height), PREPDATA uses reported HEIT as pressure-
+C  altitude (currently applies to no reports, HEIT is included in
+C  E-AMDAR and Canadian AMDAR but is always missing)
+C  PREPDATA later derives pressure from HEIT via standard atmosphere
+C  function
+C-----------------------------------------------------------------------
+C Otherwise, if this type does not report pressure (PRLC) but does
+C  report HMSL (altitude), PREPDATA uses reported HMSL as pressure-
+C  altitude (currently applies to E-AMDAR and Canadian AMDAR, both HEIT
+C  and HMSL are included but only HMSL is non-missing; HMSL is
+C  non-missing for AirDAT/TAMDAR)
+C  PREPDATA later derives pressure from HMSL via standard atmosphere
+C  function
+C-----------------------------------------------------------------------
+
       IF(HDR(4).LT.BMISS)  THEN
+! pressure is non-missing - initially get elev from pressure
+!  pre-v7 BUFR MDCRS and MADIS/TAMDAR
          IF(HDR(4).LT.22630) THEN
             ELEV = HGTF_HI(HDR(4)*.01)
          ELSE
             ELEV = HGTF_LO(HDR(4)*.01)
          END IF
+      ELSE IF (HDR(3).LT.BMISS) THEN
+         ELEV = HDR(3)        ! IALT (post-v7 BUFR MDCRS)
       ELSE
          ELEV = BMISS
-      END IF
+      ENDIF
 
-C FOR MDCRS ACARS DATA ONLY:
-C  "PRLC" (PRESSURE) IS REPORTED -- PREPDATA USES THIS FOR PRESSURE
-C  "IALT" (ALTITUDE) IS ONLY HEIGHT TYPE REPORTED
-C  UNCOMMENTING THE 2 LINES BELOW WILL FORCE PREPDATA TO USE REPORTED
-C    "IALT" DIRECTLY AS PRESSURE-ALTITUDE - "IALT" IS NOT SIMPLY
-C    THE STD. ATMOS. VALUE FROM "PRLC"
-C  COMMENTING THE 2 LINES BELOW WILL FORCE PREPDATA TO USE A PRESSURE-
-C    ALTITUDE DERIVED FROM "PRLC" VIA STD. ATMOS. FUNCTION
-C-----------------------------------------------------------------------
-C FOR AIREP/PIREP FORMAT DATA ONLY:
-C  "PRLC" (PRESSURE) IS NOT REPORTED
-C  "FLVL" (FLIGHT LEVEL) IS ONLY HEIGHT TYPE REPORTED - PREPDATA USES
-C    THIS FOR PRESSURE-ALTITUDE
-C  PREPDATA USES A PRESSURE DERIVED FROM "FLVL" VIA STD. ATMOS. FUNCTION
-C-----------------------------------------------------------------------
-C FOR AMDAR FORMAT DATA ONLY:
-C  "PRLC" (PRESSURE) IS NOT REPORTED
-C  "PSAL" (PRESSURE ALT.) IS ONLY HEIGHT TYPE REPORTED - PREPDATA USES
-C    THIS FOR PRESSURE-ALTITUDE
-C  PREPDATA USES A PRESSURE DERIVED FROM "PSAL" VIA STD. ATMOS. FUNCTION
-C-----------------------------------------------------------------------
-C FOR E-ADAS AND CANADIAN AMDAR DATA ONLY:
-C  "PRLC" (PRESSURE) IS NOT REPORTED
-C  "HEIT" (HEIGHT) IS INCLUDED IN REPORT BUT SEEMS TO ALWAYS BE MISSING
-C  "HMSL" (ALTITUDE) IS ONLY NON-MISSING HEIGHT TYPE REPORTED -
-C    PREPDATA USES THIS FOR PRESSURE-ALTITUDE
-C  PREPDATA USES A PRESSURE DERIVED FROM "HMSL" VIA STD. ATMOS. FUNCTION
-C    (NOTE: IF "HEIT" EVER IS NON-MISSING IT WILL BE USED IN PLACE OF
-C           "HMSL")
-C-----------------------------------------------------------------------
-C FOR TAMDAR DATA ONLY:
-C  "PRLC" (PRESSURE) IS REPORTED -- PREPDATA USES THIS FOR PRESSURE
-C  NO HEIGHT TYPE IS REPORTED
-C  PREPDATA TO USES A PRESSURE-ALTITUDE DERIVED FROM "PRLC" VIA STD.
-C    ATMOS. FUNCTION
-C-----------------------------------------------------------------------
-
-      IF(HDR(1).LT.BMISS) THEN
-         ELEV = HDR(1) + SIGN(0.0000001,HDR(1))
-      ELSE  IF(HDR(2).LT.BMISS)  THEN
-         ELEV = HDR(2) + SIGN(0.0000001,HDR(2))
-cdak  ELSE  IF(HDR(3).LT.BMISS)  THEN
-cdak     ELEV = HDR(3)
-      ELSE  IF(HDR(5).LT.BMISS)  THEN
-         ELEV = HDR(5) + SIGN(0.0000001,HDR(5))
-      ELSE  IF(HDR(6).LT.BMISS)  THEN
-         ELEV = HDR(6) + SIGN(0.0000001,HDR(6))
-      END IF
+CCCC  ELSE
+CCCC    ELEV = BMISS
+        IF(HDR(1).LT.BMISS) THEN
+                              ! PSAL (AMDAR format)
+           ELEV = HDR(1) + SIGN(0.0000001,HDR(1))
+        ELSE  IF(HDR(2).LT.BMISS)  THEN
+                              ! FLVL (AIREP/PIREP format)
+           ELEV = HDR(2) + SIGN(0.0000001,HDR(2))
+  !! uncomment next 2 lines to obtain elev from IALT when PRLC
+  !!  non-missing (applies to pre-v7 BUFR MDCRS)
+CCCC    ELSE  IF(HDR(3).LT.BMISS.AND.HDR(4).LT.BMISS)  THEN
+CCCC       ELEV = HDR(3)
+        ELSE  IF(HDR(5).LT.BMISS)  THEN
+                              ! HEIT (none right now)
+           ELEV = HDR(5) + SIGN(0.0000001,HDR(5))
+        ELSE  IF(HDR(6).LT.BMISS)  THEN
+                              ! HMSL (E-AMDAR, Canadian AMDAR & TAMDARB)
+           ELEV = HDR(6) + SIGN(0.0000001,HDR(6))
+        ELSE  IF(HDR(7).LT.BMISS)  THEN
+                              ! FLVLST (Catch-all & Korean BUFR AMDAR)
+           ELEV = HDR(7) + SIGN(0.0000001,HDR(7))
+        END IF
+CCCC  END IF
 
       ELV = ELEV
       QMELV = XMISS
@@ -4229,7 +4404,7 @@ C  --------------------------------------------------------------------
       END IF
 
       RTP = 041
-      READ(SUBSET(7:8),'(I2.2)')ISTP
+      READ(SUBSET(6:8),'(I3.3)')ISTP
       RSTP=ISTP
 
       IDS = IMISS
@@ -4253,7 +4428,14 @@ ccccc IF(ICBFMS(CBORG,8).EQ.0) THEN
 C above line not working right - may return 0 when missing, so use next
 C  two lines below temporarily until this is fixed (readlc will return
 C  all blanks for CBORG when mnemonic "BORG" not found) - dak 2/19/13
-         call readlc(lunit,CBORG,'BORG')
+C   {Note: For Panasonic (AirDAT) TAMDAR, BORG and BUHD are always
+C          missing, so set CBORG to all blanks and don't call READLC
+C          because it will print out warning messages.}
+         if(subset.eq.'NC004010')  then
+            CBORG = '        '
+         else
+            call readlc(lunit,CBORG,'BORG')
+         end if
 cpppppppppp
 cc    print'(" CBORG = """,A,"""")', CBORG
 cpppppppppp
@@ -4273,7 +4455,14 @@ cpppppppppp
 C above line not working right - may return 0 when missing, so use next
 C  two lines below temporarily until this is fixed (readlc will return
 C  all blanks for CBORG when mnemonic "ICLI" not found) - dak 2/19/13
-         call readlc(lunit,CBORG,'ICLI')
+C   {Note: For Panasonic (AirDAT) TAMDAR, ICLI is always missing, so set
+C          CBORG to all blanks and don't call READLC because it will
+C          print out warning messages.}
+         if(subset.eq.'NC004010')  then
+            CBORG = '        '
+         else
+            call readlc(lunit,CBORG,'ICLI')
+         end if
 cpppppppppp
 cc    print'(" CBORG = """,A,"""")', CBORG
 cpppppppppp
@@ -4287,6 +4476,8 @@ cpppppppppp
                               !  filled with a valid character string
                               !  by readlc, this will also get
                               !  translated into CBULLX here
+                              ! will also set CBULLX to all blanks if
+                              !  if Panasonic (AirDAT) TAMDAR
 cxxxx
       END IF
 
@@ -4294,6 +4485,7 @@ cxxxx
       POF   = BMISS
       TRBX  = BMISS
       ROLF  = BMISS
+      RIALR = BMISS
       QTRBX = IMISS
 
       IF(SUBSET.EQ.'NC004003')  THEN
@@ -4335,8 +4527,8 @@ cpppppppppp
          if(sid.eq.'        ')  sid = 'ACARS   '
 cxxxx
 
-C  ACARS FLIGHT NUMBER STORED IN HEADER RESERVE CHARACTER WORD 2 (C*8)
-C  -------------------------------------------------------------------
+C  FLIGHT NUMBER STORED IN HEADER RESERVE CHARACTER WORD 2 (C*8)
+C  -------------------------------------------------------------
 
          CALL UFBINT(LUNIT,RACID_8,1,1,IRET,'ACID')
 cccc     IF(IRET.EQ.0.OR.(RACID_8.GT.BMISS-5000..AND.RACID_8.LT.BMISS+
@@ -4354,7 +4546,7 @@ C  all blanks for acid when mnemonic "ACID" not found) - dak 2/19/13
 cpppppppppp
 cc    print'(" acid = """,A,"""")', acid
 cpppppppppp
-         if(acid.eq.'        ')  acid = '        '
+         if(acid.eq.'        ')  acid = '        ' ! kind of obvious!
 cxxxx
          RSV2 = ACID
          KNDX = KNDX + 1
@@ -4365,11 +4557,12 @@ C  -----------------------------------------------------------------
          CALL UFBINT(LUNIT,TRBX_8,4,1,IRET,
      $    'TRBX10 TRBX21 TRBX32 TRBX43');TRBX(1:4)=TRBX_8(1:4)
 
-      ELSE IF(SUBSET.EQ.'NC004006'.OR.SUBSET.EQ.'NC004009') THEN
+      ELSE IF(SUBSET.EQ.'NC004006'.OR.SUBSET.EQ.'NC004009'.OR.
+     $        SUBSET.EQ.'NC004010') THEN
  
-C  -------------------------------------------------
-C  E-ADAS AND CANADIAN AMDAR AIRCRAFT TYPE COME HERE
-C  -------------------------------------------------
+C  ------------------------------------------------------------
+C  E-AMDAR, CANADIAN AMDAR, and TAMDARB AIRCRAFT TYPE COME HERE
+C  ------------------------------------------------------------
  
          CALL UFBINT(LUNIT,RID_8,1,1,IRET,'ACRN')
 cccc     IF(IRET.EQ.0.OR.(RID_8.GT.BMISS-5000..AND.RID_8.LT.BMISS+
@@ -4389,27 +4582,87 @@ cpppppppppp
          if(sid.eq.'        ')  then
 cxxxx
             IF(SUBSET.EQ.'NC004006')  THEN
-               SID = 'EADAS   '
-            ELSE
+               SID = 'E-AMDAR '
+            ELSE IF(SUBSET.EQ.'NC004009') THEN
                SID = 'CA-AMDAR'
+            ELSE
+               SID = 'TAMDARB '
             END IF
          END IF
+
+         IF(SUBSET.EQ.'NC004010') THEN
+
+C     .................................................
+C     PANASONIC (AirDAT) TAMDAR AIRCRAFT TYPE COME HERE
+C     .................................................
+
+C  GET INSTANTANEOUS ALTITUDE RATE FOR LATER STORAGE INTO DATA LEVEL
+C   CATEGORY 8
+C  -----------------------------------------------------------------
+
+            CALL UFBINT(LUNIT,RIALR_8,1,1,IRET,'IALR');RIALR=RIALR_8
+
+C  TYPE OF COMMERCIAL AIRCRAFT STORED IN HEADER RESERVE CHARACTER
+C   WORD 2 (C*8)
+C  --------------------------------------------------------------
+
+            CALL UFBINT(LUNIT,RACTP_8,1,1,IRET,'ACTP')
+            if(ibfms(RACTP_8).ne.0) ACTP = '        '
+            RSV2 = ACTP
+
+C  OBSERVER IDENTIFICATION STORED IN BYTES 1-4 OF HEADER RESERVE
+C   CHARACTER WORD 1
+C  -------------------------------------------------------------
+
+            CALL UFBINT(LUNIT,ROBSVR_8,1,1,IRET,'OBSVR')
+            if(ibfms(ROBSVR_8).ne.0) OBSVR(1:4) = '    '
+            RSV1(1:4) = OBSVR(1:4)
+
+         END IF
+
+      else if(subset.eq.'NC004011'.or.subset.eq.'NC004103') then
+
+C  --------------------------------------------------------
+C  KOREAN AMDAR AND CATCH-ALL AMDAR AIRCRAFT TYPE COME HERE
+C  --------------------------------------------------------
+
+         CALL UFBINT(LUNIT,RID_8,1,1,IRET,'ACRN')
+         CALL UFBINT(LUNIT,RACID_8,1,1,IRET,'ACID')
+
+         if(ibfms(rid_8).eq.1) then ! ACRN missing; use ACID
+            rid_8 = racid_8
+            if(ibfms(rid_8).eq.1) then ! ACRN and ACID both missing
+               IF(SUBSET.EQ.'NC004011')  THEN
+                  SID = 'K-AMDAR '
+               ELSE
+                  SID = 'AMDAR-BF'
+               END IF
+            end if
+         end if
+
+         if(ibfms(racid_8).eq.1) then
+            ACID = '        '
+         end if
+
+C  FLIGHT NUMBER STORED IN HEADER RESERVE CHARACTER WORD 2 (C*8)
+C  -------------------------------------------------------------
+         if(subset.eq.'NC004103') RSV2 = ACID
 
       ELSE IF(SUBSET.EQ.'NC004008'.OR.SUBSET.EQ.'NC004012'.OR.
      $        SUBSET.EQ.'NC004013') THEN
  
-C  ------------------------------
-C  TAMDAR AIRCRAFT TYPE COME HERE
-C  ------------------------------
+C  ------------------------------------
+C  MADIS/TAMDAR AIRCRAFT TYPE COME HERE
+C  ------------------------------------
  
          CALL UFBINT(LUNIT,RID_8,1,1,IRET,'ACID')
 cccc     IF(IRET.EQ.0.OR.(RID_8.GT.BMISS-5000..AND.RID_8.LT.BMISS+
-cccc $    5000.))  SID = 'TAMDAR  '
+cccc $    5000.))  SID = 'TAMDAR-M'
 cxxxx
 cpppppppppp
 cc    print'(" rid_8,icbfms(sid,8): ",G0,1X,I0)', rid_8,icbfms(sid,8)
 cpppppppppp
-ccccc    IF(ICBFMS(SID,8).NE.0)  SID = 'TAMDAR  '
+ccccc    IF(ICBFMS(SID,8).NE.0)  SID = 'TAMDAR-M'
 C above line not working right - may return 0 when missing, so use next
 C  two lines below temporarily until this is fixed (readlc will return
 C  all blanks for sid when mnemonic "ACID" not found) - dak 2/19/13
@@ -4417,7 +4670,7 @@ C  all blanks for sid when mnemonic "ACID" not found) - dak 2/19/13
 cpppppppppp
 cc    print'(" sid = """,A,"""")', sid
 cpppppppppp
-         if(sid.eq.'        ')  sid = 'TAMDAR  '
+         if(sid.eq.'        ')  sid = 'TAMDAR-M'
 cxxxx
 
 C  GET TURBULENCE INDEX FOR LATER STORAGE INTO DATA LEVEL CATEGORY 8
@@ -4578,12 +4831,13 @@ C  ------------------------------------------------------------------
       END IF
  
       IF(SUBSET.EQ.'NC004003'.OR.SUBSET.EQ.'NC004004'.OR.SUBSET.EQ.
-     $ 'NC004006'.OR.SUBSET.EQ.'NC004009')  THEN
+     $ 'NC004006'.OR.SUBSET.EQ.'NC004009'.OR.SUBSET.EQ.'NC004011'.OR.
+     $ SUBSET.EQ.'NC004103'.OR.SUBSET.EQ.'NC004010') THEN
 
-C  ------------------------------------------------------------
-C  AMDAR FORMAT, MDCRS ACARS, E-ADAS OR CANADIAN AMDAR AIRCRAFT
-C   TYPES COME HERE
-C  ------------------------------------------------------------
+C  -----------------------------------------------------------------
+C  AMDAR FORMAT, MDCRS ACARS, E-AMDAR, CANADIAN AMDAR, KOREAN AMDAR,
+C   CATCH-ALL AMDAR OR TAMDARB AIRCRAFT TYPES COME HERE
+C  -----------------------------------------------------------------
 
 C  GET PRECISION OF TEMPERATURE OBSERVATION FOR LATER STORAGE
 C   INTO DATA LEVEL CATEGORY 8
@@ -4594,7 +4848,18 @@ C  ----------------------------------------------------------
 C  GET PHASE OF FLIGHT FOR LATER STORAGE INTO DATA LEVEL CAT. 8
 C  ------------------------------------------------------------
 
-         CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'POAF');POF=UFBINT_8
+         CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'DPOF')
+         if(ibfms(ufbint_8).eq.0) then
+C  Translate DPOF values into POAF values
+           if(int(ufbint_8).ge.7.and.int(ufbint_8).le.10) then
+             ufbint_8 = 5.
+           else if(int(ufbint_8).ge.11.and.int(ufbint_8).le.14) then
+             ufbint_8 = 6.
+           end if
+           pof=ufbint_8
+         else
+           CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'POAF');POF=UFBINT_8
+         endif
 
       END IF
 
@@ -4615,70 +4880,104 @@ C  -------------------------------------------------
 
          TOB(L) = BMISS
          QOB(L) = BMISS
+         IF(SUBSET.EQ.'NC004010') THEN
+          IF(ARR(3,L).GE.BMISS)  THEN
+          CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'TMDBST')
+          ARR(3,L)=UFBINT_8
+          END IF
+          IF(ARR(2,L).GE.BMISS.AND.ARR(6,L).GE.BMISS) THEN
+          CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'RAWHU')
+          ARR(6,L)=UFBINT_8
+          END IF
+         ENDIF
          IF(ARR(3,L).LT.BMISS)  THEN
             ITMP = NINT(ARR(3,L)*100.)
             TOB(L) = NINT((ITMP-27315)*0.1)
             IF(OBS2(42).EQ.0.OR.(SUBSET.EQ.'NC004008'.OR.
      $                           SUBSET.EQ.'NC004012'.OR.
-     $                           SUBSET.EQ.'NC004013')) THEN
+     $                           SUBSET.EQ.'NC004013'.OR.
+     $                           SUBSET.EQ.'NC004006'.OR.
+     $                           SUBSET.EQ.'NC004103'.OR.
+     $                           SUBSET.EQ.'NC004010')) THEN
+
+C  Process moisture (if present) if MADIS/TAMDAR (all types),
+C   Panasonic(AirDAT)/TAMDAR, E-AMDAR, Catch-all AMDAR or MDCRS (but
+C   for MDCRS only if MTSQ is zero)
+C dak-- is this still the case, is MTSQ=0 for all MDCRS with valid
+C       moisture even in v7 BUFR??!!)
+C  ----------------------------------------------------------------
 
 C  All data level category 6 rpts store specific humidity (g/kg) as
 C   moisture variable
 C  ----------------------------------------------------------------
 
-               IF(POB(L).LT.BMISS)  THEN
-                  QQ = -99999.
-                  mtyp_q = 1
-                  IF(SUBSET.EQ.'NC004004')  THEN
+C  If pressure is not reported, calculate it here via U.S. Std. Atmos.
+C   Est. solely for the purpose for calculating Td to gross check the
+C   moisture if it is reported (this pressure will not be considered
+C   as a reported pressure - the reported pressure will remain missing)
+C  --------------------------------------------------------------------
+
+               if(pob(l).ge.bmiss) then
+                 if(nint(elev).le.11000) then
+                   p = pr(elev)
+                 else
+                   p = prs(elev)
+                 end if
+               else
+                   p = pob(l)*0.1
+               end if
+               QQ = -99999.
+               mtyp_q = 1
+               IF(SUBSET.EQ.'NC004004')  THEN
 
 C  From 10/1/2006 through 10/31/2006, inclusive, and on 10/2/2007,
 C   MDCRS ACARS MIXR may or may not have been scaled incorrectly by
 C   ARINC - set to missing
 C  ----------------------------------------------------------------
 
-                     IF((IDATEB.GE.2006100100.AND.IDATEB.LE.2006103123)
-     $            .OR.  (IDATEB.GE.2007100200.AND.IDATEB.LE.2007100223))
-     $                ARR(2,L) = BMISS
-                  END IF
-                  IF(ARR(2,L).LT.BMISS)  THEN
-                     IF(SUBSET.EQ.'NC004004')  THEN
+                  IF((IDATEB.GE.2006100100.AND.IDATEB.LE.2006103123)
+     $         .OR.  (IDATEB.GE.2007100200.AND.IDATEB.LE.2007100223))
+     $             ARR(2,L) = BMISS
+               END IF
+               IF(ARR(2,L).LT.BMISS)  THEN
+                  IF(SUBSET.EQ.'NC004004')  THEN
 
 C  From 11/1/2006 through 10/1/2007, inclusive, MDCRS ACARS MIXR was
 C   scaled incorrectly by ARINC (10 times too large), compensate for
 C   this error by dividing reported MIXR by 10
 C  -----------------------------------------------------------------
 
-                        IF(IDATEB.GE.2006110100.AND.
-     $                     IDATEB.LE.2007100123) ARR(2,L) = ARR(2,L)*0.1
-                     END IF
-                     QQ = ARR(2,L)/(1.0 + ARR(2,L))
-                  ELSE  IF(ARR(6,L).LT.BMISS)  THEN
-                     QQSAT = QFRMTP(ARR(3,L),POB(L)*0.1)
-                     QQ = (ARR(6,L) * 0.01) * QQSAT
-                     mtyp_q = 0
+                     IF(IDATEB.GE.2006110100.AND.
+     $                  IDATEB.LE.2007100123) ARR(2,L) = ARR(2,L)*0.1
                   END IF
-                  IF(QQ.GT.0.0)  THEN
-                     TD = TFRMQP(QQ,POB(L)*0.1)
-                     IF(NINT(TD*10.).LE.NINT(ARR(3,L)*10.))  THEN
-                        QOB(L) = QQ * 1000.
-                        if(mtyp_q.eq.1)  then
-                           if(subset.ne.'NC004004')
+                  QQ = ARR(2,L)/(1.0 + ARR(2,L))
+               ELSE  IF(ARR(6,L).LT.BMISS)  THEN
+                  QQSAT = QFRMTP(ARR(3,L),P)
+                  QQ = (ARR(6,L) * 0.01) * QQSAT
+                  mtyp_q = 0
+               END IF
+               IF(QQ.GT.0.0)  THEN
+                  TD = TFRMQP(QQ,P)
+                  IF(NINT(TD*10.).LE.NINT(ARR(3,L)*10.))  THEN
+                     QOB(L) = QQ * 1000.
+                     if(mtyp_q.eq.1)  then
+                       if(subset.ne.'NC004004'.and.
+     $                    subset.ne.'NC004006')
      $ print'(" ^^^^^ valid aircraft mixing ratio ",G0," kg/kg stored ",
      $ "as spec. humidity ",G0," g/kg - id ",A)', arr(2,L),qob(L),sid
-                        else
-                           if(subset.eq.'NC004004')
+                     else
+                        if(subset.ne.'NC004010')
      $ print'(" ^^^^^ valid aircraft relative humidity ",G0," % stored",
      $ " as spec. humidity ",G0," g/kg - id ",A)', arr(6,L),qob(L),sid
-                        end if
-                     else
-                        if(mtyp_q.eq.1)  then
+                     end if
+                  else
+                     if(mtyp_q.eq.1)  then
       print'(" ^^^^^ INVALID aircraft mixing ratio ",G0," kg/kg - ",
      $ "spec. humidity set to missing - id ",A)', arr(2,L),sid
-                        else
+                     else
       print'(" ^^^^^ INVALID aircraft relative humidity ",G0," % - ",
      $ "spec. humidity set to missing - id ",A)', arr(6,L),sid
-                        end if
-                     END IF
+                     end if
                   END IF
                END IF
             END IF
@@ -4709,8 +5008,8 @@ C  -----------------------------------------------------------------
       IF(SUBSET.EQ.'NC004008'.OR.SUBSET.EQ.'NC004012'.OR.
      $   SUBSET.EQ.'NC004013') THEN
 
-C  Quality markers for TAMDAR (HONOR ALL BUT QM=2 FROM JUST ABOVE)
-C  ---------------------------------------------------------------
+C  Qual. markers for MADIS/TAMDAR (HONOR ALL BUT QM=2 FROM JUST ABOVE)
+C  -------------------------------------------------------------------
 
          CALL UFBREP(LUNIT,RTAM_8,2,1,IRET,'PRLC QCD')
          RQCD_8 = RTAM_8(2)
@@ -4740,16 +5039,69 @@ cdak     print'(" WSPD  QM is ",A)', QCD
 cdak     print'(" TRBX  QM is ",A)', QCD
          QTRBX = MQMUBF(QCD)  ! turbulence index
 
+      else if(subset.eq.'NC004010') then
+
+C  Quality markers for BUFR TAMDAR (2015 onward; assign QMs based on
+C  the information from QMRKH/PCCF fields) (honor all but QM=2 from
+C   just above)
+C    transformation of TAMDAR QMRKH into PREPBUFR QM:
+C              QMRKH           0   1   2   3    > 3 up to missing
+C              --------------------------------------------------
+C             (T/W)QM          2   3   3  13           13
+C  -----------------------------------------------------------------
+
+         CALL UFBREP(LUNIT,RTAMB_8,1,7,IRET,'QMRKH')
+CCC    print'(" RTAMB_8: ",4(1X,F7.2))',
+CCC  & RTAMB_8(1), RTAMB_8(2), RTAMB_8(3), RTAMB_8(4)
+!      Order of QMRKH array representation:
+!  N = 1     2       3     4     5       6       7
+!      SMMO, TMDBST, WDIR, WSPD, TRBXST, TOPEDR, AFIC
+Cfuture call ufbint(lunit,ufbint_8,1,1,iret,'SMMO')
+Cfuture if(ibfms(ufbint_8).eq.0) then
+Cfuture   print'(" SMMO   (not stored) is ",g0)', ufbint_8
+Cfuture   print'(" SMMO   QMRKH is ",g0)', rtamb_8(1)
+Cfuture end if
+         DO N = 2,4
+          RQCD_8 = 0.0
+          IF(RTAMB_8(N).GE.3.0) THEN
+           RQCD_8 = 13.0
+          ELSE
+           IF (RTAMB_8(N).GE.1.0) RQCD_8 = 3.0
+           IF (RTAMB_8(N).EQ.0.0) RQCD_8 = 2.0
+          ENDIF
+          IF((N.EQ.2).AND.(TOB(1).LT.BMISS).AND.(TQM(1).EQ.2))
+     &     TQM(1)=RQCD_8 ! T quality information
+          IF((DOB(1).LT.BMISS).AND.(SOB(1).LT.BMISS).AND.(WQM(1).EQ.2))
+     &    THEN
+           IF(N.EQ.3) RTAM_WDIR_8=RQCD_8 ! WD quality
+           IF(N.EQ.4) WQM(1)=MAX(RTAM_WDIR_8,RQCD_8) ! Total wind quality
+          ENDIF
+         ENDDO
+CCC      print'(" TQM WQM ",2(1X,F7.2))', TQM(1), WQM(1)
+         call UFBINT(LUNIT,RQCD_8,1,1,IRET,'PCCF')
+!        PCCF = percent confidence of RH quality
+         IF((QOB(1).LT.BMISS).AND.(QQM(1).EQ.2)) THEN
+! Always set QQM to 13 if TQM was set to 13 above (regardless of PCCF)
+         IF((RQCD_8.LT.80.0).OR.(RQCD_8.GT.100.0)
+     &      .OR.(TQM(1).EQ.13.0)) THEN
+          QQM(1) = 13.0
+         ELSE
+          QQM(1) = 2.0
+         ENDIF
+         ENDIF
+CCC      print'(" REHU  PCCF, QM ",2(1X,F5.1))', RQCD_8, QQM(1)
+
       END IF
 
-      IF(SUBSET.NE.'NC004004') THEN
+      IF(SUBSET.NE.'NC004004' .and. SUBSET.NE.'NC004010') THEN
 
-C  --------------------------------------------------------------
-C  ALL AIRCRAFT TYPES EXCEPT MDCRS ACARS ALSO HAVE SPECIAL CASE:
+C  -------------------------------------------------------------------
+C  ALL AIRCRAFT TYPES EXCEPT MDCRS ACARS AND PANASONIC (AirDAT) TAMDAR
+C   ALSO HAVE SPECIAL CASE:
 C     IF PURGE FLAG ON WIND (14), TEMP Q.M. ALSO GETS PURGE FLAG (14)
 C      (this is needed by PREPOBS_PREPACQC program)
 C      (note: This should be moved to prepdata)
-C  --------------------------------------------------------------
+C  -------------------------------------------------------------------
  
          if(nlev.gt.0) then
          DO L=1,NLEV
@@ -4773,11 +5125,11 @@ C  CODE FIGURE 021 - REPORT SEQUENCE NUMBER
 C                     (CURRENTLY ONLY FOR MDCRS ACARS)
 C  CODE FIGURE 914 - PHASE OF FLIGHT
 C                     (CURRENTLY ONLY FOR AMDAR FORMAT, MDCRS ACARS,
-C                      E-ADAS OR CANADIAN AMDAR) (BUFR C. TBL 0-08-004)
+C                      E-AMDAR OR CANADIAN AMDAR) (BUFR C. TBL 0-08-004)
 C  CODE FIGURE 915 - PRECISION OF TEMPERATURE OBSERVATION IN
 C                      0.01*DEG. K
 C                     (CURRENTLY ONLY FOR AMDAR FORMAT, MDCRS ACARS,
-C                      E-ADAS OR CANADIAN AMDAR) (BUFR C. TBL 0-02-005)
+C                      E-AMDAR OR CANADIAN AMDAR) (BUFR C. TBL 0-02-005)
 C  CODE FIGURE 926 - MDCRS ACARS TURBULENCE INDEX FOR PERIOD T-1 MINUTE
 C                     TO T-0 MINUTES (BUFR CODE TABLE 0-11-236)
 C  CODE FIGURE 927 - MDCRS ACARS TURBULENCE INDEX FOR PERIOD T-2 MINUTE
@@ -4787,9 +5139,10 @@ C                     TO T-2 MINUTES (BUFR CODE TABLE 0-11-238)
 C  CODE FIGURE 929 - MDCRS ACARS TURBULENCE INDEX FOR PERIOD T-4 MINUTE
 C                     TO T-3 MINUTES (BUFR CODE TABLE 0-11-239)
 C  CODE FIGURE 930 - TAMDAR TURBULENCE INDEX (BUFR CODE TABLE 0-11-239)
-C                    INDICATOR 2 CONTAINS TURBULENCE INDEX QUALITY
-C                    MARKER (0-15)
+C                     INDICATOR 2 CONTAINS TURBULENCE INDEX QUALITY
+C                     MARKER (0-15)
 C  CODE FIGURE 931 - TAMDAR ROLL ANGLE FLAG (BUFR CODE TABLE 0-02-199)
+C  CODE FIGURE 932 - INSTANTANEOUS ALTITUDE RATE IN .001*METERS/SECOND
 C  ------------------------------------------------------------------
 
       IF(SUBSET.EQ.'NC004004') THEN
@@ -4830,6 +5183,13 @@ C  ------------------------------------------------------------------
          Q82(1) = IMISS
          CALL S02UBF(8,1,*9999)
       END IF
+      IF(RIALR.LT.BMISS) THEN
+         OB8(1) = NINT(RIALR*1000)
+         CF8(1) = 932
+         Q81(1) = IMISS
+         Q82(1) = IMISS
+         CALL S02UBF(8,1,*9999)
+      END IF
 
       CALL S03UBF(OBS,SUBSET,*9999,*9998,*9997)
  
@@ -4851,7 +5211,7 @@ C  ------------------------------------------------------------------
 C***********************************************************************
 C***********************************************************************
 C***********************************************************************
-      FUNCTION R06UBF(LUNIT,OBS,OBS2,OBS3,NOBS3)
+      FUNCTION R06UBF(LUNIT,OBS,OBS2,OBS3,NOBS3,obs8_8)
 C     ---> PROCESSES SATWIND DATA (005/*)
  
       COMMON/IUBFAA/BMISS
@@ -4871,7 +5231,7 @@ C     ---> PROCESSES SATWIND DATA (005/*)
       INTEGER      IPRDF(0:2),ISWCM(5,9:10,2),ITP_C8(10),ISWDL(7)
       REAL(8) RID_8,UFBINT_8,PCCF_8(2,12),GNAP_8(12),HDR_8(20),RCT_8(5),
      $ ARR_8(10),OBS2_8(43),OBS3_8(5,255,7),WIND_8(2,5),PRLC_8(11),
-     $ QFGU_8(8),BMISS
+     $ QFGU_8(8),BMISS,obs8_8(2)
       DIMENSION    OBS(*),OBS2(43),OBS3(5,255,7),NOBS3(7),HDR(20),
      $ RCT(5),ARR(10),PCCF(2,12),GNAP(12),WIND(2,5),PRLC(11),QFGU(8)
       EQUIVALENCE  (RID_8,SID)
@@ -4980,10 +5340,12 @@ C  ---------------------------------------------------------------------
 
       R06UBF = 0
 
-C  STORE SINGLE LEVEL REPORT DATA DIRECTLY INTO OBS2 ARRAY
-C  -------------------------------------------------------
+C  STORE SINGLE LEVEL REPORT DATA DIRECTLY INTO OBS2 ARRAY AND
+C   DOUBLE-PRECISION SINGLE LEVEL REPORT DATA DIRECTLY INTO OBS8_8 ARRAY
+C  ---------------------------------------------------------------------
 
       OBS2_8 = BMISS
+      obs8_8 = bmiss
       CALL UFBINT(LUNIT,OBS2_8,2,1,IRET,'RSRD EXPRSRD')
       CALL UFBINT(LUNIT,OBS2_8(43),1,1,IRET,'SAZA')
       OBS2 = OBS2_8
@@ -4997,6 +5359,8 @@ C  -----------------------------------------------
  
       CALL UFBINT(LUNIT,HDR_8,20,1,IRET,HDSTR);HDR(2:)=HDR_8(2:)
       CALL UFBINT(LUNIT,RCT_8, 5,1,NRCT,RCSTR);RCT=RCT_8
+      obs8_8(1) = hdr_8(3)
+      obs8_8(2) = hdr_8(2)
       IF(HDR(5).GE.BMISS) HDR(5) = 0
       RCTIM = NINT(RCT(1))+NINT(RCT(2))/60.
       RID_8 = HDR_8(1)
@@ -5415,6 +5779,7 @@ C  ----------------------------------------------------------------
          ITMP = NINT(ARR(2)*100.)        ! From NESDIS binary FMT &
          TOB(1) = NINT((ITMP-27315)*0.1) !  foreign pre-V10 BUFR,
                                          !  temp in "TMDB"
+
       ELSE  IF(ARR(3).LT.BMISS)  THEN
          ITMP = NINT(ARR(3)*100.)        ! From NESDIS BUFR Fmt &
          TOB(1) = NINT((ITMP-27315)*0.1) !  foreign V10 BUFR, temp
@@ -5862,7 +6227,7 @@ C  -------------------------------------------------------------------
 C***********************************************************************
 C***********************************************************************
 C***********************************************************************
-      FUNCTION R07UBF(LUNIT,OBS,OBS2,OBS3,NOBS3)
+      FUNCTION R07UBF(LUNIT,OBS,OBS2,OBS3,NOBS3,obs8_8)
 C     ---> PROCESSES REPROCESSED SSM/I (SPSSMI) DATA (012/*)
 
       COMMON/IUBFAA/BMISS
@@ -5876,7 +6241,8 @@ C     ---> PROCESSES REPROCESSED SSM/I (SPSSMI) DATA (012/*)
       CHARACTER*80 HDSTR
       CHARACTER*8  SUBSET,SID,RSV1,RSV2
       REAL(8) RID_8,UFBINT_8,OBS2_8(43),OBS3_8(5,255,7),HDR_8(20),
-     $ PROD_8(2,2),ADDP_8(5),TMBRS_8(2,14),TMBR_8(7),BMISS,AMINIMUM_8
+     $ PROD_8(2,2),ADDP_8(5),TMBRS_8(2,14),TMBR_8(7),BMISS,AMINIMUM_8,
+     $ obs8_8(2)
       DIMENSION    OBS(*),OBS2(43),OBS3(5,255,7),NOBS3(7),HDR(20),
      $ PROD(2,2),ADDP(5),TMBRS(2,14),TMBR(7)
       EQUIVALENCE  (RID_8,SID)
@@ -5889,10 +6255,12 @@ C     ---> PROCESSES REPROCESSED SSM/I (SPSSMI) DATA (012/*)
 
       R07UBF = 0
 
-C  STORE SINGLE LEVEL REPORT DATA DIRECTLY INTO OBS2 ARRAY
-C  -------------------------------------------------------
+C  STORE SINGLE LEVEL REPORT DATA DIRECTLY INTO OBS2 ARRAY AND
+C   DOUBLE-PRECISION SINGLE LEVEL REPORT DATA DIRECTLY INTO OBS8_8 ARRAY
+C  ---------------------------------------------------------------------
 
       OBS2_8 = BMISS
+      obs8_8 = bmiss
       CALL UFBINT(LUNIT,OBS2_8,2,1,IRET,'RSRD EXPRSRD');OBS2=OBS2_8
 
       CALL S05UBF
@@ -5903,6 +6271,8 @@ C  -----------------------------------------------
       CALL UFBINT(LUNIT,HDR_8,20,  1,IRET,HDSTR);HDR(2:)=HDR_8(2:)
       IF(HDR(5).GE.BMISS) HDR(5) = 0
       IF(HDR(6).GE.BMISS) HDR(6) = 0
+      obs8_8(1) = hdr_8(3)
+      obs8_8(2) = hdr_8(2)
       RID_8 = HDR_8(1)
       XOB   = HDR(2)
       YOB   = HDR(3)

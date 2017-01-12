@@ -2,7 +2,7 @@ c$$$  Subprogram Documentation Block
 c   BEST VIEWED WITH 94-CHARACTER WIDTH WINDOW
 c
 c Subprogram: sub2mem_mer
-c   Programmer: D. Keyser       Org: NP22       Date: 2015-04-17
+c   Programmer: D. Keyser       Org: NP22       Date: 2016-12-09
 c
 c Abstract: Takes a merged (mass and wind) aircraft data profile, containing NRLACQC events,
 c   (read from input arrays *_accum), adds mandatory levels (via interpolation from spanning
@@ -46,6 +46,11 @@ c                          don't have second information in time, but a tighter 
 c                          for the data profiles that do have second information in time. Now
 c                          halfgate is relaxed to be 30 for the data profiles that do have
 c                          complete time information.
+c 2016-12-09  D. Keyser  --
+c                 - Nomenclature change: replaced "MDCRS/ACARS" with just "MDCRS".
+c                 - The format for a print statement containing latitude and longitude changed
+c                   to print to 5 decimal places since some aircraft reports contain this
+c                   precision.
 c
 c Usage: call sub2mem_mer(proflun,bmiss,mxlv,mxnmev,maxmandlvls,
 c                         mandlvls,mesgtype,hdr2wrt,
@@ -75,9 +80,9 @@ c                    profiles
 c     mandlvls     - List of mandatory pressure levels to consider for aircraft profiles
 c     mesgtype     - PREPBUFR message type (AIRCAR or AIRCFT) of the profile in question
 c     hdr2wrt      - Array containing header information for the profile report
-c     acid1        - Aircraft flight number for the profile MDCRS/ACARS report (this will be
-c                    encoded into 'ACID' for MDCRS/ACARS reports in output PREPBUFR-like
-c                    profiles file)
+c     acid1        - Aircraft flight number for the profile MDCRS report {this will be encoded
+c                    into 'ACID' for MDCRS or AMDAR (LATAM only) reports in output PREPBUFR-
+c                    like profiles file}
 c     c_acftreg    - Aircraft tail number for the profile report as used in NRL QC processing
 c                    (passed into this subroutine only for printing purposes)
 c     c_acftid     - Aircraft flight number for the profile report as used in NRL QC
@@ -324,11 +329,11 @@ c -------------------------
 
       character*8 mesgtype             ! BUFR message type (e.g., 'AIRCFT  ')
 
-      real*8      acid1                ! aircraft flight number for the profile MDCRS/ACARS
-                                       !  report
+      real*8      acid1                ! aircraft flight number for the profile MDCRS or AMDAR
+                                       !  (LATAM only) report
      +,           acid_arr1            ! used with ufbint routine to encode aircraft flight
-                                       !  number (ACID) into MDCRS/ACARS reports in output
-                                       !  PREPBUFR-like file)
+                                       !  number (ACID) into MDCRS or AMDAR (LATAM only)
+                                       !  reports in output PREPBUFR-like file)
 
       character*9  c_acftid1           ! aircraft flight number (as processed by NRLACQC)
                                        !  for the profile report (used for printing purposes
@@ -496,6 +501,7 @@ c ------------
                                        !  pul
      +,        dist2pml                ! horizontal distance traveled when going from point
                                        !  at pll to pml
+! vvvv DAK-future change perhaps to account for incr. lat/lon precision
      +,        lat_pul                 ! latitude at data level "below" mandatory level
                                        !  (higher pressure, lower altitude)
      +,        lon_pul                 ! longitude at data level "below" mandatory level
@@ -504,6 +510,7 @@ c ------------
                                        !  (lower pressure, higher altitude)
      +,        lon_pll                 ! longitude at data level "above" mandatory level
                                        !  (lower pressure, higher altitude)
+! ^^^^ DAK-future change perhaps to account for incr. lat/lon precision
      +,        radius_e                ! radius of the earth in meters
      +,        deg2rad                 ! conversion factor for converting degrees -> radians
 
@@ -1347,8 +1354,8 @@ c --------------------------
       acid_arr1 = acid1
       if(ibfms(acid1).eq.0) 
      +  call ufbint(proflun,acid_arr1,1,1,nlvwrt,'ACID')  ! store 'ACID' if present
-                                                          !  (currently only in MDCRS/ACARS
-                                                          !  reports)
+                                                          !  {currently only in MDCRS or AMDAR
+                                                          !  (LATAM only) reports}
 
       if(mesgtype.ne.'AIRCAR'.and. mesgtype.ne.'AIRCFT') then
         print *, 'Non-compatible message type! (',mesgtype,')'
@@ -1726,10 +1733,10 @@ c7999         format('EVENT # ',i5)
      +         iwuvevn_accum3,ipevn_accum4,izevn_accum4,itevn_accum4,
      +         iqevn_accum4,iwuvevn_accum5
 
- 8001 format(i5,1x,a9,1x,a8,2x,i4,3x,i1,1x,2f7.2,1x,i6,1x,i5,1x,f6.1,1x,
-     +       f6.2,i3,1x,f7.2,1x,i3,1x,f6.1,1x,f6.1,1x,i3,1x,f6.2,1x,'!',
-     +       a11,'!',f5.2,1x,i3,2x,i2,1x,f6.1,1x,i4,2x,i3,9x,'!',5(1x,
-     +       i2.2),'!',i3.3,4(1x,i3.3))
+ 8001 format(i5,1x,a9,1x,a8,1x,i3,2x,i1,1x,2f10.5, 1x,i6,1x,i5,1x,f6.1,
+     +       1x,f6.2,i3,1x,f7.2,1x,i3,1x,f6.1,1x,f6.1,1x,i3,1x,f6.2,1x,
+     +       '!',a11,'!',f5.2,1x,i3,2x,i2,1x,f6.1,1x,i4,2x,i3,9x,'!',
+     +       5(1x,i2.2),'!',i3.3,4(1x,i3.3))
 
             endif ! i.eq.mxe4prof
           endif ! .not.l_operational
@@ -1898,7 +1905,7 @@ C.......................................................................
 
       if(.not.l_operational) then
         write(52,fmt=8002)
- 8002 format(205('X'))
+ 8002 format(208('X'))
       endif
 
  9999 continue
