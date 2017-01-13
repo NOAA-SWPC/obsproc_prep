@@ -23,7 +23,7 @@ files:
    obsproc_prep/sorc/prepobs_oiqcbufr.fd/makefile
    obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
    obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
-   obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
+ M obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
  M obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
    obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
  M obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
@@ -92,6 +92,19 @@ files:
       BENEFIT: Allows future hourly WAM model to run properly.
 
  Source code changes:
+   prepobs_prepacpf:
+    - Check for, and skip, all comment lines when reading contents of METAR
+      station dictionary file ("!" in character 1). Also fix to avoid a divide
+      by zero which slips by on tide/gyre with version 12.1 of the compiler, but
+      gets caught by newer compilers.
+      BENEFIT: Code more robust.  Comment lines were added to METAR dictionary
+               on November 22, 2016 and since that time this program has been
+               silently aborting due to an internal formatted read error.
+    - Increase the maximum number of stations that can be read from METAR
+      station dictionary (MAXSTN) from 8000 to 20000.
+      BENEFIT: There are currently 7790 stations in the METAR dictionary. There
+               are still stations missing that will need to be added.  A 20000
+               limit should suffice for quite some time,
    prepobs_prepdata:
       prepdata.f (main program):
        - Processes three new aircraft types (if in "aircft" dump):
@@ -361,6 +374,7 @@ files:
    This must be implemented simultaneously with the implementations of:
       v2.2.0 of obsproc_cdas,
       v3.3.0 of obsproc_dump,
+      v2.1.0 of obsproc_dump_monitor,
       v2.3.0 of obsproc_dump_post,
       v2.4.0 of obsproc_global,
       v2.3.0 of obsproc_nam,

@@ -1,7 +1,7 @@
 C$$$  MAIN PROGRAM DOCUMENTATION BLOCK
 C
 C MAIN PROGRAM:  PREPOBS_PREPACPF
-C   PRGMMR: D. Keyser        ORG: NP22        DATE: 2013-02-12
+C   PRGMMR: D. Keyser        ORG: NP22        DATE: 2017-01-12
 C
 C ABSTRACT: This program reads in aircraft profile data as output from
 C   the NRL-based prepobs_prepacqc program and appends the nearest (in
@@ -23,6 +23,22 @@ C              manipulating BUFRLIB missing values prior to encoding
 C              them into output BUFR file (to avoid floating point
 C              invalid error in BUFRLIB routine IPKS when debugging
 C              turned on)
+C 2017-01-12  D. Stokes  -- Check for, and skip, all comment lines when
+C             reading contents of METAR station dictionary file ("!" in
+C             character 1). Also fix to avoid a divide by zero which
+C             slips by on tide/gyre with version 12.1 of the compiler,
+C             but gets caught by newer compilers.
+C             BENEFIT: Code more robust.  Comment lines were added to
+C                      METAR dictionary on November 22, 2016 and since
+C                      that time this program has been silently aborting
+C                      due to an internal formatted read error.
+C 2017-01-12  D. Keyser  -- Increase the maximum number of stations that
+C             can be read from METAR station dictionary (MAXSTN) from
+C             8000 to 20000.
+C             BENEFIT: There are currently 7790 stations in the METAR
+C                      dictionary. There are still stations missing that
+C                      will need to be added.  A 20000 limit should
+C                      suffice for quite some time,
 C
 C USAGE:
 C   INPUT FILES:
@@ -71,7 +87,7 @@ c-- station table vars
       logical      eof        / .false. /
       CHARACTER    sid*8, si4*4, sname*32, st*2, cn*2, chrx*20
    
-      parameter    (MAXSTN=8000)                 ! max # stations
+      parameter    (MAXSTN=20000 )               ! max # stations
 c     character*8  stid(MAXSTN)                  ! stn ID
       character*4  stid(MAXSTN)                  ! stn ID - 4char metar
       real         slat(MAXSTN), slon(MAXSTN)    ! stn lat, lon
@@ -145,9 +161,9 @@ ccccc     $ 0.0065/288.15)*ELEV))**5.2553026 + 0.3
 
 c====67=10========20========30========40========50========60========70=2
 
-      CALL W3TAGB('PREPOBS_PREPACPF',2013,043,71,'NP20')
+      CALL W3TAGB('PREPOBS_PREPACPF',2017,012,71,'NP20')
 
-      write(*,*) 'Welcome to PREPOBS_PREPACPF - Version 02-12-2013'
+      write(*,*) 'Welcome to PREPOBS_PREPACPF - Version 01-12-2017'
 
 C On WCOSS should always set BUFRLIB missing (BMISS) to 10E8 to avoid
 C  overflow when either an INTEGER*4 variable is set to BMISS or a
@@ -174,6 +190,7 @@ c--Read Station Table
       ns=0                                         ! station counter
       do while ( .not. eof ) 
         read(lunstn,'(a)',end=200) line
+        if(line(1:1).eq.'!')cycle
         ns=ns+1
 
         if (ns .gt. MAXSTN) then
@@ -651,10 +668,10 @@ c-- horizontal velocity
             dXj = dsqrt( ( usr2_8(1,j) - usr2_8(1,j-1) )**2 + 
      &                   ( usr2_8(2,j) - usr2_8(2,j-1) )**2 ) * 1.11d2
                                                          !! dX in km
-            vj = dXj / dTj * 60.d0                       !! v in kph
 c           write(*,'(1x,f6.1,1x,f8.5 ,$)') dXj, dTj     ! dX(km),
                                                          ! dT(min)
             if ( dTj .gt. 1.d-5 ) then
+              vj = dXj / dTj * 60.d0                       !! v in kph
               write(*,'(1x,f7.1 ,$)') vj * 1.d5 / 2.54 / 12. / 5280.
                                                     ! velocity in kph
             else
