@@ -64,6 +64,8 @@ qid=$$
 
 cd $DATA
 
+jlogfile=${jlogfile:=""}
+
 if [ $PROCESS_ACQC = YES ]; then
    PRPI=$1
    if [ ! -s $PRPI ] ; then exit 1;fi
@@ -87,9 +89,13 @@ if [ $PROCESS_ACQC = YES ]; then
    export FORT62=prepbufr.acft_profiles
    TIMEIT=${TIMEIT:-""}
    [ -s $DATA/time ] && TIMEIT="$DATA/time -p"
+   # The following improves performance on Cray-XC40 if $AQCX was
+   #    linked to the IOBUF i/o buffering library
+   export IOBUF_PARAMS='*.log:verbose,*.txt:verbose,*.sorted:verbose'
    $TIMEIT $AQCX< $AQCC > outout 2> errfile
    err=$?
    err_actual=$err
+   unset IOBUF_PARAMS
 ######cat errfile
    cat errfile >> outout
    cat outout >> prepacqc.out
@@ -104,9 +110,7 @@ if [ $PROCESS_ACQC = YES ]; then
    set -x
    if [ $err -eq 4 ]; then
       msg="PREPBUFR DATA SET CONTAINS NO "AIRCAR" OR "AIRCFT" TABLE A MESSAGES  --> non-fatal"
-set +u
       [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
-set -u
       err=0
    fi
    if [ -s $DATA/err_chk ]; then
@@ -116,7 +120,7 @@ set -u
       then
 #########kill -9 ${qid} # need a WCOSS alternative to this even tho commented
                         #  out in ops
-         exit 555
+         exit 55
       fi
    fi
 
@@ -156,9 +160,7 @@ FILE NOT FOUND --> non-fatal"
       echo "$msg"
       echo
       set -x
-      set +u
       [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
-      set -u
       exit 0
    fi
 
@@ -199,9 +201,7 @@ FILE NOT FOUND --> non-fatal"
       echo "$msg"
       echo
       set -x
-      set +u
       [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
-      set -u
    else
       err=0
       [ -s $DATA/err_chk ]  &&  $DATA/err_chk

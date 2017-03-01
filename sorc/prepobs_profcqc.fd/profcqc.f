@@ -1,7 +1,7 @@
 C$$$  MAIN PROGRAM DOCUMENTATION BLOCK
 C
 C MAIN PROGRAM: PREPOBS_PROFCQC
-C   PRGMMR: KEYSER           ORG: NP22        DATE: 2013-02-05
+C   PRGMMR: KEYSER           ORG: NP22        DATE: 2016-12-20
 C
 C ABSTRACT: PERFORMS COMPLEX QUALITY CONTROL OF PROFILER DOPPLER
 C   WINDS.  THE INPUT AND OUTPUT ARE IN PREPBUFR FORMAT.  THE
@@ -66,6 +66,9 @@ C     missing (BMISS) to 10E8 rather than 10E10 to avoid integer
 C     overflow; rename all REAL(8) variables as *_8; use formatted
 C     print statements where previously unformatted print was > 80
 C     characters.
+C 2016-12-20  Stokes/Keyser  Increase the max allowable number of times
+C     per station.  Skip reports and print warning if that limit is 
+C     exceeded.
 C
 C USAGE:
 C   INPUT FILES:
@@ -90,6 +93,7 @@ C                LEVEL (BY REPORT TYPE (BY REPORT TYPE AND FIELD, BUT
 C                OVER ALL TIMES COMBINED)
 C
 C   SUBPROGRAMS CALLED:
+C     SYSTEM:    - SYSTEM
 C     UNIQUE:    - WRITBUFR CHECKS   CSTATS   DIFS
 C                  DMA      EVENT    INCR     INDICATE INIT
 C                  ISDONE   MODQUAL  PLINT    PRNTDATA
@@ -230,12 +234,12 @@ C                bad ("13").
 C
 C ATTRIBUTES:
 C   LANGUAGE: FORTRAN 90
-C   MACHINE:  NCEP WCOSS
+C   MACHINE:  NCEP WCOSS (iDataPlex and Cray-XC40)
 C
 C$$$
       PROGRAM PREPOBS_PROFCQC
 
-      PARAMETER  (NL=150,NT=26,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
 
       LOGICAL  DONE,STATS,MEAN,STDDEV,SKEW,KURT
       CHARACTER*8  STN
@@ -258,7 +262,7 @@ C$$$
       NAMELIST/RDATA/IPRINT,TIMWIN_E,TIMWIN_L,STATS,MEAN,STDDEV,SKEW,
      $ KURT
 
-      CALL W3TAGB('PREPOBS_PROFCQC',2013,0036,0078,'NP22')
+      CALL W3TAGB('PREPOBS_PROFCQC',2016,0355,1200,'NP22')
 
       WRITE(6,100)
 
@@ -318,7 +322,7 @@ ccccc CALL SETBMISS(10E10_8)
 
       STOP
 
-  100 FORMAT(' WELCOME TO PREPOBS_PROFCQC -- VERSION 02/05/2013'//)
+  100 FORMAT(' WELCOME TO PREPOBS_PROFCQC -- VERSION 12/20/2016'//)
   101 FORMAT(1X,128('*'))
   102 FORMAT(/'xxxxxxxxxxxxxxxxxxxxxxxxxxx'/'Process Stn. ',A8)
 
@@ -327,7 +331,7 @@ ccccc CALL SETBMISS(10E10_8)
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    BLOCK DATA
-C   PRGMMR: D. A. KEYSER     ORG: NP22       DATE: 2004-09-09
+C   PRGMMR: D. A. KEYSER     ORG: NP22       DATE: 2016-12-20
 C
 C ABSTRACT: BLOCK DATA FOR PREPOBS_PROFCQC.
 C
@@ -335,6 +339,8 @@ C PROGRAM HISTORY LOG:
 C 1996-11-20  W. Collins -- Original author.
 C 2004-09-09  D. Keyser  -- XI, XT, XV now expanded to cover all
 C     possible levels.
+C 2016-12-20  D. Stokes   Increase the max allowable number of times 
+C     per station.
 C
 C
 C ATTRIBUTES:
@@ -345,7 +351,7 @@ C$$$
 
       BLOCK DATA
 
-      PARAMETER  (NL=150,NT=26,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
 
       COMMON/PST/IOFFSET(3:8),LVLINCR(3:8),ILEVELS(3:8),STATS,MEAN,
      $ STDDEV,SKEW,KURT
@@ -437,7 +443,7 @@ C                 > 15750 m : 3.00
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    WRITBUFR
-C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2004-09-09
+C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2016-12-20
 C
 C ABSTRACT: WRITE OUTPUT PREPBUFR FILE, IDENTICAL TO INPUT
 C   EXCEPT FOR THE ADDITION OF WIND PROFILER Q.C. EVENTS.
@@ -449,6 +455,8 @@ C     time window - allows input to have wider time window so temporal
 C     chk at all output times can be based on 2-sided diff {before
 C     temporal chk on output rpts on time (assimilation) bdry based on
 C     1-sided diff}.
+C 2016-12-20  D. Stokes   Increase the max allowable number of times 
+C     per station.
 C
 C USAGE:    CALL WRITBUFR
 C   INPUT FILES:
@@ -467,7 +475,7 @@ C$$$
 
       SUBROUTINE WRITBUFR
 
-      PARAMETER  (NL=150,NT=26,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
 
       LOGICAL  FIRST
       CHARACTER*8  STN,LAST,SUBSET,CID
@@ -746,7 +754,7 @@ C  ------------
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    CHECKS
-C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2004-09-09
+C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2016-12-20
 C
 C ABSTRACT: PERFORM INCREMENT, TEMPORAL AND VERTICAL CHECKS FOR
 C   A SINGLE UNIQUE STATION.
@@ -765,6 +773,8 @@ C     NPNs), else del-time must be .ge. half-hr on one side, else
 C     temporal check not performed.  Max. del-time on one side is 2-hrs
 C     for all rpts. DO-LOOP logic more concise (esp. in temporal &
 C     vert. chks.)
+C 2016-12-20  D. Stokes   Increase the max allowable number of times 
+C     per station.
 C
 C USAGE:   SUBROUTINE CHECKS(IS)
 C   INPUT ARGUMENT LIST:
@@ -792,7 +802,7 @@ C
 C$$$
       SUBROUTINE CHECKS(IS)
 
-      PARAMETER  (NL=150,NT=26,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
 
       CHARACTER*8     STN
       REAL(8)   BMISS
@@ -1091,7 +1101,7 @@ C   levels on the differencing side)
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    CSTATS
-C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2004-09-09
+C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2016-12-20
 C
 C ABSTRACT: CALCULATE MOMENTS FOR RESIDUALS FOR A SINGLE STATION.
 C
@@ -1099,6 +1109,8 @@ C PROGRAM HISTORY LOG:
 C 1995-04-04  W. Collins -- Original author.
 C 2004-09-09  D. Keyser  -- Stats generated separately for NPN, CAP &
 C     JMA rpts and stratified according to hgt above ground.
+C 2016-12-20  D. Stokes   Increase the max allowable number of times 
+C     per station.
 C
 C USAGE:   SUBROUTINE CSTATS(IS)
 C
@@ -1134,7 +1146,7 @@ C
 C$$$
       SUBROUTINE CSTATS(IS)
 
-      PARAMETER  (NL=150,NT=26,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
 
       CHARACTER*8  STN
       REAL(8)   BMISS
@@ -1413,7 +1425,7 @@ C What type of station is this? (=3-NPN, =7-CAP, =8=JMA)
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    DIFS
-C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2004-09-09
+C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2016-12-20
 C
 C ABSTRACT: COMPUTE DIFFERENCES OF RESIDUALS, USED IN DMA.
 C
@@ -1422,6 +1434,8 @@ C 1995-04-04  W. Collins -- Original author.
 C 2004-09-09  D. Keyser  -- Excessive stdout print of differencing
 C     results can be removed w/ new namelist switch which controls the
 C     degree of printout.
+C 2016-12-20  D. Stokes   Increase the max allowable number of times 
+C     per station.
 C
 C USAGE:    CALL DIFS(IS,IPRINT)
 C
@@ -1461,7 +1475,7 @@ C
 C$$$
       SUBROUTINE DIFS(IS,IPRINT)
 
-      PARAMETER  (NL=150,NT=26,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
 
       CHARACTER*8  STN
       REAL(8)   BMISS
@@ -1558,7 +1572,7 @@ C     OF THE RESIDUALS.
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    DMA
-C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2004-09-09
+C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2016-12-20
 C
 C ABSTRACT: DECISION MAKING ALGORITHM FOR PROFILER WIND QC.
 C
@@ -1566,6 +1580,8 @@ C PROGRAM HISTORY LOG:
 C 1995-04-05  W. Collins -- Original author.
 C 2004-09-09  D. Keyser  -- Reason codes are expanded (see MAIN program
 C     remarks).
+C 2016-12-20  D. Stokes   Increase the max allowable number of times 
+C     per station.
 C
 C USAGE:    CALL DMA(IS)
 C   INPUT ARGUMENT LIST:
@@ -1596,7 +1612,7 @@ C
 C$$$
       SUBROUTINE DMA(IS)
 
-      PARAMETER  (NL=150,NT=26,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
 
       CHARACTER*8  STN,CID
       REAL(8)   BMISS
@@ -1904,7 +1920,7 @@ C  -------------------------
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    INCR
-C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1996-11-20
+C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 2016-12-20
 C
 C ABSTRACT: CALCULATE FORECAST INCREMENTS, I.E. THE DIFFERENCE 
 C   BETWEEN THE OBSERVED VALUE AND THE FORECAST VALUE (OF THE
@@ -1912,6 +1928,8 @@ C   WIND COMPONENTS).
 C
 C PROGRAM HISTORY LOG:
 C 1996-11-20  W. Collins -- Original author.
+C 2016-12-20  D. Stokes   Increase the max allowable number of times 
+C     per station.
 C
 C USAGE:    CALL INCR
 C   OUTPUT FILES:
@@ -1924,7 +1942,7 @@ C
 C$$$
       SUBROUTINE INCR
 
-      PARAMETER  (NL=150,NT=26,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
 
       CHARACTER*8  STN
       REAL(8)  BMISS
@@ -1974,7 +1992,7 @@ C$$$
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    INDICATE
-C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2004-09-09
+C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2016-12-20
 C
 C ABSTRACT: COMPUTE NORMALIZED RESIDUALS FOR A SINGLE UNIQUE
 C   STATION.
@@ -1986,6 +2004,8 @@ C     limits now directly assoc. w/ a rpted hgt above ground lvl rather
 C     than w/ lvl index in arrays (ensures proper error limit used at
 C     all lvls & eliminates hgt above ground vs. hgt above sea lvl
 C     discrepancy - error limits values remain unchanged).
+C 2016-12-20  D. Stokes   Increase the max allowable number of times 
+C     per station.
 C
 C USAGE:    CALL INDICATE(IS)
 C   INPUT ARGUMENT LIST:
@@ -2013,7 +2033,7 @@ C
 C$$$
       SUBROUTINE INDICATE(IS)
 
-      PARAMETER  (NL=150,NT=26,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
 
       CHARACTER*8  STN
       REAL(8)  BMISS
@@ -2101,12 +2121,14 @@ C     VALUES ARE CAPPED AT 20.
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C 
 C SUBPROGRAM:    INIT
-C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1996-11-20
+C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 2016-12-20
 C
 C ABSTRACT: INITIALIZES SEVERAL VARIABLES.
 C
 C PROGRAM HISTORY LOG:
 C 1996-11-20  W. Collins -- Original author.
+C 2016-12-20  D. Stokes   Increase the max allowable number of times 
+C     per station.
 C
 C USAGE:    CALL INIT
 C
@@ -2118,7 +2140,7 @@ C$$$
 
       SUBROUTINE INIT
 
-      PARAMETER  (NL=150,NT=26,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
 
       CHARACTER*8 STN
       REAL(8)  BMISS
@@ -2311,7 +2333,7 @@ C     SORT IA ACCORDING TO THE ORDER SPECIFIED BY THE INDICES IN INDX.
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    MODQUAL
-C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1995-04-05
+C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 2016-12-20
 C
 C ABSTRACT: CONVERTS THIS PROGRAM'S DMA INDEX FOR WIND QUALITY
 C   CONTROL FOR SUSPECT OR BAD (1 OR 2, RESP.) TO PREPBUFR
@@ -2320,6 +2342,8 @@ C   EXISTING BAD PREPBUFR QUALITY MARKS ARE HONORED.
 C
 C PROGRAM HISTORY LOG:
 C 1995-04-05  W. Collins -- Original author.
+C 2016-12-20  D. Stokes   Increase the max allowable number of times 
+C     per station.
 C
 C USAGE:    CALL MODQUAL(IS)
 C   INPUT ARGUMENT LIST:
@@ -2342,7 +2366,7 @@ C
 C$$$
       SUBROUTINE MODQUAL(IS)
 
-      PARAMETER  (NL=150,NT=26,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
 
       CHARACTER*8  STN
 
@@ -2497,7 +2521,7 @@ C$$$
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    PRNTDATA
-C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2004-09-09
+C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2016-12-20
 C
 C ABSTRACT: WRITE WIND PROFILER DATA TO VARIOUS UNITS FOR A SINGLE
 C   UNIQUE STATION.
@@ -2509,6 +2533,8 @@ C     lvl info. in various output listings expanded & sorted into bins
 C     containing both all data lvls & only lvls w/ either suspect or
 C     bad q. marks; output written to text files but not incl. in
 C     stdout.
+C 2016-12-20  D. Stokes   Increase the max allowable number of times 
+C     per station.
 C
 C USAGE:    CALL PRNTDATA(IS)
 C   INPUT ARGUMENT LIST:
@@ -2532,7 +2558,7 @@ C
 C$$$
       SUBROUTINE PRNTDATA(IS)
 
-      PARAMETER  (NL=150,NT=26,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
 
       CHARACTER*8  STN
       CHARACTER*1  CEVN
@@ -2688,7 +2714,7 @@ C         WRITE ALL DATA TO UNIT 53 - TYPE 2 LISTING
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    PUTDATA
-C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2004-09-09
+C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2016-12-20
 C
 C ABSTRACT: PLACE DATA FOR A SINGLE REPORT INTO COMMON BLOCKS FOR
 C   USE.  THE ORIGINAL REPORTED LEVELS ARE SPLIT FROM THE AUXILIARY
@@ -2703,6 +2729,9 @@ C     change computation.
 C 2004-09-09  D. Keyser  -- Max. no. of sites processed incr. from 40
 C     to 120. No. of time periods input now site specific (was
 C     hardwired to be same for all rpts).
+C 2016-12-20  Stokes/Keyser  Increase the max allowable number of times
+C     per station.  Skip reports and print warning if that limit is 
+C     exceeded.
 C
 C USAGE:    CALL PUTDATA
 C   OUTPUT FILES:
@@ -2716,9 +2745,9 @@ C$$$
 
       SUBROUTINE PUTDATA
 
-      PARAMETER  (NL=150,NT=26,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
 
-      CHARACTER*8  STN,CID
+      CHARACTER*8  STN,CID,cNT
       REAL  RINC(5)
       REAL(8)  SID_8
       INTEGER  IDAT(8),JDAT(8)
@@ -2741,6 +2770,8 @@ C$$$
      $ NFIN,NFOUT
 
       EQUIVALENCE (SID_8,CID)
+
+      data ifirst/0/
 
       NREP1  = NREP1  + 1
 
@@ -2773,7 +2804,23 @@ C  -------------------------------------
 
    10 CONTINUE
 
+C  PRINT WARNING IF NUMBER OF OB TIMES > LIMIT FOR A PARTICULAR STATION
+C  --------------------------------------------------------------------
+
       NTIMES(N) = NTIMES(N) + 1
+      IF(NTIMES(N).GT.NT) THEN
+         WRITE(6,105) CID,NT,DHR
+         NTIMES(N) = NT
+         if(ifirst.eq.0) then
+            write(cNT,'(i8)') NT
+            call system('[ -n "$jlogfile" ] && $DATA/postmsg'//
+     $       ' "$jlogfile" "***WARNING: THE NUMBER OF OB TIMES FOR 1'//
+     $       ' OR MORE IDs EXCEEDS LIMIT OF '//cNT//', SOME REPORTS '//
+     $       'NOT PROCESSED - INCR. SIZE OF NT"')
+            ifirst = 1
+         endif
+         RETURN
+      ENDIF
       TIM(NTIMES(N),N) = DHR
 
 cdak  WRITE(6,101) N,CID
@@ -2834,13 +2881,15 @@ C  ----------------------------------------------------------------
   100 FORMAT(/'##PUTDATA: ID ',A8,' CANNOT BE Q.C.-d BECAUSE THE ',
      $ 'NUMBER OF UNIQUE STATIONS EXCEEDS THE LIMIT OF',I4/)
   101 FORMAT(' PUTDATA: N,CID: ',I5,2X,A8)
+  105 FORMAT(/'##PUTDATA: THE NUMBER OF OB TIMES FOR ID ',A8,
+     $ ' EXCEEDS THE LIMIT OF ',I0,'. SKIP REPORT FOR DHR=',F7.3/)
 
       END
 
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    READPROF
-C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2004-09-09
+C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2016-12-20
 C
 C ABSTRACT: READ PROFILER REPORTS FROM THE PREPBUFR FILE AND STORE
 C   INTO MEMORY.
@@ -2849,6 +2898,8 @@ C PROGRAM HISTORY LOG:
 C 1996-11-20  W. Collins -- Original author.
 C 2004-09-09  D. Keyser  -- Namelist switches added to specify output
 C     time window.
+C 2016-12-20  D. Stokes   Increase the max allowable number of times 
+C     per station.
 C
 C USAGE:    CALL READPROF
 C   OUTPUT FILES:
@@ -2862,7 +2913,7 @@ C$$$
 
       SUBROUTINE READPROF
 
-      PARAMETER  (NL=150,NT=26,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
 
       LOGICAL  FIRST
       CHARACTER*8  SUBSET,CID
@@ -3047,12 +3098,14 @@ C-----------------------------------------------------------------------
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    RESIDUAL
-C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1996-11-20
+C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 2016-12-20
 C
 C ABSTRACT: CALCULATE ALL RESIDUALS FOR A SINGLE UNIQUE STATION.
 C
 C PROGRAM HISTORY LOG:
 C 1996-11-20  W. Collins -- Original author.
+C 2016-12-20  D. Stokes   Increase the max allowable number of times 
+C     per station.
 C
 C USAGE:    CALL RESIDUAL(IS)
 C   INPUT ARGUMENT LIST:
@@ -3067,7 +3120,7 @@ C$$$
 
       SUBROUTINE RESIDUAL(IS)
 
-      PARAMETER  (NL=150,NT=26,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
 
       COMMON/PROFZ/ZZ(NL,NT,NS),UZ(NL,NT,NS),VZ(NL,NT,NS),QZ(NL,NT,NS),
      $ PZ(NL,NT,NS),UFZ(NL,NT,NS),VFZ(NL,NT,NS),SZ(NL,NT,NS),
@@ -3100,7 +3153,7 @@ C  -------------------------------------------------
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    RESTRUCT
-C   PRGMMR: D. KEYSER        ORG: NP22     DATE: 2004-09-09
+C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2016-12-20
 C
 C ABSTRACT: VERTICALLY AND TEMPORALLY RESTRUCTURE THE DATA.
 C
@@ -3112,6 +3165,8 @@ C     to allow proper temporal checking at each individual site (each
 C     site examined over all rpt times to generate hgt profile
 C     containing all possible lvls, times w/ new lvls inserted get
 C     missing wind).
+C 2016-12-20  D. Stokes   Increase the max allowable number of times 
+C     per station.
 C
 C USAGE:    CALL RESTRUCT
 C   OUTPUT FILES:
@@ -3125,7 +3180,7 @@ C$$$
 
       SUBROUTINE RESTRUCT
 
-      PARAMETER  (NL=150,NT=26,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
 
       CHARACTER*8     STN
       REAL(8)  BMISS
@@ -3392,7 +3447,7 @@ C     SORT RA ACCORDING TO THE ORDER SPECIFIED BY THE INDICES IN INDX.
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    TWODIM
-C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2004-09-09
+C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2016-12-20
 C
 C ABSTRACT: COMPUTE MEDIAN RESIDUALS FOR A SINGLE UNIQUE
 C   STATION.
@@ -3403,6 +3458,8 @@ C 2004-09-09  D. Keyser  -- Lvl index in all arrays now site specific
 C     to allow proper temporal checking at each individual site times
 C     w/ new lvls inserted get missing wind). No. of time periods input
 C     now site specific (was hardwired to be same for all rpts).
+C 2016-12-20  D. Stokes   Increase the max allowable number of times 
+C     per station.
 C
 C USAGE:    CALL TWODIM(IS)
 C   INPUT ARGUMENT LIST:
@@ -3424,7 +3481,7 @@ C
 C$$$
       SUBROUTINE TWODIM(IS)
 
-      PARAMETER  (NL=150,NT=26,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
 
       CHARACTER*8  STN
       REAL  U(NL,NT),V(NL,NT),TIN(3,3),TUT(NL,NT)
@@ -3527,7 +3584,7 @@ C           AND COMPUTE VECTOR RESIDUAL.
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    PSTAT
-C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2004-09-09
+C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2016-12-20
 C
 C ABSTRACT: DRIVER SUBROUTINE TO COMPUTE AND PRINT MOMENT
 C   STATISTICS. CALLS SUBROUTINE MSTATS TO ACTUALLY DO THE WORK
@@ -3537,6 +3594,8 @@ C PROGRAM HISTORY LOG:
 C 1995-04-05  W. Collins -- Original author.
 C 2004-09-09  D. Keyser  -- Stats generated separately for NPN, CAP &
 C     JMA rpts.
+C 2016-12-20  D. Stokes   Increase the max allowable number of times 
+C     per station.
 C
 C USAGE:    CALL PSTAT
 C
@@ -3547,7 +3606,7 @@ C
 C$$$
       SUBROUTINE PSTAT
 
-      PARAMETER  (NL=150,NT=26,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
 
       LOGICAL  STATS,MEAN,STDDEV,SKEW,KURT
       CHARACTER*8  STN
@@ -3628,7 +3687,7 @@ C  --------------------------------------------------
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    MSTATS
-C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2004-09-09
+C   PRGMMR: D. KEYSER        ORG: NP22       DATE: 2016-12-20
 C
 C ABSTRACT: COMPUTES THE VARIOUS MOMENT STATISTICS AND PRINTS
 C   TO FILES.
@@ -3641,6 +3700,8 @@ C     stdout.  Computation & printout of stats, as well as combination
 C     of stat types printed out controlled via new namelist switches.
 C     Stats generated separately for NPN, CAP & JMA rpts and stratified
 C     according to hgt above ground.
+C 2016-12-20  D. Stokes   Increase the max allowable number of times 
+C     per station.
 C
 C USAGE:    CALL MSTATS(FIELD,ITYPE,TITLE,NUM)
 C   INPUT ARGUMENT LIST:
@@ -3668,7 +3729,7 @@ C
 C$$$
       SUBROUTINE MSTATS(FIELD,ITYPE,TITLE,IFLD)
 
-      PARAMETER  (NL=150,NT=26,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
 
       LOGICAL  STATS,LPRNT
       CHARACTER*8   STATISTIC(4)

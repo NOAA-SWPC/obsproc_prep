@@ -32,6 +32,8 @@ cd $DATA
 PRPI=$1
 if [ ! -s $PRPI ] ; then exit 1;fi
 
+jlogfile=${jlogfile:=""}
+
 rm $PRPI.profcqc
 rm profcqc.monitor profcqc.events
 
@@ -72,9 +74,7 @@ echo
 set -x
 if [ $err -eq 4 ]; then
    msg="PREPBUFR DATA SET CONTAINS NO "PROFLR" TABLE A MESSAGES  --> non-fatal"
-set +u
    [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
-set -u
    err=0
 fi
 if [ -s $DATA/err_chk ]; then
@@ -84,7 +84,7 @@ else
    then
 ######kill -9 ${qid} # need a WCOSS alternative to this even tho commented out
                      #  in ops
-      exit 555
+      exit 55
    fi
 fi
 

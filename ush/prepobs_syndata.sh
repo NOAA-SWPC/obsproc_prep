@@ -54,6 +54,11 @@ set -aux
 #              script if not passed in)
 #   pgmout   - string indicating path to for standard output file (skipped
 #              over by this script if not passed in)
+#   sys_tp   - system type and phase.  (if not passed in, an attempt is made to
+#              set this string using getsystem.pl, an NCO script in prod_util)
+#   SITE     - site name (may have been set by local shell startup script)
+#   launcher_SYNDX - launcher for SYNDX executable (on Cray-XC40, defaults to
+#                    aprun using single task)
 
 
 cd $DATA
@@ -61,6 +66,9 @@ PRPI=$1
 if [ ! -s $PRPI ] ; then exit 1 ;fi
 VITL=$2
 CDATE10=$3
+
+jlogfile=${jlogfile:=""}
+
 if [ ! -s $VITL ] ; then
    msg="TCVITALS EMPTY - NO PROCESSING PERFORMED BY SYNDAT_SYNDATA for \
 $CDATE10  --> non-fatal"
@@ -69,9 +77,7 @@ $CDATE10  --> non-fatal"
    echo "$msg"
    echo
    set -x
-   set +u
    [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
-   set -u
 
    exit
 fi
@@ -82,12 +88,12 @@ else
    suffix_char="_nobog"
 fi
 
-rm $PRPI.syndata bogdomn.wrk${suffix_char} alldat${suffix_char}
-rm stmtrk.wrk${suffix_char} rawdat.wrk${suffix_char} dumcoef${suffix_char}
-rm matcoef${suffix_char} dthistry${suffix_char} bogrept${suffix_char}
-rm bogdata${suffix_char} fenvdta.wrk${suffix_char} stkdatb.wrk${suffix_char}
-rm gesvit${suffix_char} bghistry.diag${suffix_char}
-rm prevents.filtering.syndata${suffix_char}
+rm -f $PRPI.syndata bogdomn.wrk${suffix_char} alldat${suffix_char}
+rm -f stmtrk.wrk${suffix_char} rawdat.wrk${suffix_char} dumcoef${suffix_char}
+rm -f matcoef${suffix_char} dthistry${suffix_char} bogrept${suffix_char}
+rm -f bogdata${suffix_char} fenvdta.wrk${suffix_char} stkdatb.wrk${suffix_char}
+rm -f gesvit${suffix_char} bghistry.diag${suffix_char}
+rm -f prevents.filtering.syndata${suffix_char}
 
 pgm=`basename  $SYNDX`
 if [ -s $DATA/prep_step ]; then
@@ -137,17 +143,31 @@ export FORT74=alldat${suffix_char}
 export FORT80=prevents.filtering.syndata${suffix_char}
 export FORT89=bogdomn.wrk${suffix_char}
 
-#### THE BELOW LIKELY NO LONGER APPLIES ON WCOSS
-#The choice in the first  line below MAY cause a failure
-#The choice in the second line below works!
-set +u
-####[ -n "$LOADL_PROCESSOR_LIST" ] && export XLSMPOPTS=parthds=2:stack=64000000
-[ -n "$LOADL_PROCESSOR_LIST" ] && export XLSMPOPTS=parthds=2:stack=20000000
-set -u
+#### THE BELOW APPLIED TO THE CCS (IBM AIX)  (kept for reference)
+##The choice in the first  line below MAY cause a failure
+##The choice in the second line below works!
+#set +u
+#####[ -n "$LOADL_PROCESSOR_LIST" ] && export XLSMPOPTS=parthds=2:stack=64000000
+#[ -n "$LOADL_PROCESSOR_LIST" ] && export XLSMPOPTS=parthds=2:stack=20000000
+#set -u
 
 TIMEIT=${TIMEIT:-""}
 [ -s $DATA/time ] && TIMEIT="$DATA/time -p"
-$TIMEIT $SYNDX < $SYNDC > outout  2> errfile
+
+SITE=${SITE:-""}
+sys_tp=${sys_tp:-$(getsystem.pl -tp)}
+getsystp_err=$?
+if [ $getsystp_err -ne 0 ]; then
+   msg="***WARNING: error using getsystem.pl to determine system type and phase"
+   [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+fi
+echo sys_tp is set to: $sys_tp
+if [ "$sys_tp" = "Cray-XC40" -o "$SITE" = "SURGE" -o "$SITE" = "LUNA" ]; then
+  launcher_SYNDX=${launcher_SYNDX:-"aprun -n 1 -N 1 -d 1"}
+else
+  launcher_SYNDX=${launcher_SYNDX:-""}
+fi
+$TIMEIT $launcher_SYNDX $SYNDX < $SYNDC > outout  2> errfile
 err=$?
 ###cat errfile
 cat errfile >> outout
@@ -170,9 +190,7 @@ if [ $err -eq 0 ]; then
    echo " --------------------------------------------- "
    set -x
    msg="$pgm completed normally for $CDATE10 - DO_BOGUS= $DO_BOGUS"
-   set +u
    [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
-   set -u
    mv $PRPI.syndata $PRPI
 
 else
@@ -184,9 +202,7 @@ msg="SYNDAT_SYNDATA TERMINATED ABNORMALLY WITH CONDITION CODE $err \
    echo "$msg"
    echo
    set -x
-   set +u
    [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
-   set -u
 
 fi
 

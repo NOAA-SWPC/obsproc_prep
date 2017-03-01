@@ -89,8 +89,12 @@ export FORT68=cqc_radcor
 export FORT80=cqcbufr.unit80.wrk
 TIMEIT=${TIMEIT:-""}
 [ -s $DATA/time ] && TIMEIT="$DATA/time -p"
+# The following improves performance on Cray-XC40 if $CQCX was
+#    linked to the IOBUF i/o buffering library
+export IOBUF_PARAMS='*wrk:verbose,*cqc_*:verbose'
 $TIMEIT $CQCX< $CQCC > outout 2> errfile
 err=$?
+unset IOBUF_PARAMS
 ###cat errfile
 cat errfile >> outout
 cat outout >> cqcbufr.out
@@ -110,7 +114,7 @@ else
    then
 ######kill -9 ${qid} # need a WCOSS alternative to this even tho commented out
                      #  in ops
-      exit 555
+      exit 55
    fi
 fi
 

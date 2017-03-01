@@ -27,11 +27,18 @@ qid=$$
 #              script if not passed in)
 #   pgmout   - string indicating path to for standard output file (skipped
 #              over by this script if not passed in)
+#   sys_tp   - system type and phase.  (if not passed in, an attempt is made to
+#              set this string using getsystem.pl, an NCO script in prod_util)
+#   SITE     - site name (may have been set by local shell startup script)
+#   launcher_OIQCX - launcher for OIQCX executable (on Cray-XC40, defaults to
+#                    aprun using 16 tasks)
 
 cd $DATA
 PRPI=$1
 if [ ! -s $PRPI ] ; then exit 1;fi
 CDATE10=$2
+
+jlogfile=${jlogfile:=""}
 
 rm $PRPI.oiqcbufr
 rm tosslist
@@ -46,25 +53,10 @@ else
    unset FORT00 `env | grep "^FORT[0-9]\{1,\}=" | awk -F= '{print $1}'`
 fi
 
-#### THE BELOW LIKELY NO LONGER APPLIES ON WCOSS
-set +u
-[ -n "$LOADL_PROCESSOR_LIST" ] && export XLSMPOPTS=parthds=2:usrthds=2:stack=64000000
-set -u
-
-#########################module load ibmpe ics lsf uncomment if not in profile
-
-#  seems to run ok w next 10 lines commented out (even though Jack had them in
-#   his version of this script)
-###export LANG=en_US
-###export MP_EAGER_LIMIT=65536
-###export MP_EUIDEVELOP=min
-###export MP_EUIDEVICE=sn_all
-###export MP_EUILIB=us
-###export MP_MPILIB=mpich2
-###export MP_USE_BULK_XFER=yes
-###export MPICH_ALLTOALL_THROTTLE=0
-###export MP_COLLECTIVE_OFFLOAD=yes
-###export KMP_STACKSIZE=1024m
+#### THE BELOW APPLIED TO THE CCS (IBM AIX)  (kept for reference)
+#set +u
+#[ -n "$LOADL_PROCESSOR_LIST" ] && export XLSMPOPTS=parthds=2:usrthds=2:stack=64000000
+#set -u
 
 echo "      $CDATE10" > cdate.dat
 export FORT11=cdate.dat
@@ -84,7 +76,36 @@ TIMEIT=${TIMEIT:-""}
 [ -s $DATA/time ] && TIMEIT="$DATA/time -p"
 # $TIMEIT mpirun $OIQCX > outout 2> errfile
 #$TIMEIT mpirun -genvall -n $LSB_DJOB_NUMPROC -machinefile $LSB_DJOB_HOSTFILE $OIQCX > outout 2> errfile
-$TIMEIT mpirun.lsf $OIQCX > outout 2> errfile
+
+SITE=${SITE:-""}
+sys_tp=${sys_tp:-$(getsystem.pl -tp)}
+getsystp_err=$?
+if [ $getsystp_err -ne 0 ]; then
+   msg="***WARNING: error using getsystem.pl to determine system type and phase"
+   [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+fi
+echo sys_tp is set to: $sys_tp
+if [ "$sys_tp" = "Cray-XC40" -o "$SITE" = "SURGE" -o "$SITE" = "LUNA" ]; then
+   launcher_OIQCX=${launcher_OIQCX:-"aprun -n 16 -N 16 -j 1"}  # consistent with tide/gyre
+#  launcher_OIQCX=${launcher_OIQCX:-"aprun -n 24 -N 24 -j 1"}  # slightly faster
+else
+   launcher_OIQCX=${launcher_OIQCX:-"mpirun.lsf"}
+#########################module load ibmpe ics lsf uncomment if not in profile
+#  seems to run ok w next 10 lines commented out (even though Jack had them in
+#   his version of this script)
+###export LANG=en_US
+###export MP_EAGER_LIMIT=65536
+###export MP_EUIDEVELOP=min
+###export MP_EUIDEVICE=sn_all
+###export MP_EUILIB=us
+###export MP_MPILIB=mpich2
+###export MP_USE_BULK_XFER=yes
+###export MPICH_ALLTOALL_THROTTLE=0
+###export MP_COLLECTIVE_OFFLOAD=yes
+###export KMP_STACKSIZE=1024m
+fi
+
+$TIMEIT $launcher_OIQCX $OIQCX > outout  2> errfile
 
 err=$?
 ###cat errfile
@@ -108,9 +129,7 @@ msg="WRNG: SOME OBS NOT QC'd BY PGM PREPOBS_OIQCBUFR - # OF OBS > LIMIT \
    echo "$msg"
    echo
    set -x
-   set +u
    [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
-   set -u
    err=0
 fi
 if [ -s $DATA/err_chk ]; then
@@ -120,7 +139,7 @@ else
    then
 ######kill -9 ${qid} # need a WCOSS alternative to this even tho commented out
                      #  in ops
-      exit 555
+      exit 55
    fi
 fi
 

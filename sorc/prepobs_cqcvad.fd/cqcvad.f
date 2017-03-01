@@ -1,7 +1,7 @@
 C$$$  MAIN PROGRAM DOCUMENTATION BLOCK
 C
 C MAIN PROGRAM: PREPOBS_CQCVAD
-C   PRGMMR: MELCHIOR         ORG: NP22        DATE: 2014-01-15
+C   PRGMMR: MELCHIOR         ORG: NP22        DATE: 2016-12-18
 C
 C ABSTRACT: PERFORM COMPLEX QUALITY CONTROL OF VAD WINDS FROM
 C   WSR-88D RADARS.
@@ -65,6 +65,8 @@ C       amongst all VAD reports that can be processed) and NEVNT (total
 C       number of events amongst all VAD reports that can be processed)
 C       both from 160000 to 500000 to accommodate VAD wind reports from
 C       Level 2 decoder.
+C 2016-12-18  D. Stokes  Increased NSTN (maximum number of stations to
+C       process) from 200 to 300.  Made minor correction in GETDAT.
 C
 C USAGE:
 C   INPUT FILES:
@@ -138,9 +140,9 @@ C$$$
 
       NAMELIST /NAMLST/ HONOR_FLAGS, PRINT_52, PRINT_53, PRINT_60, TEST
 
-      CALL W3TAGB('PREPOBS_CQCVAD',2014,0015,0031,'NP22')
+      CALL W3TAGB('PREPOBS_CQCVAD',2016,0353,1200,'NP22')
 
-      PRINT *, ' ==> WELCOME TO CQCVAD, VERSION 2014-01-15 <=='
+      PRINT *, ' ==> WELCOME TO CQCVAD, VERSION 2016-12-18 <=='
       PRINT *, ' '
 
 C  Set up default values for namelist switches
@@ -324,7 +326,7 @@ C$$$
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM: COMSTAT
-C   PRGMMR: S. Melchior      ORG: NP22       DATE: 2014-01-15
+C   PRGMMR: S. Melchior      ORG: NP22       DATE: 2016-12-18
 C
 C ABSTRACT: COMPUTE STATISTICS FOR HEIGHT-TIME INCREMENT INTERPOLATION.
 C
@@ -339,6 +341,8 @@ C       WIND REPORTS FROM LEVEL 2 DECODER.
 C 2014-01-15  S. Melchior  Increased NRPT (total number of levels
 C       amongst all VAD reports that can be processed) from 160000 to
 C       500000 to accommodate VAD wind reports from Level 2 decoder.
+C 2016-12-18  D. Stokes  Increased NSTN (maximum number of stations to
+C       process) from 200 to 300.
 C
 C USAGE:    CALL COMSTAT
 C
@@ -349,7 +353,7 @@ C
 C$$$
       SUBROUTINE COMSTAT
 
-      PARAMETER (NL=34,NTIM=5,NTIMES=6,NRPT=500000,NSTN=200)
+      PARAMETER (NL=34,NTIM=5,NTIMES=6,NRPT=500000,NSTN=300)
       PARAMETER (NLEV=35,NINC=3)
       INTEGER N12(0:NL,0:NTIM)
       REAL    U1(0:NL,0:NTIM),   V1(0:NL,0:NTIM),
@@ -415,7 +419,7 @@ C  ---------------------
 
 C  COLLECT STATISTICS BY TIME AND HEIGHT DIFFERENCES
 C  -------------------------------------------------
-      DO IS=1,NST ! nst max is nstn=200
+      DO IS=1,NST ! nst max is nstn=300
         DO L=1,NLEV ! nlev max is 35
           DO I=1,NTIMES ! ntimes max is 6
            DO IT=1,NIN(L,I,IS) !  nin(L,I,IS) max is 3
@@ -879,12 +883,14 @@ C           print *, 'WARNING: INDEX > NDIV, SET INDEX = NDIV'
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM: DRCTSL
-C   PRGMMR: WOOLLEN          ORG: NP22       DATE: 1990-11-06
+C   PRGMMR: WOOLLEN          ORG: NP22       DATE: 2016-12-18
 C
 C ABSTRACT: DRIVER FOR CHOLESKY TYPE LINEAR EQUATION SOLVER.
 C
 C PROGRAM HISTORY LOG:
 C 1990-11-06  J. WOOLLEN
+C 2016-12-18  D. Stokes  Increased NSTN (maximum number of stations to
+C       process) from 200 to 300.
 C
 C USAGE:
 C   INPUT ARGUMENTS:
@@ -911,7 +917,7 @@ C
 C$$$
       SUBROUTINE DRCTSL(FAALL,RAALL,DOTPRD,NDIM,MAXDIM,NXXYY,NFT)
 
-      PARAMETER(NSTN=200)
+      PARAMETER(NSTN=300)
       DIMENSION  FAALL(NSTN,45), DOTPRD(NSTN,1), RAALL(NSTN,9,1),
      &           NDIM(NSTN)
       DIMENSION  A(NSTN,45),B(NSTN,9,1),BAD(NSTN),SMOOTH(6)
@@ -1007,7 +1013,7 @@ C  ----------------------------------------------------
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM: EVNOUT
-C   PRGMMR: S. Melchior      ORG: NP22       DATE: 2014-01-15
+C   PRGMMR: S. Melchior      ORG: NP22       DATE: 2016-12-18
 C
 C ABSTRACT: THE PRESENT REPORT IS IN /SINGLE/ AND STNID WITH INDICES
 C   FROM NUM1 TO NUM2.  FOLLOWING CODE WILL LOOK AT THE EVENTS
@@ -1042,6 +1048,8 @@ C       amongst all VAD reports that can be processed) and NEVNT (total
 C       number of events amongst all VAD reports that can be processed)
 C       both from 160000 to 500000 to accommodate VAD wind reports from
 C       Level 2 decoder.
+C 2016-12-18  D. Stokes  Increased NSTN (maximum number of stations to
+C       process) from 200 to 300.
 C
 C USAGE:    CALL EVNOUT(NUM1,NUM2,NLV)
 C   INPUT ARGUMENT LIST:
@@ -1056,7 +1064,7 @@ C
 C$$$
       SUBROUTINE EVNOUT(NUM1,NUM2,NLV)
 
-      PARAMETER (NRPT=500000,NSTN=200,NLEV=35)
+      PARAMETER (NRPT=500000,NSTN=300,NLEV=35)
       parameter (nevnt=500000)
       REAL(8)   BMISS
 
@@ -1278,7 +1286,7 @@ C  ----------------
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM: GETDAT
-C   PRGMMR: S. Melchior      ORG: NP22       DATE: 2014-01-15
+C   PRGMMR: S. Melchior      ORG: NP22       DATE: 2016-12-18
 C
 C ABSTRACT: READ PREPBUFR DATA
 C
@@ -1300,6 +1308,10 @@ C       ACCOMMODATE VAD WIND REPORTS FROM LEVEL 2 DECODER.
 C 2014-01-15  S. Melchior  Increased NRPT (total number of levels
 C       amongst all VAD reports that can be processed) from 160000 to
 C       500000 to accommodate VAD wind reports from Level 2 decoder.
+C 2016-12-18  D. Stokes  Increased NSTN (maximum number of stations to
+C       process) from 200 to 300.  Also made a minor logic correction
+C       so that the station info for the "NSTN'th" id is stored if
+C       there are at least that many unique ids.
 C
 C USAGE:    CALL GETDAT(ITIME)
 C   INPUT ARGUMENT LIST:
@@ -1312,7 +1324,7 @@ C
 C$$$
       SUBROUTINE GETDAT(ITIME)
 
-      PARAMETER (NRPT=500000,NSTN=200,NLEV=35,NTIMES=6,NINC=3)
+      PARAMETER (NRPT=500000,NSTN=300,NLEV=35,NTIMES=6,NINC=3)
       PARAMETER (MLV=255)         ! no. of possible levels
       INTEGER IDAT(8), JDAT(8), ITIMES(8,4)
       REAL    TDIF(5,4), RINC(5)
@@ -1585,11 +1597,11 @@ C  -------------------------------------
         LOOP1n1: DO IS=1,NSTN
           IF(SIDS(IS).EQ.STNID(I)) CYCLE LOOP1
         ENDDO LOOP1n1
-        NST = NST + 1
         if(nst.ge.nstn) then
           print *, 'WARNING: NST>=NSTN, EXIT LOOP'
           exit LOOP1
         endif
+        NST = NST + 1
         SIDS(NST) = STNID(I)
         SLAT(NST) = XLA(I)
         SLON(NST) = XLO(I)
@@ -1722,7 +1734,7 @@ C$$$
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM: INCDIST
-C   PRGMMR: S. Melchior      ORG: NP22       DATE: 2014-01-15
+C   PRGMMR: S. Melchior      ORG: NP22       DATE: 2016-12-18
 C
 C ABSTRACT: COMPUTE STATISTICS AND DISTRIBUTIONS FOR INCREMENTS
 C
@@ -1754,6 +1766,8 @@ C       utilize parameters NSTN, NTIMES, and NINC rather than
 C       explicitly setting the array size at 3600. "icntmx" is no 
 C       longer necessary but will be retained because it may prove
 C       useful for future debugging.
+C 2016-12-18  D. Stokes  Increased NSTN (maximum number of stations to
+C       process) from 200 to 300.
 C
 C USAGE:    CALL INCDIST
 C
@@ -1767,7 +1781,7 @@ C
 C$$$
       SUBROUTINE INCDIST
 
-      PARAMETER (NRPT=500000,NSTN=200,NLEV=35,NDIV=23,NTIMES=6,NINC=3)
+      PARAMETER (NRPT=500000,NSTN=300,NLEV=35,NDIV=23,NTIMES=6,NINC=3)
 
       COMMON /STN/    SLAT(NSTN), SLON(NSTN), SIDS(NSTN), STNID(NRPT),
      &                ZSTN(NSTN)
@@ -1921,7 +1935,7 @@ c       WRITE(6,503) (IZLEV(L), (NMS(I,L,2,IS),I=1,23), L=1,NLEV)
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM: INCR
-C   PRGMMR: S. Melchior      ORG: NP22       DATE: 2014-01-15
+C   PRGMMR: S. Melchior      ORG: NP22       DATE: 2016-12-18
 C
 C ABSTRACT: Compute increments (observation - guess)
 C
@@ -1935,6 +1949,8 @@ C       REPORTS FROM LEVEL 2 DECODER.
 C 2014-01-15  S. Melchior  Increased NRPT (total number of levels
 C       amongst all VAD reports that can be processed) from 160000 to
 C       500000 to accommodate VAD wind reports from Level 2 decoder.
+C 2016-12-18  D. Stokes  Increased NSTN (maximum number of stations to
+C       process) from 200 to 300.
 C
 C USAGE:    CALL INCR
 C
@@ -1945,7 +1961,7 @@ C
 C$$$
       SUBROUTINE INCR
 
-      PARAMETER (NRPT=500000,NSTN=200,NLEV=35,NTIMES=6,NINC=3)
+      PARAMETER (NRPT=500000,NSTN=300,NLEV=35,NTIMES=6,NINC=3)
 
       REAL(8)  BMISS
 
@@ -2148,7 +2164,7 @@ C     input quantities n and arr are not changed.
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM: INIT
-C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1999-08-18
+C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 2016-12-18
 C
 C ABSTRACT: Initialize some quantities.
 C
@@ -2158,6 +2174,8 @@ C 2012-03-05  S. MELCHIOR  ADDED PARAMETERS NTIMES=6 AND NINC=3 TO
 C       TIDY UP THE CODE. RENAMED NE TO NME FOR EASE OF 
 C       NAVIGATION AND FOR CLARIFICATION AS NE IS USED FOR 
 C       INEQUALITY TESTING (.NE.).
+C 2016-12-18  D. Stokes  Increased NSTN (maximum number of stations to
+C       process) from 200 to 300.
 C
 C USAGE:    CALL INIT
 C
@@ -2168,7 +2186,7 @@ C
 C$$$
       SUBROUTINE INIT
 
-      PARAMETER(NSTN=200,NLEV=35,NTIMES=6,NINC=3)
+      PARAMETER(NSTN=300,NLEV=35,NTIMES=6,NINC=3)
 
       REAL(8)   BMISS
 
@@ -2199,7 +2217,7 @@ C$$$
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM: MATR
-C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1999-08-18
+C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 2016-12-18
 C
 C ABSTRACT: SET UP THE MATRICES FOR THE HEIGHT-TIME OI ANALYSIS
 C   THE ANALYSIS EQUATION IS AW=C
@@ -2210,6 +2228,8 @@ C 2012-03-05  S. MELCHIOR  ADDED PARAMETERS NTIMES=6 AND NINC=3 TO
 C       TIDY UP THE CODE. RENAMED NE TO NME FOR EASE OF 
 C       NAVIGATION AND ALSO FOR CLARIFICATION AS NE IS USED FOR
 C       INEQUALITY TESTING (.NE.).
+C 2016-12-18  D. Stokes  Increased NSTN (maximum number of stations to
+C       process) from 200 to 300.
 C
 C USAGE:    CALL MATR(IS,IT)
 C   INPUT ARGUMENT LIST:
@@ -2223,7 +2243,7 @@ C
 C$$$
       SUBROUTINE MATR(IS,IT)
 
-      PARAMETER(NSTN=200,NLEV=35,NTIMES=6,NINC=3)
+      PARAMETER(NSTN=300,NLEV=35,NTIMES=6,NINC=3)
       COMMON /MATRIC/ A(NSTN,45), C(NSTN,9), NMAT(NSTN), NM
       COMMON /COLECT/ LS(NSTN,NLEV,NINC), JS(NSTN,NLEV,NINC),
      $                NS(NSTN,NLEV,NINC), NC(NLEV,NINC),
@@ -2320,7 +2340,7 @@ C  -------------------------
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM: DMA
-C   PRGMMR: S. Melchior      ORG: NP22       DATE: 2014-01-15
+C   PRGMMR: S. Melchior      ORG: NP22       DATE: 2016-12-18
 C
 C ABSTRACT: THIS IS THE DECISION MAKING ALGORITHM.  IT DETERMINES
 C   THE DATA QUALITY.
@@ -2344,6 +2364,8 @@ C       amongst all VAD reports that can be processed) and NEVNT (total
 C       number of events amongst all VAD reports that can be processed)
 C       both from 160000 to 500000 to accommodate VAD wind reports from
 C       Level 2 decoder.
+C 2016-12-18  D. Stokes  Increased NSTN (maximum number of stations to
+C       process) from 200 to 300.
 C
 C USAGE:    CALL DMA(HONOR_FLAGS)
 C   INPUT ARGUMENT LIST:
@@ -2356,7 +2378,7 @@ C
 C$$$
       SUBROUTINE DMA(HONOR_FLAGS)
 
-      PARAMETER (NRPT=500000,NSTN=200,NLEV=35,NTIMES=6,NINC=3)
+      PARAMETER (NRPT=500000,NSTN=300,NLEV=35,NTIMES=6,NINC=3)
       PARAMETER (nevnt=500000)
       CHARACTER*8 SIDS, STNID, SIDEV
 
@@ -2634,7 +2656,7 @@ C  ------------------------------------------------------
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM: RESDIST
-C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1999-08-18
+C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 2016-12-18
 C
 C ABSTRACT: COMPUTE STATISTICS AND DISTRIBUTIONS OF RESIDUALS OF
 C   CHECKS.
@@ -2662,6 +2684,8 @@ C       utilize parameters NSTN, NTIMES, and NINC rather than
 C       explicitly setting the array size at 3600. "icntmx" is no 
 C       longer necessary but will be retained because it may prove
 C       useful for future debugging.
+C 2016-12-18  D. Stokes  Increased NSTN (maximum number of stations to
+C       process) from 200 to 300.
 C
 C USAGE:    CALL RESDIST
 C
@@ -2675,7 +2699,7 @@ C
 C$$$
       SUBROUTINE RESDIST
 
-      PARAMETER(NSTN=200,NLEV=35,NDIV=23,NTIMES=6,NINC=3)
+      PARAMETER(NSTN=300,NLEV=35,NDIV=23,NTIMES=6,NINC=3)
 
       COMMON /INCS/   UIN(NLEV,NTIMES,NINC,NSTN),
      &                VIN(NLEV,NTIMES,NINC,NSTN),
@@ -2768,7 +2792,7 @@ C  -------------------
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM: SELECT
-C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1999-08-18
+C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 2016-12-18
 C
 C ABSTRACT: SELECT DATA TO BE USED IN Z-T OI ANALYSIS
 C
@@ -2778,6 +2802,8 @@ C 2012-03-05  S. MELCHIOR  ADDED PARAMETERS NTIMES=6 AND NINC=3 TO
 C       TIDY UP THE CODE. RENAMED NE TO NME FOR EASE OF 
 C       NAVIGATION AND FOR CLARIFICATION SINCE NE IS USED FOR
 C       INEQUALITY TESTING (.NE.).
+C 2016-12-18  D. Stokes  Increased NSTN (maximum number of stations to
+C       process) from 200 to 300.
 C
 C USAGE:    CALL SELECT(IS,IT)
 C   INPUT ARGUMENT LIST:
@@ -2791,7 +2817,7 @@ C
 C$$$
       SUBROUTINE SELECT(IS,IT)
 
-      PARAMETER(NSTN=200,NLEV=35,NTIMES=6,NINC=3)
+      PARAMETER(NSTN=300,NLEV=35,NTIMES=6,NINC=3)
       COMMON /INCS/   UIN(NLEV,NTIMES,NINC,NSTN),
      &                VIN(NLEV,NTIMES,NINC,NSTN),
      &                UUU(NLEV,NTIMES,NINC,NSTN),
@@ -2870,7 +2896,7 @@ C  ------------------------------------------
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM: SOLVE
-C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1999-08-18
+C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 2016-12-18
 C
 C ABSTRACT:  SOLVE THE MATRIX PROBLEMS
 C   A IS THE SYMMETRIC MATRIX (IN TRIANGULAR FORM)
@@ -2883,6 +2909,8 @@ C 2012-03-05  S. MELCHIOR  ADDED PARAMETERS NTIMES=6 AND NINC=3 TO
 C       TIDY UP THE CODE. RENAMED NE TO NME FOR EASE OF
 C       NAVIGATION AND FOR CLARIFICATION AS NE IS USED FOR
 C       INEQUALITY TESTING (.NE.).
+C 2016-12-18  D. Stokes  Increased NSTN (maximum number of stations to
+C       process) from 200 to 300.
 C
 C USAGE:    CALL SOLVE
 C
@@ -2893,7 +2921,7 @@ C
 C$$$
       SUBROUTINE SOLVE
 
-      PARAMETER(NSTN=200,NLEV=35,NTIMES=6,NINC=3)
+      PARAMETER(NSTN=300,NLEV=35,NTIMES=6,NINC=3)
       REAL            DPR(NSTN,1)
       COMMON /INCS/   UIN(NLEV,NTIMES,NINC,NSTN),
      &                VIN(NLEV,NTIMES,NINC,NSTN),
@@ -2921,7 +2949,9 @@ C    THE ANALYSIS WEIGHTS ON OUTPUT FROM DRCTSL.
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM: SORTD
-C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1999-08-18
+C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 2016-12-18
+C 2016-12-18  D. Stokes  Increased NSTN (maximum number of stations to
+C       process) from 200 to 300.
 C
 C ABSTRACT: SORT D, L, J, N, ALL ACCORDING TO ORDER OF D.
 C
@@ -2949,7 +2979,7 @@ C
 C$$$
       SUBROUTINE SORTD(D,L,J,N,NC)
 
-      PARAMETER(NSTN=200)
+      PARAMETER(NSTN=300)
       REAL    D(*), W(NSTN)
       INTEGER L(*), J(*), N(*), INDX(NSTN), IW(NSTN)
       INDX = 0
@@ -2974,13 +3004,15 @@ C$$$
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM: VSOLVE
-C   PRGMMR: WOOLLEN          ORG: NMC22      DATE: 1990-11-06
+C   PRGMMR: WOOLLEN          ORG: NMC22      DATE: 2016-12-18
 C
 C ABSTRACT: CHOLESKY TYPE SOLUTION FOR ARRAYS OF POSITIVE DEFINITE
 C   SYMMETRIC MATRIXES.
 C
 C PROGRAM HISTORY LOG:
 C   90-11-06  J. WOOLLEN
+C 2016-12-18  D. Stokes  Increased NSTN (maximum number of stations to
+C       process) from 200 to 300.
 C
 C USAGE:
 C   INPUT ARGUMENTS:
@@ -3005,7 +3037,7 @@ C
 C$$$
       SUBROUTINE VSOLVE (A,B,NDIM,BAD,NFT,NS,MAXDIM)
 
-      PARAMETER(NSTN=200)
+      PARAMETER(NSTN=300)
       DIMENSION A(NSTN,45),B(NSTN,9,1),NDIM(NSTN),BAD(NSTN),T(NSTN)
       LOGICAL BAD
 
@@ -3144,7 +3176,7 @@ C  -------------
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM: ZTRES
-C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 1999-08-18
+C   PRGMMR: W. COLLINS       ORG: NP22       DATE: 2016-12-18
 C
 C ABSTRACT: SOLVE FOR THE HEIGHT-TIME OI ANALYSIS RESIDUALS
 C
@@ -3154,6 +3186,8 @@ C 2012-03-05  S. MELCHIOR  ADDED PARAMETERS NTIMES=6 AND NINC=3 TO
 C       TIDY UP THE CODE. RENAMED NE TO NME FOR EASE OF 
 C       NAVIGATION AND FOR CLARIFICATION AS NE IS USED FOR
 C       INEQUALITY TESTING (.NE.).
+C 2016-12-18  D. Stokes  Increased NSTN (maximum number of stations to
+C       process) from 200 to 300.
 C
 C USAGE:    CALL ZTRES(IS,IT)
 C   INPUT ARGUMENT LIST:
@@ -3167,7 +3201,7 @@ C
 C$$$
       SUBROUTINE ZTRES(IS,IT)
 
-      PARAMETER(NSTN=200,NLEV=35,NTIMES=6,NINC=3)
+      PARAMETER(NSTN=300,NLEV=35,NTIMES=6,NINC=3)
       REAL WU(NSTN), WV(NSTN)
 
       COMMON /MATRIC/ A(NSTN,45), C(NSTN,9), NMAT(NSTN), NM

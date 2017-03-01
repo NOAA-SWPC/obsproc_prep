@@ -6,7 +6,7 @@
 # Script name:         prepobs_makeprepbufr.sh
 # Script description:  Prepares & quality controls PREPBUFR file
 #
-# Author:       Keyser              Org: EMC          Date: 2016-07-12
+# Author:       Keyser              Org: EMC          Date: 2017-02-07
 #
 # Abstract: This script creates the PREPBUFR file containing observational data
 #   assimilated by all versions of NCEP analyses.  It points to BUFR
@@ -219,6 +219,14 @@
 #      scripts if they don't exist in the working directory and eliminated 
 #      similar blocks of logic that had been repeated throughout the script.
 #      Updated USHGETGES default to pick up more recent versions of getges.sh.
+# 2017-02-07  D.C. Stokes -- Updated to run on Cray-XC40 as well as iDataPlex.
+#      If on Cray-XC40, default parallel scripting launching mechanism is cfp 
+#      inovked by aprun. Variable name used for launching mechanism changed from
+#      "launcher" to "launcher_PREP".  Variable COMDATEROOT is now the primary
+#      default for the root of the directory containing NCEP date files.  The
+#      variable NWROOTp1 is now the default root for directory DICTPREP.  Logic
+#      used to determine if $COMSP points to production "com" directory was
+#      updated to recognize full path name (as needed on luna/surge).
 #     
 #
 # Usage:  prepobs_makeprepbufr.sh yyyymmddhh
@@ -233,12 +241,11 @@
 #     These must ALWAYS be exported to this script by the parent script --
 #
 #     COMROOT       Root to input/output "com" directory (in production,
-#                   normally either "/com" for WCOSS  Phase 1 or "/com2" for
-#                   WCOSS Phase 2)
+#                   normally "/com", "/com2", or "/gpfs/hps/nco/ops/com")
 #     NSPLIT        Number of parts into which the PREPDATA processing shell
 #                   script (herefile MP_PREPDATA) will be split in order to
-#                   run in parallel for computational efficiency (either under
-#                   poe tasks when POE is not "NO" or in background threads
+#                   run in parallel for computational efficiency (either using
+#                   multiple tasks when POE is not "NO" or in background threads
 #                   when BACK is "YES")
 #                   NOTE : This is required ONLY if the imported shell variable
 #                          POE is not "NO" (see below) or the imported shell
@@ -285,15 +292,20 @@
 #     These will be set to their default value in this script if not exported
 #      to this script by the parent script --
 #
+#     SITE          Site name (may have been set by local shell startup script)
+#                   Default is ""
+#     sys_tp        System type and phase.  If not imported, an attempt is made
+#                   to set it using getsystem.pl (an NCO prod_util script).
+#                   A failed attempt results in an empty string.
 #     SENDDBN       String indicating whether or not to alert an output file to
 #                   the NWS/TOC (= "YES" - invoke alert; anything else - do not
 #                   invoke alert)
 #                   Default is "NO"
-#     NPROCS        Number of poe tasks to use for mpmd (must be .GE. $NSPLIT)
+#     NPROCS        Number of "poe" tasks to use for mpmd (must be .GE. $NSPLIT)
 #                   NOTE : This is applicable ONLY if the imported shell
 #                          variable POE is not "NO" (see below) and variable 
-#                          launcher is not "cfp" (see below) and the
-#                          imported shell variable PREPDATA=YES (see below)
+#                          launcher_PREP is not "cfp" or "aprun" (see below) and
+#                          the imported shell variable PREPDATA=YES (see below)
 #                   For LSF jobs, the count of hosts listed in string $LSB_HOSTS
 #                   will be used to set NPROCS (overriding any imported value).
 #                   Default is "$NSPLIT"
@@ -332,22 +344,23 @@
 #                   Default is "adpupa proflr aircar aircft satwnd adpsfc \
 #                   sfcshp sfcbog vadwnd goesnd spssmi erscat qkswnd msonet \
 #                   gpsipw rassda wdsatr ascatw"
-#     POE           String indicating whether or not to invoke poe under mpi
-#                   (across multiple tasks) when executing the herefile
-#                   MP_PREPDATA (would then perform the PREPBUFR processing in
-#                   parallel) (= "NO" - do not invoke invoke poe; anything else
-#                   - invoke poe)
+#     POE           String indicating whether or not to use a poe-like launcher
+#                   to spread instances of the PREPBUFR processing herefile 
+#                   MP_PREPDATA over multiple pes in parallel. (= "NO" - 
+#                   do not invoke invoke "poe"; anything else - invoke "poe")
 #                   Default is "YES"
-#     launcher      Parallel scripting launch tool. Settings are in place for
-#                   mpirun.lsf and cfp but a different tool can be specified.
+#     launcher_PREP Parallel scripting launch tool. Settings are in place for
+#                   aprun, mpirun.lsf, and cfp but a different tool can be
+#                   specified.
 #                   NOTE : This is applicable ONLY if the imported shell
 #                          variable POE is not "NO" and the imported shell
 #                          variable PREPDATA=YES (see below)
-#                   Default is "mpirun.lsf"
+#                   Default on Cray-XC40 is "aprun". Otherwise: "mpirun.lsf"
 #     BACK          String indicating whether or not to run background shells
 #                   (on the same task) for the PREPBUFR processing (= "YES" -
 #                   run background shells; anything else - do not run
-#                   background shells)
+#                   background shells). IF BACK=YES on Cray-XC40, the shells
+#                   are invoked by aprun.
 #     USHSYND       String indicating directory path for SYNDATA ush file
 #                   Default is "${HOMEobsproc_prep}/ush"
 #     USHPREV       String indicating directory path for PREVENTS ush file
@@ -371,7 +384,7 @@
 #                   Default is "${HOMEobsproc_prep}/fix"
 #     DICTPREP      String indicating directory path for PREPOBS dictionary
 #                   files
-#                   Default is "/nw${envir}/decoders/decod_shared/dictionaries"
+#                   Default is "${NWROOTp1}/decoders/decod_shared/dictionaries"
 #     EXECSYND      String indicating directory path for SYNTHETIC data
 #                   executables
 #                   Default is "${HOMEobsproc_prep}/exec"
@@ -605,12 +618,20 @@
 #
 #     These do not have be exported to this script.
 #
+#     COMDATEROOT   Primary default for the root of the directory containing
+#                   produciton date files.
+#
+#     NWROOTp1      Root directory for production software on WCOSS Phase 1.
+#
 #     UTILSHAREDROOT  String pointing to some version of util_shared directory
 #                      (may have been set by util_shared environment module)
 #
 #     USHGETGES     String indicating directory path for GETGES utility script.
 #                   If not set, first default is $UTILSHAREDROOT/ush.  If that 
 #                    option is not viable, will see if getges.sh is in path.
+#
+#     PREPDATAtpn   Tasks per node when invoking cfp on Cray-XC40.  Will be
+#                   computed if needed but was not imported.
 #                   
 #     These do not have to be exported to this script.  If they are, they will
 #      be passed on to the script $USHCQC/prepobs_cqcbufr.sh. They are not used
@@ -736,6 +757,7 @@
 
 set -aux
 
+jlogfile=${jlogfile:=""}
 SENDDBN=${SENDDBN:-NO}
 
 if [ ! -d $DATA ] ; then mkdir -p $DATA ;fi
@@ -779,11 +801,25 @@ fi
 #####################################################
 #####################################################
 
+
+#  determine local system name and type if available
+#  -------------------------------------------------
+SITE=${SITE:-""}
+sys_tp=${sys_tp:-$(getsystem.pl -tp)}
+getsystp_err=$?
+if [ $getsystp_err -ne 0 ]; then
+   msg="***WARNING: error using getsystem.pl to determine system type and phase"
+   [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+fi
+echo sys_tp is set to: $sys_tp
+
+#-------------------------------------------------------------------------------
+
 #  obtain the center date/time for PREPBUFR processing
 #  ---------------------------------------------------
 
 if [ $# -ne 1 ] ; then
-   cp ${COMROOT}/date/$cycle ncepdate
+   cp ${COMDATEROOT:-$COMROOT}/date/$cycle ncepdate
    err0=$?
    CDATE10=`cut -c7-16 ncepdate`
 else 
@@ -806,7 +842,7 @@ then
    echo
    set -x
    $DATA/err_exit
-   [ $? != 0 ] && exit 555  # for extra measure
+   [ $? != 0 ] && exit 55  # for extra measure
 fi
 
 cyc=`echo $CDATE10|cut -c9-10`
@@ -849,9 +885,7 @@ if [ "$PREPDATA" != 'YES' ] ; then
 else
    set +u
    [ -z "$POE" -a "$BACK" = 'YES' ]  &&  POE=NO
-   set -u
    POE=${POE:-YES}
-   set +u
    if [ "$POE" != 'NO' -a "$BACK" = 'YES' ]; then
    set -u
       set +x
@@ -866,9 +900,13 @@ echo
    PARALLEL=NO
    [ "$POE" != 'NO' -o "$BACK" = 'YES' ]  &&  PARALLEL=YES
    if [ "$POE" != 'NO' ] ; then
-      launcher=${launcher:-mpirun.lsf}
-      if [ "$launcher" != 'cfp' ]; then 
-         if [ -n "$LSB_HOSTS" ]; then
+      if [ "$sys_tp" = Cray-XC40 -o "$SITE" = SURGE -o "$SITE" = LUNA ]; then
+        launcher_PREP=${launcher_PREP:-aprun}
+      else
+        launcher_PREP=${launcher_PREP:-mpirun.lsf}
+      fi
+      if [ "$launcher_PREP" != 'cfp' -a "$launcher_PREP" != aprun ]; then 
+         if [ -n ${LSB_HOSTS:-""} ]; then
             NPROCS=$(echo $LSB_HOSTS|wc -w)
             set +x; echo "Setting NPROCS based on LSB_HOSTS count"; set -x
          else
@@ -887,7 +925,7 @@ echo "********************************************************************"
             msg="***FATAL ERROR:  Insufficient NPROCS for NSPLIT=$NSPLIT"
             [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
             $DATA/err_exit
-            [ $? != 0 ] && exit 555  # for extra measure
+            [ $? != 0 ] && exit 55  # for extra measure
          fi
       fi
    elif [ "$BACK" = 'YES' ] ; then
@@ -907,7 +945,7 @@ USHOIQC=${USHOIQC:-${HOMEobsproc_prep}/ush}
 EXECPREP=${EXECPREP:-${HOMEobsproc_prep}/exec}
 PARMPREP=${PARMPREP:-${HOMEobsproc_network}/parm}
 FIXPREP=${FIXPREP:-${HOMEobsproc_prep}/fix}
-DICTPREP=${DICTPREP:-/nw${envir}/decoders/decod_shared/dictionaries}
+DICTPREP=${DICTPREP:-${NWROOTp1}/decoders/decod_shared/dictionaries}
 
 EXECSYND=${EXECSYND:-${HOMEobsproc_prep}/exec}
 PARMSYND=${PARMSYND:-${HOMEobsproc_network}/parm}
@@ -1010,9 +1048,7 @@ else
    RELOCATION_HAS_RUN=NO
    msg="Tropical cyclone RELOCATION did NOT run prior to this job"
 fi
-set +u
 [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
-set -u
 
 if [ -s ${COMSP}tropcy_relocation_status.$tmmark ]; then
    if [ "$SENDDBN" = "YES" ]; then
@@ -1074,7 +1110,7 @@ relative to center PREPBUFR date/time;"
                echo
                set -x
                $DATA/err_exit
-               [ $? != 0 ] && exit 555  # for extra measure
+               [ $? != 0 ] && exit 55  # for extra measure
             fi
             set +x
             echo
@@ -1127,7 +1163,7 @@ populated by earlier tropical cyclone relocation processing"
       echo
       set -x
       $DATA/err_exit
-      [ $? != 0 ] && exit 555  # for extra measure
+      [ $? != 0 ] && exit 55  # for extra measure
    done
    mv tcvitals.relocate.$tmmark tcvitals
    if [ $relo_rec = yes ]; then  # come here if relocation ran and processed
@@ -1291,7 +1327,7 @@ echo "ABNORMAL EXIT!!!!!!!!!!!"
                   echo
                   set -x
                   $DATA/err_exit
-                  [ $? != 0 ] && exit 555  # for extra measure
+                  [ $? != 0 ] && exit 55  # for extra measure
                else
 echo "problem obtaining global sigma guess valid at the nearest cycle time "
                   if [ "$sfx" != 'A' ]; then
@@ -1304,9 +1340,7 @@ echo "will continue running but a GUESS will NOT be encoded in PREPBUFR file!!"
                   set -x
                   msg="PROBLEM OBTAINING ONE OR BOTH SPANNING SIGMA GUESS \
 FILES, GUESS NOT ENCODED IN PREPBUFR FILE  --> non-fatal"
-                  set +u
                   [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
-                  set -u
                   GETGUESS=NO
                   SGES=/dev/null
                   SGESA=/dev/null
@@ -1388,25 +1422,20 @@ set -u
 #           required)
 #  ----------------------------------------------------------------------------
 
-            first5_comsp=`echo $COMSP | cut -c1-5`
-            first6_comsp=`echo $COMSP | cut -c1-6`
-            first9_tstsp=`echo $tstsp | cut -c1-9`
-
-            set +x
 echo
 echo "Some or all BUFR data dumps were not found for requested time ... "
 echo
             set -x
 
-            if [ \( "$first5_comsp" = '/com/' -o "$first6_comsp" = '/com2/' \) \
-                 -a "$first9_tstsp" = '/tmp/null' ]; then
+            if [[ "$COMSP" =~ (^/com/|^/com2/|^/gpfs/.../nco/ops/com/) && \
+                "$tstsp" =~ (^/tmp/null)  ]]; then
                set +x
 echo
 echo "ABNORMAL EXIT!!!!!!!!!!!"
 echo
                set -x
                $DATA/err_exit
-               [ $? != 0 ] && exit 555  # for extra measure
+               [ $? != 0 ] && exit 55  # for extra measure
             fi
          fi
       fi
@@ -1433,7 +1462,7 @@ echo " time (but is in BUFRLIST); ABNORMAL EXIT!!!!!!!!!!!"
 echo
          set -x
          $DATA/err_exit
-         [ $? != 0 ] && exit 555  # for extra measure
+         [ $? != 0 ] && exit 55  # for extra measure
       fi
 
    fi
@@ -1486,9 +1515,7 @@ echo
          echo "   SUBSKP(004,004) = TRUE," > insert
          msg="***WARNING: Dump count for ARINC ACARS < AFWA ACARS; encode \
 backup AFWA ACARS into PREPBUFR"
-         set +u
          [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
-         set -u
       fi
    elif [ -s ${COMSP}aircar_status_flag.${tmmark}.bufr_d ]; then
       grep -q -Fe "004.007" ${COMSP}aircar_status_flag.${tmmark}.bufr_d
@@ -1497,9 +1524,7 @@ backup AFWA ACARS into PREPBUFR"
          echo "   SUBSKP(004,004) = TRUE," > insert
          msg="***WARNING: Dump count for ARINC ACARS < AFWA ACARS; encode \
 backup AFWA ACARS into PREPBUFR"
-         set +u
          [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
-         set -u
       fi
    fi
 
@@ -1736,14 +1761,19 @@ export FORT48=$dump_dir/${BUFRLIST_all_array[19]}
 export FORT51=prepda
 export FORT52=prevents.filtering.prepdata
 
-#### THE BELOW LIKELY NO LONGER APPLIES ON WCOSS
+#### THE BELOW APPLIED TO THE CCS (IBM AIX)  (kept for reference)
 #If program ever fails, try changing 64000000 to 20000000
-set +u
-[ -n "$LOADL_PROCESSOR_LIST" ]  &&  XLSMPOPTS=parthds=2:stack=64000000
-set -u
+#set +u
+#[ -n "$LOADL_PROCESSOR_LIST" ]  &&  XLSMPOPTS=parthds=2:stack=64000000
+#set -u
+
+# The following improves performance on Cray-XC40 if $PRPX was
+#    linked to the IOBUF i/o buffering library
+export IOBUF_PARAMS='*prevents.filtering.prepdata:verbose'
 
 $TIMEIT $PRPX <prepdata.stdin >>$mp_pgmout 2>&1
 errPREPDATA=$?
+unset IOBUF_PARAMS
 cat prevents.filtering.prepdata >> $mp_pgmout
 set +x
 echo
@@ -1828,15 +1858,16 @@ set -x
    if [ "$PARALLEL" = 'YES' ]; then
 
 #  In the parallel environment, either cat the multiple MP_PREPDATA tasks
-#   into a poe command file (for poe/mpi) - or - fire off each MP_PREPDATA
-#   thread as a background process
+#   into a poe command file (for poe/mpi/cfp) - or - set up a script that will
+#   fire off each MP_PREPDATA thread as a background process
 #  -----------------------------------------------------------------------
       if [ "$POE" != 'NO' ]; then
          multi=-1
          while [ $((multi+=1)) -lt $NSPLIT ] ; do
             echo "ksh $DATA/MP_PREPDATA $multi "|tee -a $DATA/prep_exec.cmd
          done
-         if [ "$launcher" != cfp ]; then  # fill in empty tasks
+         if [ "$launcher_PREP" != cfp -a "$launcher_PREP" != aprun ]; then
+            # fill in empty tasks
             multi=$((multi-=1))  #need to go back one
             while [ $((multi+=1)) -lt $NPROCS ] ; do
                echo "echo do-nothing" >> $DATA/prep_exec.cmd
@@ -1844,22 +1875,22 @@ set -x
          fi
       elif [ $BACK = 'YES' ] ; then
          multi=-1
+         echo "#!/bin/ksh" > $DATA/prepthrds.sh
          while [ $((multi+=1)) -lt $NSPLIT ] ; do
-           set +x
-           $DATA/MP_PREPDATA $multi &
-           echo
-           echo $DATA/MP_PREPDATA $multi submitted in background
-           echo
-           set -x
+            echo "$DATA/MP_PREPDATA $multi &" >> $DATA/prepthrds.sh
+            echo "echo $DATA/MP_PREPDATA $multi submitted in background" \
+                                                           >> $DATA/prepthrds.sh
          done
+         echo "wait" >> $DATA/prepthrds.sh
+         chmod 775 $DATA/prepthrds.sh
       fi
 
 #  In the parallel environment, next either execute the poe wrapper (for poe/
-#   mpi) (do not execute a time command with poe!) - or - wait for all
-#   background processes to complete
+#   mpi/cfp) (do not execute a time command with poe!) - or - run prepthrds.sh
+#   to kick off background processes and wait for them to complete
 #  --------------------------------------------------------------------------
       if [ "$POE" != 'NO' ]; then
-         if [ "$launcher" = mpirun.lsf ]; then
+         if [ "$launcher_PREP" = mpirun.lsf ]; then
             export MP_CMDFILE=$DATA/prep_exec.cmd
             export MP_PGMMODEL=mpmd
             export MP_PULSE=0
@@ -1868,21 +1899,54 @@ set -x
             export MP_STDOUTMODE=ordered
             mpirun.lsf
             export err=$?; $DATA/err_chk
-            [ $? != 0 ] && exit 555  # for extra measure
-         elif [ "$launcher" = cfp ]; then
+            [ $? != 0 ] && exit 55  # for extra measure
+         elif [ "$launcher_PREP" = cfp ]; then
             export MP_CSS_INTERRUPT=yes
             export MP_LABELIO=yes
             export MP_STDOUTMODE=ordered
             mpirun.lsf cfp $DATA/prep_exec.cmd
             export err=$?; $DATA/err_chk
-            [ $? != 0 ] && exit 555  # for extra measure
-         else  # unknown launcher and options (eg, for use on R&D system) 
-            $launcher
+            [ $? != 0 ] && exit 55  # for extra measure
+         elif [ "$launcher_PREP" = aprun ]; then
+            ## Determine tasks per node (PREPDATAtpn) and
+            ##    max number of concurrent procs (PREPDATAprocs) for cfp
+            typeset -i nodesall=$(echo -e "${LSB_HOSTS// /\\n}"|sort -u|wc -w)
+            typeset -i ncnodes=$(($nodesall-1)) # we want compute nodes only
+            if [ $ncnodes -lt 1 ]; then
+               set +x
+               echo
+               echo " ** Could not get positive compute node count for aprun **"
+               echo " ** Are we using LSF queue with compute node access? **"
+               echo
+               echo "ABNORMAL EXIT!!!!!!!!!!!"
+               echo
+               set -x
+               $DATA/err_exit
+               [ $? != 0 ] && exit 55  # for extra measure
+            fi
+            if [[ -z ${PREPDATAtpn:-""} ]]; then
+               PREPDATAtpn=$((($NSPLIT+$ncnodes-1)/$ncnodes))
+               # cfp is faster with extra thread so add one if there is room.
+               #  (this logic needs an update to avoid hardwired 24)
+               [ $PREPDATAtpn -lt 24 ] && PREPDATAtpn=$(($PREPDATAtpn+1))
+            fi
+            if [[ -z ${PREPDATAprocs:-""} ]]; then
+              PREPDATAprocs=$(($ncnodes*$PREPDATAtpn))  # max concurrent processes
+            fi
+            aprun -j 1 -n${PREPDATAprocs} -N${PREPDATAtpn} -d1 cfp $DATA/prep_exec.cmd
             export err=$?; $DATA/err_chk
-            [ $? != 0 ] && exit 555  # for extra measure
-          fi
+            [ $? != 0 ] && exit 55  # for extra measure
+         else  # unknown launcher and options (eg, for use on R&D system) 
+            $launcher_PREP
+            export err=$?; $DATA/err_chk
+            [ $? != 0 ] && exit 55  # for extra measure
+         fi
       elif [ $BACK = 'YES' ] ; then
-         wait
+         if [ "$sys_tp" = Cray-XC40 -o "$SITE" = SURGE -o "$SITE" = LUNA ]; then
+            aprun -n 1 -d $NSPLIT $DATA/prepthrds.sh
+         else
+            $DATA/prepthrds.sh
+         fi
       fi
       totalt=$NSPLIT
    else
@@ -1890,7 +1954,11 @@ set -x
 #  In the serial environment, just fire off a single thread of MP_PREPDATA
 #  -----------------------------------------------------------------------
       multi=0
-      $DATA/MP_PREPDATA $multi
+      if [ "$sys_tp" = Cray-XC40 -o "$SITE" = SURGE -o "$SITE" = LUNA ]; then
+         aprun -n 1 -N 1 ksh $DATA/MP_PREPDATA $multi
+      else
+         $DATA/MP_PREPDATA $multi
+      fi
       totalt=1
 
    # fi for $PARALLEL = YES
@@ -1973,7 +2041,7 @@ echo
 
    if [ "$errSTATUS" -gt '0' ]; then
       $DATA/err_exit
-      [ $? != 0 ] && exit 555  # for extra measure
+      [ $? != 0 ] && exit 55  # for extra measure
    fi
 
    [ "$errPREPDATA" -eq '4' -a "$four_check" = 'no' ]  && errPREPDATA=0
@@ -2002,7 +2070,7 @@ echo
    pgm=`basename  $PRPX`
    touch errfile
    $DATA/err_chk
-   [ $? != 0 ] && exit 555  # for extra measure
+   [ $? != 0 ] && exit 55  # for extra measure
 
    if [ "$PARALLEL" = 'YES' ]; then
 
@@ -2149,7 +2217,7 @@ echo "The foreground exit status for PREPOBS_MONOPREPBUFR is " $err
 echo
 set -x
 $DATA/err_chk
-[ $? != 0 ] && exit 555  # for extra measure
+[ $? != 0 ] && exit 55  # for extra measure
 
 exit 0
 EOFmrg
@@ -2171,7 +2239,7 @@ set -x
       then
 #  problem with merge script
          $DATA/err_exit
-         [ $? != 0 ] && exit 555  # for extra measure
+         [ $? != 0 ] && exit 55  # for extra measure
       fi
    else
 
@@ -2337,9 +2405,7 @@ if [ "$err" -eq '0' ]; then
    echo "$msg"
    echo
    set -x
-   set +u
    [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
-   set -u
 fi
 
 exit 0

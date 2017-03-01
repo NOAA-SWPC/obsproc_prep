@@ -105,7 +105,7 @@ else
    then
 ######kill -9 ${qid} # need a WCOSS alternative to this even tho commented out
                      #  in ops
-      exit 555
+      exit 55
    fi
 fi
 
