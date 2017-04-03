@@ -177,6 +177,25 @@ files:
       after it is updated with information for the current storm by routine
       FENBOG.  This prevents inadvertent input of residual content from a
       previous storm processed during the same run on Cray-XC40.
+    - Parameters LDXDIM and NDATMX (storage limit for number of observations in
+      storm vicinity) increased from 1000 to 8000 in subr. CMPSIT.  LDXDIM
+      increased from 71 to 8000 in subr. MM2DVO and from 2500 to 8000 in subr.
+      AS2DVO, XSPLCM, OUTPUTT, SL1GET, AD1EXX and SL1MBO.
+      BENEFIT: There can be > 1000 obs in the storm vicinity. This change
+               ensures that all obs are processed and eliminates partial
+               processing of statistics in cases where code does not abort but
+               there are > 1000 obs going into certain subroutines. The value
+               for parameter LDXDIM is standardized throughout the code (it was
+               already set to 8000 in many subroutines, but to 2500 in other
+               subroutines and to 1000 in subr. CMPSIT before this change).
+    - Additional traps set in subr. MM2DVO and AS2DVO and in entries FITOBS,
+      STICKD, GETAMR and GT1AMR to catch cases where number of obs would exceed
+      LDXDIM, and in emtries ANLCOM and OPSCOM to catch cases where number of
+      obs would exceed NDATMX.  Diagnostics are printed when limit hit.
+      BENEFIT: Prevents array overflow (and program termination when debugging
+               is turned on at run time). (These traps should not be hit now
+               since the limits for LDXDIM and NDATMX have been now been greatly
+               increased, see previosu change).
 
 
  Output changes:
@@ -807,6 +826,8 @@ files added, modified or deleted since last release:
 
  Special Instructions:
  ---------------------
+   This should be implemented on WCOSS Phase 2.
+
    This is part of OBSPROC.v6.2.0b.
    This must be implemented before or simultaneously with the implementation
    of rtma.v2.4.3 and urma.v2.4.3.

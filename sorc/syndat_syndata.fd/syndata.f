@@ -1,7 +1,7 @@
 C$$$  MAIN PROGRAM DOCUMENTATION BLOCK
 C
 C MAIN PROGRAM: SYNDAT_SYNDATA
-C   PRGMMR: KEYSER           ORG: NP22        DATE: 2016-07-01
+C   PRGMMR: KEYSER           ORG: NP22        DATE: 2017-04-03
 C
 C ABSTRACT: PERFORMS FOUR DISTINCT FUNCTIONS.  THE FIRST IS TO
 C   GENERATE TYPE 110/210 TROPICAL CYCLONE BOGUS REPORTS IN THE
@@ -174,6 +174,31 @@ C        AFTER IT IS UPDATED WITH INFORMATION FOR THE CURRENT STORM BY
 C        ROUTINE FENBOG.  THIS PREVENTS INADVERTENT INPUT OF RESIDUAL
 C        CONTENT FROM A PREVIOUS STORM WHILE PROCESSING THE INFORMATION
 C        FOR THE CURRENT STORM (as can happen with some compilations).
+C 2017-04-03  D. A. KEYSER
+C           - PARAMETERS LDXDIM AND NDATMX (STORAGE LIMIT FOR NUMBER OF
+C        OBSERVATIONS IN STORM VICINITY) INCREASED FROM 1000 TO 8000 IN
+C        SUBR. CMPSIT.  LDXDIM INCREASED FROM 71 TO 8000 IN SUBROUTINE
+C        MM2DVO, AND FROM 2500 TO 8000 IN SUBROUTINES AS2DVO, XSPLCM,
+C        OUTPUTT, SL1GET, AD1EXX and SL1MBO. 
+C        BENEFIT: There can be > 1000 obs in the storm vicinity. This
+C                 change ensures that all obs are processed and
+C                 eliminates partial processing of statistics in cases
+C                 where code does not abort but there are > 1000 obs
+C                 going into certain subroutines. The value for
+C                 parameter LDXDIM is standardized throughout the code
+C                 (it was already set to 8000 in many subroutines, but
+C                 to 2500 in other subroutines and to 1000 in subr.
+C                 CMPSIT before this change).
+C           - ADDITIONAL TRAPS SET IN SUBROUTINES MM2DVO AND AS2DVO AND
+C             IN ENTRIES FITOBS, STICKD, GETAMR AND GT1AMR TO CATCH
+C             CASES WHERE NUMBER OF OBS WOULD EXCEED LDXDIM, AND IN
+C             EMTRIES ANLCOM AND OPSCOM TO CATCH CASES WHERE NUMBER OF
+C             OBS WOULD EXCEED NDATMX.  DIAGNOSTICS ARE PRINTED WHEN
+C             LIMIT HIT.
+C        BENEFIT: Prevents array overflow (and program termination when
+C                 debugging is turned on at run time). (These traps
+C                 should not be hit now since the limits for LDXDIM and
+C                 NDATMX have been now been greatly increased).
 C
 C
 C USAGE:
@@ -519,7 +544,7 @@ C                    WIND ARE CREATED)
 
 C  PRESET AND UPDATE SOME OPTIONS AND READ IN DATE/TIME
 
-      CALL W3TAGB('SYNDAT_SYNDATA',2016,0183,1200,'NP22')
+      CALL W3TAGB('SYNDAT_SYNDATA',2017,0093,1200,'NP22')
 
       MWAVEZ   = MWAVE
       PTOPAZ   = PTOPAL
@@ -554,7 +579,7 @@ C  PRESET AND UPDATE SOME OPTIONS AND READ IN DATE/TIME
      6         20X,'****   MNIBOG=',L1,' RUNID=',A,9X,  '****'/
      7         20X,'*****************************************'/
      8         20X,'*****************************************'//
-     9         ' ===> VERSION -- 18 May 2016'//)
+     9         ' ===> VERSION -- 03 Apr 2017'//)
 
 C  On WCOSS should always set BUFRLIB missing (BMISS) to 10E8 to avoid
 C   overflow when either an INTEGER*4 variable is set to BMISS or a
@@ -9295,12 +9320,10 @@ C
       PARAMETER (NLVLBN= 4)
       PARAMETER (NCORBN= 2)
       PARAMETER (NVARBN= 3)
-cdak  fix 9/5/14 vvvvvvvvvv
-ccccc PARAMETER (NDATMX=500)
-ccccc PARAMETER (LDXDIM=500)
-      PARAMETER (NDATMX=1000)
-      PARAMETER (LDXDIM=1000)
-cdak  fix 9/5/14 ^^^^^^^^^^
+ccccc PARAMETER (NDATMX=1000)
+      PARAMETER (NDATMX=8000)
+ccccc PARAMETER (LDXDIM=1000)
+      PARAMETER (LDXDIM=8000)
       PARAMETER (NVROUT=16)
       PARAMETER (IOUTMX= 6)
       PARAMETER (NRBNPS=36)
@@ -9664,7 +9687,7 @@ C
         NMSNG=NMSNG+1
         WRITE(6,169) NRA,NLB,NSTOR(NRA,NLB),NDATMX,NMSNG
   169   FORMAT('******STORAGE FOR OBSERVATIONS EXCEEDED, NRA,NLB,',
-     1         'NSTOR,NDATMX,NONPRINTED OBS=',5I5)
+     1         'NSTOR,NDATMX,NONPRINTED OBS=',5I6)
         ENDIF
 C
         ELSE
@@ -9686,6 +9709,11 @@ C
       NOBPS=NOBPS+1
       NRAPS=MIN(1+INT(IHOWFR/DRPSM),NBINPS)
       NPSBIN(NRAPS,NCOMPS)=NPSBIN(NRAPS,NCOMPS)+1
+      IF(NPSBIN(NRAPS,NCOMPS).GT. NDATMX)  THEN 
+         print *, 'NDATMX limit (',NDATMX,') exceeded - ',
+     $    'NPSBIN(NRAPS,NCOMPS)=',NPSBIN(NRAPS,NCOMPS),', return'
+         return
+      endif
       PSBIN(NRAPS,NCOMPS)=PSBIN(NRAPS,NCOMPS)+DATA(3)
       PSDAT(1,NPSBIN(NRAPS,NCOMPS),NRAPS)=RLAT
       PSDAT(2,NPSBIN(NRAPS,NCOMPS),NRAPS)=RLON
@@ -10034,6 +10062,12 @@ C
 C
       IF(NSMX .GE. 2)  THEN
         DO 544 NS=1,NSMX
+        if(ns.GT. NDATMX)  THEN 
+           print *, 'NDATMX limit (',NDATMX,') exceeded - NS=',NS,
+     $      ', return'
+           return
+        endif
+        
         STDZ(NS)=PSDAT(INDZ,NS,NRPS)
   544   CONTINUE
         CALL STDEV(STDZ,NSMX,NSMX-1,PSCOM(NRPS,1),STDAZP(NRPS))
@@ -10054,7 +10088,13 @@ C
      1       I5,/,5X,'LAT',7X,'LONG',5X,'DIST.',4X,'ANGLE',5X,
      2       'TYPE',4X,'PRESR')
       DO 570 NRPS=1,NBINPS
-C
+C 
+      if(NPSBIN(NRPS,1) .GT. NDATMX)  THEN
+         print *, 'NDATMX limit (',NDATMX,') exceeded - ',
+     $    'NPSBIN(NRPS,1)=',NPSBIN(NRPS,1),', return'
+         return
+      endif
+
       IF(NPSBIN(NRPS,1) .NE. 0)  THEN
       WRITE(6,553) RPSBIN(NRPS),NPSBIN(NRPS,1)
   553 FORMAT(///30X,'R <',-3PF7.1,' KM   ...NUMBER OF OBSERVATIONS=',
@@ -10073,10 +10113,8 @@ C     STORE OBS FOR SPLINE FITTING
 C
       NMSNG=0
       DO 560 NSPL=1,NPSBIN(NRPS,1)
-cdak  fix 9/5/14 vvvvvvvvvv
-ccccccc  IF(LDXX .LE. LDXDIM)  THEN
-         IF(LDXX+1 .LE. LDXDIM)  THEN
-cdak  fix 9/5/14 ^^^^^^^^^^
+         IF(LDXX+1 .LE. LDXDIM .and.
+     $    nspl.le. ndatmx)  then
             LDXX=LDXX+1
             SPLDTA(LDXX)=PSDAT(INDZ,NSPL,NRPS)
             YDZ(LDXX)=PSDAT(INDR,NSPL,NRPS)*1.E-3
@@ -10084,9 +10122,10 @@ cdak  fix 9/5/14 ^^^^^^^^^^
             YNT=MAX(YNT,YDZ(LDXX))
          ELSE
             NMSNG=NMSNG+1
-            WRITE(6,559) LDXDIM,NMSNG
+            WRITE(6,559) LDXDIM,ldxx,NDATMX,nspl,NMSNG
   559 FORMAT(/'######STORAGE LIMIT EXCEEDED FOR SPLINE FITTING,',
-     1       ' LDXDIM=',I5,'; NONPRINTED OBS=',I5)
+     1       ' LDXDIM=',I5,'; LDXX=',i5,'; NDATMX=',i5,'; NSPL =',i5,
+     2       '; NONPRINTED OBS=',I5)
          ENDIF
   560 CONTINUE
   570 CONTINUE
@@ -10152,6 +10191,11 @@ C
       RCRIT=HUNDKM
       IF(HOWFMN .GT. RCRIT)  THEN
       LDXX=LDXX+1
+      if(LDXX .GT. LDXDIM)  THEN
+         print *, 'LDXDIM limit (',LDXDIM,') exceeded - ',
+     $    'LDXX=',LDXX,', return'
+         return
+      endif
       YDZ(LDXX)=0.0
       WDZ(LDXX)=0.1
       SPLDTA(LDXX)=PCEN
@@ -10165,6 +10209,11 @@ C
 C
       IF(HOWFMN .GT. RMAXM)  THEN
       LDXX=LDXX+1
+      if(LDXX .GT. LDXDIM)  THEN
+         print *, 'LDXDIM limit (',LDXDIM,') exceeded - ',
+     $    'LDXX=',LDXX,', return'
+         return
+      endif
       YDZ(LDXX)=RMAX
       WDZ(LDXX)=0.1
       SPLDTA(LDXX)=PENV
@@ -10399,7 +10448,9 @@ C$$$
 C
       PARAMETER(MMDIMP=12)
       PARAMETER(MMDIMR=70)
-      PARAMETER(NDIM  =70,LDXDIM=NDIM+1)
+      PARAMETER(NDIM  =70)
+ccccc PARAMETER(LDXDIM=NDIM+1)
+      PARAMETER(LDXDIM=8000)
 C
       CHARACTER STMNMZ*(*)
 C
@@ -10586,6 +10637,11 @@ C
       YDCWL=SP1DWL*DEGLAT/DYNODE
       LDXX=IMAXA
       DO 55 I=1,IMAXA
+      if(I .GT. LDXDIM)  THEN
+         print *, 'LDXDIM limit (',LDXDIM,') exceeded - ',
+     $    'I=',I,', return'
+         return
+      endif
       YDZ(I)=R(I)/1000.
       WDZ(I)=1.0
       SPLDTA(I)=PSA(I)
@@ -10776,6 +10832,14 @@ C PROGRAM HISTORY LOG:
 C 1989-10-19  SHAPIRO
 C 1990-10-29  LORD  CONVERT TO SUBROUTINE FOR SYNDATA
 C 1991-07-01  LORD  VORTICITY-DIVERGENCE BOGUSING
+C 2017-04-03  D. A. KEYSER  PARAMETER LDXDIM (STORAGE LIMIT FOR NUMBER
+C        OF OBSERVATIONS IN STORM VICINITY) INCREASED FROM 2500 TO 8000.
+C        BENEFIT: There can be > 1000 obs in the storm vicinity. This
+C                 change ensures that all obs are processed and
+C                 eliminates partial processing of statistics in cases
+C                 where code does not abort but there are > 1000 obs
+C                 going into certain subroutines. The value for
+C                 parameter LDXDIM is standardized throughout the code.
 C
 C USAGE:
 C   INPUT ARGUMENT LIST:
@@ -10823,7 +10887,9 @@ C*****************************************************************
 C
       PARAMETER(MMDIMP=12)
       PARAMETER(MMDIMR=1000)
-      PARAMETER(NDIM=70,LDXDIM=2500)
+      PARAMETER(NDIM=70)
+ccccc PARAMETER(LDXDIM=2500)
+      PARAMETER(LDXDIM=8000)
       PARAMETER(MAXPTS=20)
 C
       SAVE
@@ -11359,6 +11425,11 @@ C
                LDXX=0
                DO 410 I=IVGMX,IMAXA-1
                   LDXX=LDXX+1
+      if(LDXX .GT. LDXDIM)  THEN
+         print *, 'LDXDIM limit (',LDXDIM,') exceeded - ',
+     $    'LDXX=',LDXX,', return'
+         return
+      endif
                   SPLDTA(LDXX)=VORT(I,K)*SCLFAC
                   YDZ(LDXX)=R(I)/1000.
                   WDZ(LDXX)=1.0
@@ -11376,6 +11447,11 @@ C
                LDXX=0
                DO 430 I=IURMX,IMAXA-1
                   LDXX=LDXX+1
+      if(LDXX .GT. LDXDIM)  THEN
+         print *, 'LDXDIM limit (',LDXDIM,') exceeded - ',
+     $    'LDXX=',LDXX,', return'
+         return
+      endif
                   SPLDTA(LDXX)=DIV(I,K)*SCLFAC
                   YDZ(LDXX)=R(I)/1000.
                   WDZ(LDXX)=1.0
@@ -15053,6 +15129,11 @@ C
       ENDDO
 C
   350 LDXX=LDXX+1
+      if(LDXX .GT. LDXDIM)  THEN
+         print *, 'LDXDIM limit (',LDXDIM,') exceeded - ',
+     $    'LDXX=',LDXX,', return'
+         return
+      endif
       XD(LDXX)=XDZ(LD)
       YD(LDXX)=YDZ(LD)
       ID(LDXX)=WX
@@ -21490,6 +21571,11 @@ C     CHECK IF UNPROCESSED DATA STILL REMAIN
 C
   110 IF(IDD.GE.LDX) GO TO 120
       IDD=IDD+1
+      if(IDD .GT. LDXDIM)  THEN
+         print *, 'LDXDIM limit (',LDXDIM,') exceeded - ',
+     $    'IDD=',IDD,', return'
+         return
+      endif
       LD=LXSORT(IDD)
       X=XD(LD)
       Y=YD(LD)
@@ -23000,7 +23086,7 @@ C                             SLICCO ADDED FOR CORNER CONDITIONS
 C                             SPTIKA ADDED.   TESTING ROUTINES REMOVED
 C                             PAST REV. 04/04,09,17,20/79
 C                             PAST REV. 05/01,08/,06/01/,07/31/79
-C     ++ ASSUMED DIM PARAMETERS ... MDIM=47...NDIM=35, LDXDIM=2300,
+C     ++ ASSUMED DIM PARAMETERS ... MDIM=47...NDIM=35, LDXDIM=8000,
 C                               ... KDXDIM=KDTDIM*KLDIM KDTDIM=5
 C
       SUBROUTINE SLIMBO(FD,KP1,KP2,A)
@@ -24620,7 +24706,8 @@ C                  FROM ARGUMENTS    ++
 C
 C
       PARAMETER (NDIM=71)
-      PARAMETER (LDXDIM=2500)
+ccccc PARAMETER (LDXDIM=2500)
+      PARAMETER (LDXDIM=8000)
       PARAMETER (KDTDIM=5)
 C
       COMMON / / A(KDTDIM,NDIM),FD(KDTDIM,LDXDIM),FKMN(KDTDIM,NDIM),
@@ -24801,7 +24888,8 @@ C$$$
       SUBROUTINE OUTPUTT(FD,A,FKMN,KDATS,KDATF,IUNIT,IPLVL,IOK)
 C
       PARAMETER (NDIM=71)
-      PARAMETER (LDXDIM=2500)
+ccccc PARAMETER (LDXDIM=2500)
+      PARAMETER (LDXDIM=8000)
       PARAMETER (KDTDIM=5)
       PARAMETER (NLXDIM=NDIM+LDXDIM)
 C
@@ -25926,7 +26014,8 @@ C                             AMM IS SQUARE MATRIX
 C          ENTRY GT1AMR (AMM)
 C
       PARAMETER (NDIM=71)
-      PARAMETER (LDXDIM=2500)
+ccccc PARAMETER (LDXDIM=2500)
+      PARAMETER (LDXDIM=8000)
 C
 C     ** DATA POINTS INFORMATION **
 C
@@ -26030,6 +26119,11 @@ C
 C     CHECK IF UNPROCESSED DATA STILL REMAIN
   110 IF(ID.GE.LDX) GO TO 120
       ID=ID+1
+      if(ID .GT. LDXDIM)  THEN
+         print *, 'LDXDIM limit (',LDXDIM,') exceeded - ',
+     $    'ID=',ID,', return'
+         return
+      endif
       LD=LXSORT(ID)
       Y=YD(LD)
       W=MIN(WD(LD),1.0)
@@ -26321,7 +26415,8 @@ C$$$
 C
       PARAMETER (NDIM=71)
       PARAMETER (KDTDIM=5)
-      PARAMETER (LDXDIM=2500)
+ccccc PARAMETER (LDXDIM=2500)
+      PARAMETER (LDXDIM=8000)
 C
 C     DUMMY ARGUMENTS ARE NOW IN BLANK COMMON FOR VAX-11
       COMMON // A(KDTDIM,NDIM),FD(KDTDIM,LDXDIM),FKMN(KDTDIM,NDIM),
@@ -26655,7 +26750,7 @@ C   MACHINE:  NCEP WCOSS
 C
 C$$$
 C.                SL1MBO **   11/20/84
-C     ++ ASSUMED DIM PARAMETERS ... NDIM=71, LDXDIM=2500,
+C     ++ ASSUMED DIM PARAMETERS ... NDIM=71, LDXDIM=8000,
 C                               ... KDTDIM=5
 C
 C
@@ -26665,7 +26760,8 @@ C     ** NODAL SPLINE AMPLITUDES A(K,N) FROM DATA FD(K,L)**
 C
 C
       PARAMETER (NDIM=71)
-      PARAMETER (LDXDIM=2500)
+ccccc PARAMETER (LDXDIM=2500)
+      PARAMETER (LDXDIM=8000)
       PARAMETER (KDTDIM=5)
 C
 C     ** SECONDARY PARAMETERS FOR COMPILATION
