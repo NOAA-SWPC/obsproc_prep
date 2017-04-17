@@ -1,24 +1,30 @@
 #  this will only work well if all codes in package need same version of each lib below
 
 w3nco_ver=v2.0.6
+w3emc_ver=v2.3.0
 bufr_ver=v11.1.0
-w3emc_ver=v2.2.0
-sigio_ver=v1.0.1; sigio_ver_CrayXC40=v2.0.1
-bacio_ver=v2.0.1
+bacio_ver=v2.0.2
+sigio_ver=v2.0.1; sigio_ver_CrayXC40=v2.0.1
+nemsio_ver=v2.2.2; nemsio_ver_CrayXC40=v2.2.2
 sp_ver=v2.0.2
 
-# sigio version should match what was used to build library holding gblevents (w3emc)
-# improve this later -dcs
+# sigio and nemsio versions should match what was used to build the library
+#   holding gblevents (w3emc)    (improve this later -dcs)
 if [[ "$sys_tp" =~ Cray-XC40 && $sigio_ver != "$sigio_ver_CrayXC40" ]]; then
    echo "CHANGING REQUESTED SIGIO VERSION FROM $sigio_ver to $sigio_ver_CrayXC40"
    sigio_ver=$sigio_ver_CrayXC40
+fi
+if [[ "$sys_tp" =~ Cray-XC40 && $nemsio_ver != "$nemsio_ver_CrayXC40" ]]; then
+   echo "CHANGING REQUESTED NEMSIO VERSION FROM $nemsio_ver to $nemsio_ver_CrayXC40"
+   nemsio_ver=$nemsio_ver_CrayXC40
 fi
 
 if [[ "$sys_tp" =~ IBM-p[12] ]]; then
    export W3NCO_LIB4=/nwprod2/lib/w3nco/${w3nco_ver}/libw3nco_${w3nco_ver}_4.a
    export BUFR_LIB4=/nwprod2/lib/bufr/${bufr_ver}/libbufr_${bufr_ver}_4_64.a
    export W3EMC_LIB4=/nwprod2/lib/w3emc/${w3emc_ver}/libw3emc_${w3emc_ver}_4.a
-   export SIGIO_LIB4=/nwprod/lib/sigio/${sigio_ver}/libsigio_${sigio_ver}_4.a
+   export SIGIO_LIB4=/nwprod2/lib/sigio/${sigio_ver}/libsigio_${sigio_ver}_4.a
+   export NEMSIO_LIB=/nwprod2/lib/nemsio/${nemsio_ver}/libnemsio_${nemsio_ver}.a
    export BACIO_LIB4=/nwprod2/lib/bacio/${bacio_ver}/libbacio_${bacio_ver}_4.a
    export SP_LIB4=/nwprod2/lib/sp/${sp_ver}/libsp_${sp_ver}_4.a
 elif [[ "$sys_tp" =~ Cray-XC40 ]]; then
@@ -26,13 +32,22 @@ elif [[ "$sys_tp" =~ Cray-XC40 ]]; then
    export BUFR_LIB4=/gpfs/hps/nco/ops/nwprod/lib/bufr/${bufr_ver}/${lib_build}/libbufr_${bufr_ver}_4_64.a
    export W3EMC_LIB4=/gpfs/hps/nco/ops/nwprod/lib/w3emc/${w3emc_ver}/${lib_build}/libw3emc_${w3emc_ver}_4.a
    export SIGIO_LIB4=/gpfs/hps/nco/ops/nwprod/lib/sigio/${sigio_ver}/${lib_build}/libsigio_${sigio_ver}_4.a
+   export NEMSIO_LIB=/gpfs/hps/nco/ops/nwprod/lib/nemsio/${nemsio_ver}/${lib_build}/libnemsio_${nemsio_ver}.a
    export BACIO_LIB4=/gpfs/hps/nco/ops/nwprod/lib/bacio/${bacio_ver}/${lib_build}/libbacio_${bacio_ver}_4.a
    export SP_LIB4=/gpfs/hps/nco/ops/nwprod/lib/sp/${sp_ver}/${lib_build}/libsp_${sp_ver}_4.a
-elif [[ -n "$sys_tp" ]]; then   # add theia later -dcs
-  echo " **** UNEXEPECTED PLATFORM: $sys_tp ***** "
+elif [[ "$sys_tp" == Cray-CS400 || "$SITE" =~ (theia|THEIA) ]]; then
+   export W3NCO_LIB4=/scratch3/NCEPDEV/nwprod/lib/w3nco/${w3nco_ver}/libw3nco_${w3nco_ver}_4.a
+   export BUFR_LIB4=/scratch3/NCEPDEV/nwprod/lib/bufr/${bufr_ver}/libbufr_${bufr_ver}_4_64.a
+   export W3EMC_LIB4=/scratch3/NCEPDEV/nwprod/lib/w3emc/${w3emc_ver}/libw3emc_${w3emc_ver}_4.a
+   export SIGIO_LIB4=/scratch3/NCEPDEV/nwprod/lib/sigio/${sigio_ver}/libsigio_${sigio_ver}_4.a
+   export NEMSIO_LIB=/scratch3/NCEPDEV/nwprod/lib/nemsio/${nemsio_ver}/libnemsio_${nemsio_ver}.a
+   export BACIO_LIB4=/scratch3/NCEPDEV/nwprod/lib/bacio/${bacio_ver}/libbacio_${bacio_ver}_4.a
+   export SP_LIB4=/scratch3/NCEPDEV/nwprod/lib/sp/${sp_ver}/libsp_${sp_ver}_4.a
+elif [[ -n "$sys_tp" || -n "$SITE" ]]; then
+  echo " **** UNEXEPECTED PLATFORM: sys_tp: ${sys_tp:-not set}  SITE: ${SITE:-not set} ***** "
   return 9
 else
-  echo " **** variable sys_tp is not set ***** "
+  echo " **** neither variable sys_tp nor SITE is set ***** "
   return 9
 fi
 

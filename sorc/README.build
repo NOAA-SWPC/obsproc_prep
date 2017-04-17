@@ -7,6 +7,8 @@ Library versions and variables are defined by sourcing load_libs.rc which loads 
 
 To build ALL codes, simply run:
   ./build.sh
+or, if on theia:
+  SITE=theia ./build.sh   (or the equivalent if not in an sh-like shell)
 
 To build only select codes (to save time):
   ./build.sh <some_code.fd ...>

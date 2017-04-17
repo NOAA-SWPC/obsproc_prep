@@ -2,25 +2,34 @@
 set -x
 set -e    # fail if an error is hit so that errors do not go unnoticed
 
-##  determine system/phase   (update for theia later -dcs)
-module load prod_util
-sys_tp=$(getsystem.pl -tp)
-echo $sys_tp
+if [[ "$SITE" =~ (theia|THEIA) ]]; then
+  sys_tp=Cray-CS400
+  . /apps/lmod/lmod/init/sh     # may be needed for some users
+else
+  ##  determine system/phase
+  module load prod_util
+  sys_tp=$(getsystem.pl -tp)
+  echo $sys_tp
+fi
 
 module purge
 case $sys_tp in
  IBM-p1|IBM-p2)
-   module load ics/12.1;
-   module load ibmpe;
+   module load ics/16.0.3
+   module load ibmpe
    ;;
  Cray-XC40)
-   module load PrgEnv-intel;
-   module load craype-haswell;
-   module load cray-mpich/7.2.0;
-   module swap intel/16.3.210;
-   module load iobuf/2.0.7;
-   lib_build="intel";
-   export FC=ftn;
+   module load PrgEnv-intel
+   module load craype-haswell
+   module load cray-mpich/7.2.0
+   module swap intel/16.3.210
+   module load iobuf/2.0.7
+   lib_build="intel"
+   export FC=ftn
+   ;;
+ Cray-CS400)
+   module load intel/16.1.150
+   module load impi/5.1.2.150
    ;;
  *) echo unexpected system.  Update for $sys_tp;;
 esac
@@ -51,5 +60,4 @@ for sdir in $dir_list; do
  ls -l
  cd ..
 done
-
 

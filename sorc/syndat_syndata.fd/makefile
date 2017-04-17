@@ -45,7 +45,7 @@ FC = ifort
 #LDFLAGS = -Xlinker -t -mkl
 #LDFLAGS = -Xlinker -M -mkl
 LDFLAGS = -mkl
-LIBS = ${W3NCO_LIB4} ${W3EMC_LIB4} ${BUFR_LIB4} ${SIGIO_LIB4} ${SP_LIB4} ${BACIO_LIB4}
+LIBS = ${W3EMC_LIB4} ${NEMSIO_LIB} ${BUFR_LIB4} ${W3NCO_LIB4} ${SIGIO_LIB4} ${SP_LIB4} ${BACIO_LIB4}
 CMD = syndat_syndata
 
 # For now DO NOT comment out DEBUG2 option - want to run in ops with debugger on to make sure

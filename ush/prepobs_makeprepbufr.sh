@@ -6,21 +6,21 @@
 # Script name:         prepobs_makeprepbufr.sh
 # Script description:  Prepares & quality controls PREPBUFR file
 #
-# Author:       Keyser              Org: EMC          Date: 2017-02-07
+# Author:       Keyser              Org: EMC          Date: 2017-03-19
 #
 # Abstract: This script creates the PREPBUFR file containing observational data
-#   assimilated by all versions of NCEP analyses.  It points to BUFR
+#   assimilated by all versions of NCEP atmospheric analyses.  It points to BUFR
 #   observational data dumps as input files.  PREPOBS_PREPDATA combines them to
 #   generate an initial form of the PREPBUFR file which also contains the
 #   background guess as well as the observational error field.  If tropical
 #   cyclone relocation processing has previously occurred, the background global
-#   sigma guess read in by PREPOBS_PREPDATA (and later by SYNDAT_SYNDATA if it
-#   runs) is the relocated guess valid at the center date/time for the PREPBUFR
-#   processing.  Otherwise it is the regular (unrelocated) global sigma guess
-#   obtained via the getges utility script.  After PREPOBS_PREPDATA runs, this
-#   script can execute SYNDAT_SYNDATA to generate synthetic wind bogus data, as
-#   well as their background guess and observational error fields, which are
-#   appended to the PREPBUFR file. 
+#   guess read in by PREPOBS_PREPDATA (and later by SYNDAT_SYNDATA if it runs)
+#   is the relocated guess valid at the center date/time for the PREPBUFR
+#   processing.  Otherwise it is the regular (unrelocated) global atmosperic
+#   guess obtained via the getges utility script.  After PREPOBS_PREPDATA runs,
+#   this script can execute SYNDAT_SYNDATA to generate synthetic wind bogus
+#   data, as well as their background guess and observational error fields,
+#   which are appended to the PREPBUFR file. 
 #
 #   In the global networks the decision to append synthetic wind bogus data in
 #   the SYNDATA processing is determined by the outcome of the previous
@@ -227,6 +227,12 @@
 #      variable NWROOTp1 is now the default root for directory DICTPREP.  Logic
 #      used to determine if $COMSP points to production "com" directory was
 #      updated to recognize full path name (as needed on luna/surge).
+# 2017-03-19  D.C. Stokes/D.A. Keyser -- Updated to input nemsio atmopheric 
+#      guess files -or- the older sigio atmospheric files.  The nemsio option
+#      is triggered by flag NEMSIO_IN=.true.  For nemsio runs, a single guess
+#      file valid at the prepbufr center time is picked up, even for runs with
+#      center time that is not a multiple of 3.  Also the dbn_alert subtype is
+#      now dependent upon $RUN (for transition from "gdas1" to "gdas").
 #     
 #
 # Usage:  prepobs_makeprepbufr.sh yyyymmddhh
@@ -234,7 +240,7 @@
 #   Input script positional parameters:
 #     1             String indicating the center date/time for the PREPBUFR
 #                   processing <yyyymmddhh> - if missing, then this time
-#                   is obtained from the ${COMROOT}/date/$cycle file
+#                   is obtained from the ${COMDATEROOT}/date/$cycle file
 #
 #   Imported Shell Variables:
 #
@@ -255,10 +261,10 @@
 #     NET           String indicating system network {either "gfs", "gdas",
 #                   "cdas", "nam", "rap", "rtma" or "urma"}
 #                   NOTE : NET is changed to gdas in the parent Job script for
-#                          the RUN=gdas1 (was gfs - NET remains gfs for RUN=gfs)
-#     RUN           String indicating model run {either "gfs", "gdas1", "cdas",
-#                         "nam", "ndas", "rap", "rap_p", "rap_e", "rtma" or
-#                         "urma"}
+#                          RUN=gdas or RUN=gdas1 (was gfs) 
+#     RUN           String indicating model run {either "gfs", "gdas", "gdas1",
+#                         "cdas", "nam", "ndas", "rap", "rap_p", "rap_e",
+#                         "rtma", or "urma"}
 #     cycle         String indicating the center cycle hour for PREPBUFR
 #                   processing {"txxz", where xx is two-digit hour of the day
 #                   (UTC)}
@@ -268,8 +274,8 @@
 #                   temporary location)
 #     COMSP         String indicating the directory/filename path to input BUFR
 #                   observational data dumps, tropical cyclone location
-#                   (tcvitals) files, global sigma guess files, and status
-#                   files (e.g., "$COMROOT/gfs/prod/gdas.20060612/gdas1.t12z.")
+#                   (tcvitals) files, global atmos guess files, and status
+#                   files (e.g., "$COMROOT/gfs/prod/gfs.20060612/gfs.t12z.")
 #     DBNROOT       String indicating directory path to bin/dbn_alert file
 #                   location
 #                   NOTE : This is required ONLY if the imported shell variable
@@ -297,6 +303,9 @@
 #     sys_tp        System type and phase.  If not imported, an attempt is made
 #                   to set it using getsystem.pl (an NCO prod_util script).
 #                   A failed attempt results in an empty string.
+#     NEMSIO_IN     Flag that if ".true." indicates that nemsio atmospheric 
+#                   background fields will be input rather than sigio.
+#                   Default is ""
 #     SENDDBN       String indicating whether or not to alert an output file to
 #                   the NWS/TOC (= "YES" - invoke alert; anything else - do not
 #                   invoke alert)
@@ -319,14 +328,14 @@
 #                   String indicating job network under which GETGES utility
 #                   ush runs (see getges.sh docblock for more information)
 #                   Default is "global" unless the center PREPBUFR processing
-#                   date/time is not a multiple of 3-hrs, then the default is
-#                   "gfs"
+#                   date/time is not a multiple of 3-hrs and the global guess is
+#                   sigio-based, then the default is "gfs"
 #     pgmout        String indicating file containing standard output (output
 #                   always contatenated onto this file)
 #                   Default is "/dev/null"
 #     tstsp         String indicating the directory/filename path to one or
 #                   more BUFR observational data dumps and/or tropical cyclone
-#                   location (tcvitals) files and/or global sigma guess files
+#                   location (tcvitals) files and/or global atmos guess files
 #                   and/or status files that are to override the corresponding
 #                   file in $COMSP (this should be imported with the same
 #                   naming convention as $COMSP; e.g.,
@@ -396,15 +405,15 @@
 #     GETGUESS      String: if = "YES" will encode first guess (background)
 #                   values interpolated by the program PREPOBS_PREPDATA to
 #                   observation locations in the PREPBUFR file for use by the
-#                   q.c. programs.  This guess is always from a global sigma
+#                   q.c. programs.  This guess is always from a global atmos
 #                   guess file valid at the center PREPBUFR processing date/
 #                   time or from an interpolated guess obtained from global
-#                   sigma guess files valid at times 3-hours apart which span
+#                   atmos guess files valid at times 3-hours apart which span
 #                   the PREPBUFR processing date/time (the latter is performed
-#                   by the program PREPOBS_PREPDATA and occurs when the
-#                   PREPBUFR date/time hour is not a multiple of 3, e.g. rap,
-#                   rap_p or rap_e runs at 02Z).  This file (or these files)
-#                   may be obtained in one of two ways:
+#                   by the program PREPOBS_PREPDATA and occurs when the guess
+#                   files are sigio-based and the PREPBUFR date/time hour is not
+#                   a multiple of 3, e.g. 02Z rap or tm04 nam catchup runs). The
+#                   guess file (or files) may be obtained in one of two ways:
 #                       1) From pre-existing files in the working directory
 #                          $DATA called sgesprep and sgesprepA (either copied
 #                          there prior to the execution of this script, or
@@ -412,9 +421,9 @@
 #                          $tstsp, or if not found there, $COMSP which was
 #                          populated by the previous running of tropical
 #                          cyclone relocation processing
-#                           NOTE 1: sgesprepA is needed only when the PREPBUFR
-#                                   processing date/time is not a multiple of
-#                                   3-hrs and spanning guess files are needed
+#                           NOTE 1: sgesprepA is needed only when the guess is
+#                                   sigio-based and the PREPBUFR processing
+#                                   date/time is not a multiple of 3-hrs.
 #                           NOTE 2: if previous tropical cyclone relocation
 #                                   processing was run, then an sgesprepA file
 #                                   is NEVER generated, not a problem since
@@ -426,8 +435,8 @@
 #                          does not exist), and possibly via the execution of
 #                          the GETGES utility ush to obtain sgesprepA (if
 #                          PREPBUFR processing date/time is not a multiple of
-#                          3-hrs and the pre-existing file $DATA/sgesprepA does
-#                          not exist)
+#                          3-hrs and the global guess is sigio-based, and the
+#                          pre-existing file $DATA/sgesprepA does not exist)
 #                   Default is "YES"
 #                   NOTE: If GETGUESS=NO, then the program PREPOBS_PREPDATA
 #                         will NOT call w3emc routine GBLEVENTS to perform
@@ -601,12 +610,12 @@
 #                    PREPBUFR file generated in this script by PREPOBS_PREPDATA
 #                    (normally this would be used when PREPDATA=NO)
 #                         @ - if the PREPBUFR_IN target file is obtained from
-#                             ${COMROOT}/*/prod/*.YYYYMMDD/*.tCCz.prepbufr_pre-qc,
+#                           ${COMROOT}/*/prod/*.YYYYMMDD/*.tCCz.prepbufr_pre-qc,
 #                             then for all runs on and after 12Z 25 Jan 2005,
 #                             SYNDATA should be NO because the target files
 #                             will already contain synthetic bogus data;
 #                             if the PREPBUFR_IN target file is obtained from
-#                             ${COMROOT}/*/prod/*.YYYYMMDD/*.tCCz.prepbufr_pre-qc,
+#                           ${COMROOT}/*/prod/*.YYYYMMDD/*.tCCz.prepbufr_pre-qc,
 #                             then for all runs prior to 12Z 25 Jan 2005,
 #                             SYNDATA should be YES because the target files
 #                             will not have contain synthetic bogus data.
@@ -623,12 +632,13 @@
 #
 #     NWROOTp1      Root directory for production software on WCOSS Phase 1.
 #
-#     UTILSHAREDROOT  String pointing to some version of util_shared directory
-#                      (may have been set by util_shared environment module)
-#
 #     USHGETGES     String indicating directory path for GETGES utility script.
-#                   If not set, first default is $UTILSHAREDROOT/ush.  If that 
-#                    option is not viable, will see if getges.sh is in path.
+#                   Default is $HOMEobsproc_prep/ush.
+#
+#     GETGESprep    GETGES utility script. If NEMSIO_IN=.true.,  defaults to:
+#                       $USHGETGES/getges.sh
+#                   otherwise, defaults to:
+#                       $USHGETGES/getges_sig.sh 
 #
 #     PREPDATAtpn   Tasks per node when invoking cfp on Cray-XC40.  Will be
 #                   computed if needed but was not imported.
@@ -646,29 +656,33 @@
 #     CDATE10       String indicating the center date/time for the PREPBUFR
 #                   processing <yyyymmddhh>
 #     SGES          Either ...
-#                    1) String indicating the full path name for global simga
-#                       guess file valid at the center PREPBUFR processing
-#                       date/time (in which case the center PREPBUFR processing
-#                       date/time is a multiple of 3-hrs)  - This guess file
-#                       will be encoded into the PREPBUFR file for use by the
-#                       q.c. programs.
+#                    1) String indicating the full path name for global
+#                       sigio-based or nemsio-based guess file valid at the
+#                       center PREPBUFR processing date/time (in which case the
+#                       center PREPBUFR processing date/time is a multiple of
+#                       3-hrs, or for any PREPBUFR center hour if global guess
+#                       is nemsio-based)  - This guess file will be encoded
+#                       into the PREPBUFR file for use by the q.c. programs.
 #                             -- or --
 #                    2) String indicating the full path name for the global
-#                       sigma guess file valid at the nearest cycle time prior
-#                       to the center PREPBUFR processing date/time which is a
-#                       multiple of 3 (in which case the center PREPBUFR
-#                       processing date/time is not a multiple of 3-hrs) - A
-#                       linear interpolation (of the spectal coefficients)
-#                       between this guess file and the guess file indicated
-#                       by SGESA below (see case 2 for SGESA) will be performed
-#                       by the program PREPOBS_PREPDATA and encoded into the
-#                       PREPBUFR file for use by the q.c. programs.  The SGES
-#                       file is always from the GFS in this case.
+#                       atmosperic guess file valid at the nearest cycle time
+#                       prior to the center PREPBUFR processing date/time which
+#                       is a multiple of 3 (in which case the center PREPBUFR
+#                       processing date/time is not a multiple of 3-hrs and the
+#                       global guess is sigio-based) - A linear interpolation
+#                       (of the spectal coefficients) between this file and the
+#                       guess file indicated by SGESA case 2 below will be
+#                       performed by program PREPOBS_PREPDATA and encoded into
+#                       the PREPBUFR file for use by the q.c. programs.  The
+#                       SGES file is always from the GFS in this case.
 #                     NOTE 1: Only case 1 above is valid when tropical cyclone
-#                       relocation processing previously occurred.
-#                     NOTE 2: Case 2 above is necessary because global sigma
-#                             guess files are valid only at hours which are a
-#                             multiple of 3.
+#                             relocation processing previously occurred.
+#                     NOTE 2: Case 2 above is necessary because the w3emc lib
+#                             routine gblevents called by PREPOBS_PREPDATA
+#                             expects that sigio-based guess files will only
+#                             have valid hours which are a multiple of 3
+#                     NOTE 3: Only case 1 above is valid when global guess is
+#                             nemsio-based.
 #     SGESA         Either ...
 #                    1) String set to "/dev/null" for case 1 of SGES above
 #                       (default)
@@ -686,16 +700,20 @@
 #                       is 3-hrs later than the SGES file (thus both initiate
 #                       at the same time).
 #                     NOTE 1: Only case 1 above is valid when tropical cyclone
-#                       relocation processing previously occurred.
-#                     NOTE 2: Case 2 above is necessary because global sigma
-#                             guess files are valid only at hours which are a
-#                             multiple of 3.
+#                             relocation processing previously occurred.
+#                     NOTE 2: Case 2 above is necessary because the w3emc lib
+#                             routine gblevents called by PREPOBS_PREPDATA
+#                             expects that sigio-based guess files will only
+#                             have valid hours which are a multiple of 3
+#                     NOTE 3: Only case 1 above is valid when global guess is
+#                             nemsio-based.
 #   
 #
 #   Modules and files referenced:
 #     herefiles  : $DATA/MP_PREPDATA
 #                  $DATA/MERGE_MSGS
 #     scripts    : $USHGETGES/getges.sh
+#                  $USHGETGES/getges_sig.sh
 #                  $USHSYND/prepobs_syndata.sh
 #                  $USHPREV/prepobs_prevents.sh
 #                  $USHCQC/prepobs_cqcbufr.sh
@@ -757,6 +775,7 @@
 
 set -aux
 
+NEMSIO_IN=${NEMSIO_IN:=""}
 jlogfile=${jlogfile:=""}
 SENDDBN=${SENDDBN:-NO}
 
@@ -842,7 +861,7 @@ then
    echo
    set -x
    $DATA/err_exit
-   [ $? != 0 ] && exit 55  # for extra measure
+   exit 55  # for extra measure
 fi
 
 cyc=`echo $CDATE10|cut -c9-10`
@@ -862,7 +881,7 @@ set -x
 envir=${envir:-prod}
 
 envir_getges=${envir_getges:-$envir}
-if [ $modhr -eq 0 ]; then
+if [ $modhr -eq 0 -o "$NEMSIO_IN" = .true. ]; then
    network_getges=${network_getges:-global}
 else
    network_getges=${network_getges:-gfs}
@@ -925,7 +944,7 @@ echo "********************************************************************"
             msg="***FATAL ERROR:  Insufficient NPROCS for NSPLIT=$NSPLIT"
             [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
             $DATA/err_exit
-            [ $? != 0 ] && exit 55  # for extra measure
+            exit 55  # for extra measure
          fi
       fi
    elif [ "$BACK" = 'YES' ] ; then
@@ -953,18 +972,14 @@ FIXSYND=${FIXSYND:-${HOMEobsproc_prep}/fix}
 
 GETGUESS=${GETGUESS:-YES}
 if [ "$GETGUESS" = 'YES' ]; then
-   set +u
-   if [ -z "$USHGETGES" ]; then
-      if [ -n "${UTILSHAREDROOT}" ]; then
-         USHGETGES=${UTILSHAREDROOT}/ush
-      else
-         # last ditch effort... search the current path for getges.sh but no
-         #  error here if not found since it might not actually be needed
-         which_getges=$(which getges.sh)
-         [ $? -eq 0 ] && USHGETGES=$(dirname $which_getges)
-      fi
+   USHGETGES=${USHGETGES:-${HOMEobsproc_prep}/ush}
+   if [ "$NEMSIO_IN" = .true. ]; then
+      GETGESprep=${GETGESprep:-$USHGETGES/getges.sh}
+      stype=${stype:="natges"}
+   else
+      GETGESprep=${GETGESprep:-$USHGETGES/getges_sig.sh}
+      stype=${stype:="sigges"}
    fi
-   set -u
 fi
 
 PREPDATA=${PREPDATA:-YES}
@@ -1052,13 +1067,10 @@ fi
 
 if [ -s ${COMSP}tropcy_relocation_status.$tmmark ]; then
    if [ "$SENDDBN" = "YES" ]; then
-      if [ "$NET" = 'gfs' ]; then
-         $DBNROOT/bin/dbn_alert MODEL GFS_TCI $job \
-          ${COMSP}tropcy_relocation_status.$tmmark
-      fi
       if [ "$NET" = 'gdas' ]; then
-         $DBNROOT/bin/dbn_alert MODEL GDAS1_TCI $job \
-          ${COMSP}tropcy_relocation_status.$tmmark
+         RUN_uc=$(echo $RUN | tr [a-z] [A-Z])
+         $DBNROOT/bin/dbn_alert MODEL ${RUN_uc}_TCI $job \
+             ${COMSP}tropcy_relocation_status.$tmmark
       fi
    fi
 fi
@@ -1068,16 +1080,27 @@ if [ "$RELOCATION_HAS_RUN" != 'YES' -a "$GETGUESS" != 'NO' ]; then
    if [ $cyc = 00 -o $cyc = 06 -o $cyc = 12 -o $cyc = 18 ]; then
 
 # The GFS and GDAS networks at 00, 06, 12 and 18z will get the t-3 and t+3
-#  sigma guess files here since they are needed by the GSI even if tropical
+#  atmos guess files here since they are needed by the GSI even if tropical
 #  cyclone relocation was not previously performed (RELOCATION_HAS_RUN=NO)
 #   (NOTE 1: Normally RELOCATION_HAS_RUN=YES for these networks)
-#   (NOTE 2: If RELOCATION_HAS_RUN=YES, the t-3 and t+3 sigma guess files have
+#   (NOTE 2: If RELOCATION_HAS_RUN=YES, the t-3 and t+3 atmos guess files have
 #            already been obtained for all networks including the GFS and GDAS)
 #   (NOTE 3: This is not done if GETGUESS is NO)
 #
 
    if [ "$NET" = 'gfs' -o "$NET" = 'gdas' ]; then
       for fhr in -3 +3 ;do
+       if [ "$NEMSIO_IN" = .true. ]; then 
+         if [ $fhr = "-3" ] ; then
+            sges=sgm3prep
+            stype=natgm3
+            echo $sges
+         else
+            sges=sgp3prep
+            stype=natgp3
+            echo $sges
+         fi
+       else
          if [ $fhr = "-3" ] ; then
             sges=sgm3prep
             stype=siggm3
@@ -1087,30 +1110,31 @@ if [ "$RELOCATION_HAS_RUN" != 'YES' -a "$GETGUESS" != 'NO' ]; then
             stype=siggp3
             echo $sges
          fi
+       fi
          if [ ! -s $sges ]; then
             set +x
             echo
 echo "VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV"
 echo "           Tropical cylone relocation HAS NOT previously run"
-echo "     Get global sigma GUESS valid for $fhr hrs relative to center"
+echo "     Get global atmospheric GUESS valid for $fhr hrs relative to center"
 echo "                     PREPBUFR processing date/time"
 echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
             echo
             set -x
-            $USHGETGES/getges.sh -e $envir_getges -n $network_getges \
+            $GETGESprep -e $envir_getges -n $network_getges \
              -v $CDATE10 -t $stype $sges
             errges=$?
             if test $errges -ne 0; then
-#  problem obtaining global sigma first guess so exit
+#  problem obtaining global atmospheric first guess so exit
                set +x
                echo
-               echo "problem obtaining global sigma guess valid $fhr hrs \
+               echo "problem obtaining global atmos guess valid $fhr hrs \
 relative to center PREPBUFR date/time;"
                echo "ABNORMAL EXIT!!!!!!!!!!!"
                echo
                set -x
                $DATA/err_exit
-               [ $? != 0 ] && exit 55  # for extra measure
+               exit 55  # for extra measure
             fi
             set +x
             echo
@@ -1125,22 +1149,26 @@ echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 elif [ "$RELOCATION_HAS_RUN" = 'YES' ]; then
 
 #  If Tropical cyclone relocation previously ran for this network and cycle
-#   copy the t-3, t+0 and t+3 sigma guess files and the tcvitals_relocate file
+#   copy the t-3, t+0 and t+3 atmos guess files and the tcvitals_relocate file
 #   from either $tstsp or, if not found there, $COMSP to working directory
 #   (Note: tcvitals_relocate file can be empty, but it must exist)
 #  --------------------------------------------------------------------------
 
    qual_last=".$tmmark"  # need this because gfs and gdas don't add $tmmark
-                         #  qualifer to end of output sigma guess files
+                         #  qualifier to end of output atmos guess files
    [ $NET = gfs -o $NET = gdas ]  &&  qual_last=""
    for file in sgm3prep sgesprep sgp3prep tcvitals.relocate.$tmmark; do
-      [ $file = tcvitals.relocate.$tmmark ]  && qual_last="" # already has
-                                                             #  $tmmark at end
-      if [ -s ${tstsp}${file}${qual_last} ]; then
-         cp ${tstsp}${file}${qual_last} $file
+      case $file in
+        tcvitals.relocate.$tmmark) infile=$file; qual_last="";; #  already has $tmmark at end
+        sgm3prep) if [ "$NEMSIO_IN" = .true. ];then infile=atmgm3.nemsio;else infile=$file;fi;;
+        sgesprep) if [ "$NEMSIO_IN" = .true. ];then infile=atmges.nemsio;else infile=$file;fi;;
+        sgp3prep) if [ "$NEMSIO_IN" = .true. ];then infile=atmgp3.nemsio;else infile=$file;fi;;
+      esac
+      if [ -s ${tstsp}${infile}${qual_last} ]; then
+         cp ${tstsp}${infile}${qual_last} $file
          continue
-      elif [ -s ${COMSP}${file}${qual_last} ]; then
-         cp ${COMSP}${file}${qual_last} $file
+      elif [ -s ${COMSP}${infile}${qual_last} ]; then
+         cp ${COMSP}${infile}${qual_last} $file
          continue
       else
          if [ $file = tcvitals.relocate.$tmmark ]; then
@@ -1153,7 +1181,7 @@ elif [ "$RELOCATION_HAS_RUN" = 'YES' ]; then
             fi
          fi
       fi
-#  either t-3,t+0 or t+3 sigma guess file or the tcvitals_relocate file not
+#  either t-3,t+0 or t+3 atmos guess file or the tcvitals_relocate file not
 #   found in expected location so exit
       set +x
       echo
@@ -1163,9 +1191,9 @@ populated by earlier tropical cyclone relocation processing"
       echo
       set -x
       $DATA/err_exit
-      [ $? != 0 ] && exit 55  # for extra measure
+      exit 55  # for extra measure
    done
-   mv tcvitals.relocate.$tmmark tcvitals
+   cp tcvitals.relocate.$tmmark tcvitals
    if [ $relo_rec = yes ]; then  # come here if relocation ran and processed
                                  #  1 or more records, means it updated
                                  #  sgesprep
@@ -1173,7 +1201,7 @@ populated by earlier tropical cyclone relocation processing"
       echo
 echo "VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV"
 echo "     Center PREPBUFR processing date/time is a multiple of 3-hrs"
-echo "        Global sigma GUESS valid for  0 hrs relative to center"
+echo "        Global atmospheric GUESS valid for  0 hrs relative to center"
 echo "             PREPBUFR processing date/time was generated by"
 echo "             previous tropical cyclone relocation processing"
 echo "    It will be encoded into PREPBUFR file and used by q.c. programs"
@@ -1187,7 +1215,7 @@ echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
       echo
 echo "VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV"
 echo "     Center PREPBUFR processing date/time is a multiple of 3-hrs"
-echo "        Global sigma GUESS valid for  0 hrs relative to center"
+echo "        Global atmospheric GUESS valid for  0 hrs relative to center"
 echo "         PREPBUFR processing date/time was obtained via GETGES"
 echo "    It will be encoded into PREPBUFR file and used by q.c. programs"
 echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
@@ -1198,7 +1226,7 @@ echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 fi
 
 ###############################################################################
-# POSSIBLY OBTAIN GBL SIGMA GUESS FILE(S) FOR LATER ENCODING INTO PREPBUFR FILE
+# POSSIBLY OBTAIN GBL ATMOS GUESS FILE(S) FOR LATER ENCODING INTO PREPBUFR FILE
 ###############################################################################
 
 if [ "$PREPDATA" = 'YES' -o "$SYNDATA" = 'YES' -o "$PREVENTS" = 'YES' ]; then
@@ -1211,13 +1239,14 @@ if [ "$PREPDATA" = 'YES' -o "$SYNDATA" = 'YES' -o "$PREVENTS" = 'YES' ]; then
    if [ "$GETGUESS" != 'NO' ]; then
 
 #  Either ...
-#    If center PREPBUFR processing date/time is a multiple of 3-hrs, then get a
-#    global sigma guess valid at the center PREPBUFR processing date/time -
-#    this will be interpolated to observation locations by PREPDATA and encoded
-#    into the PREPBUFR file for use by the q.c. programs; if a non-zero length
-#    file sgesprep exists in the working directory, then this guess is used -
-#    otherwise: the utility ush GETGES is executed to obtain the global sigma
-#    guess file here
+#    If the global background guess will be nemsio-based -OR- if the global
+#    background guess will be sigio-based and the center PREPBUFR processing
+#    date/time is a multiple of 3-hrs, then get a global atmospheric guess valid
+#    at the center PREPBUFR processing date/time - this will be interpolated to
+#    observation locations by PREPDATA and encoded into the PREPBUFR file for
+#    use by the q.c. programs; if a non-zero length file sgesprep exists in the
+#    working directory, then this guess is used - otherwise: the GETGES utility
+#    is executed to obtain the global atmospheric guess file here
 #
 #    (NOTE 1: a pre-existing sgesprep file in the working directory at this
 #             point was either:
@@ -1227,28 +1256,30 @@ if [ "$PREPDATA" = 'YES' -o "$SYNDATA" = 'YES' -o "$PREVENTS" = 'YES' ]; then
 #                  not found there, $COMSP which was populated by the previous
 #                  running of tropical cyclone relocation processing
 #    (NOTE 2: If imported variable GETGUESS=NO, then bypass this step - a
-#             global sigma guess valid at center PREPBUFR time is not obtained)
+#             global atmos guess valid at center PREPBUFR time is not obtained)
 #
 #                   -- or --
 #
-#    If center PREPBUFR processing date/time is not a multiple of 3-hrs, then
-#    get a global sigma guess valid at the nearest cycle time prior to the
-#    center PREPBUFR processing date/time which is a multiple of 3, then get a
-#    global sigma guess valid at the nearest cycle time after the center
-#    PREPBUFR processing date/time which is a multiple of 3 - the spectral
-#    coefficients will be linearly interpolated to the center PREPBUFR
-#    processing date/time by the program PREPOBS_PREPDATA and this guess will
-#    then be interpolated to observation locations (again by the program
-#    PREPOBS_PREPDATA) and encoded into the PREPBUFR file for use by the q.c.
-#    programs; if a non-zero length file sgesprep exists in the working
+#       (AND THIS APPLIES ONLY TO A GLOBAL SIGIO-BASED GUESS!!)
+#
+#    If center PREPBUFR processing date/time is not a multiple of 3-hrs -AND-
+#    global guess is sigio-based, then get a global sigma guess valid at the
+#    nearest cycle time prior to the center PREPBUFR processing date/time which
+#    is a multiple of 3, then get a global sigma guess valid at the nearest
+#    cycle time after the center PREPBUFR processing date/time which is a
+#    multiple of 3 - the spectral coefficients will be linearly interpolated to
+#    the center PREPBUFR processing date/time by the program PREPOBS_PREPDATA
+#    and this guess will then be interpolated to observation locations (again by
+#    the program PREPOBS_PREPDATA) and encoded into the PREPBUFR file for use by
+#    the q.c. programs; if a non-zero length file sgesprep exists in the working
 #    directory, then this guess is used for time prior to the center PREPBUFR
 #    processing date/time  - otherwise: the utility ush GETGES is executed to
-#    obtain the global sigma guess file here (will always be from GFS network);
+#    obtain the global atmos guess file here (will always be from GFS network);
 #
 #    likewise if a non-zero length file sgesprepA exists in the working
 #    directory, then this guess is used for time after the center PREPBUFR
 #    processing date/time - otherwise: the utility ush GETGES is executed to
-#    obtain the global sigma guess file here (will always be from the GFS
+#    obtain the global atmos guess file here (will always be from the GFS
 #    network and initiate at the same time as the guess file valid prior to the
 #    PREPBUFR processing date/time)
 #
@@ -1265,43 +1296,50 @@ if [ "$PREPDATA" = 'YES' -o "$SYNDATA" = 'YES' -o "$PREVENTS" = 'YES' ]; then
 #             because previous tropical cyclone relocation processing can run
 #             only when the center tropical cyclone relocation (or PREPBUFR)
 #             processing date/time is a multiple of 3)
-#    (NOTE 3: this case is necessary because global sigma guess files are valid
-#             only at hours which are a multiple of 3)
+#    (NOTE 3: this case is necessary because the gblevents subroutine used to
+#             add background forecast values to the prepbufr file expects sigio-
+#             based files to be valid only at hours that are a multiple of 3)
 #    (NOTE 4: if imported variable GETGUESS=NO, then bypass this step - a
-#             global sigma guess valid at center PREPBUFR time is not obtained
+#             global atmos guess valid at center PREPBUFR time is not obtained)
 #  ----------------------------------------------------------------------
 
       for sfx in "" A; do
          if [ ! -s sgesprep${sfx} ]; then
             fhr=any
-            dhr=`expr 0 - $modhr`
-            if [ $modhr -eq 0 ]; then
+            if [ "$NEMSIO_IN" = .true. ]; then 
+               dhr=0
+            else
+               dhr=`expr 0 - $modhr`
+            fi
+            if [ $modhr -eq 0 -o "$NEMSIO_IN" = .true. ]; then
                [ "$sfx" = 'A' ]  &&  break
                set +x
                echo
 echo "VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV"
-echo "     Center PREPBUFR processing date/time is a multiple of 3-hrs"
-echo "Use GETGES to get global sigma GUESS valid for  0 hrs relative to center"
-echo "                     PREPBUFR processing date/time"
+echo "  Either center PREPBUFR processing date/time is a multiple of 3-hrs"
+echo "                                -OR-"
+echo "                     global guess is nemsio-based"
+echo "   Use GETGES to get global sigio-based or nemsio-based GUESS valid for"
+echo "             0 hrs relative to center PREPBUFR processing date/time"
 echo "     Will be encoded into PREPBUFR file and used by q.c. programs"
 echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
                echo
                set -x
             else
                if [ "$sfx" = 'A' ]; then
-                  typeset -Z2 fhr
-                  fhr=`awk -F"sf" '{print$2}' sgesprep_pathname | cut -c1-2`
-                  fhr=`expr $fhr + 03`
-                  dhr=`expr 3 - $modhr`
+                 typeset -Z2 fhr
+                 fhr=`awk -F"sf" '{print$2}' sgesprep_pathname | cut -c1-2`
+                 fhr=`expr $fhr + 03`
+                 dhr=`expr 3 - $modhr`
                fi
                set +x
                echo
 echo "VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV"
 echo "   Center PREPBUFR processing date/time is not a multiple of 3-hrs"
                if [ "$sfx" != 'A' ]; then
-echo "   Get global sigma GUESS valid at the nearest cycle time prior to"
+echo "   Get global atmos GUESS valid at the nearest cycle time prior to"
                else
-echo "     Get global sigma GUESS valid at the nearest cycle time after"
+echo "     Get global atmos GUESS valid at the nearest cycle time after"
                fi
 echo "    center PREPBUFR processing date/time which is a multiple of 3"
 echo "     Will be used to generate an interpolated guess which will be"
@@ -1310,26 +1348,35 @@ echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
                echo
                set -x
             fi
-            $USHGETGES/getges.sh -e $envir_getges -n $network_getges \
+            $GETGESprep -e $envir_getges -n $network_getges -t $stype\
              -f $fhr -v `${NDATE} $dhr $CDATE10` > sgesprep${sfx}_pathname
             errges=$?
             if test $errges -ne 0
             then
-#  problem obtaining global sigma guess - exit if center PREPBUFR processing
-#   date/time is a multiple of 3-hrs, otherwise continue running but set
-#   GETGUESS=NO meaning a first guess will NOT be encoded in PREPBUFR file
-               set +x
-               echo
-               if [ $modhr -eq 0 ]; then
-echo "problem obtaining global sigma guess valid  0 hrs relative to \
+#  problem obtaining global sigio-based or nemsio-based guess - exit if center
+#   PREPBUFR processing date/time is a multiple of 3-hrs or if global guess is
+#   nemsio-based, otherwise continue running but set GETGUESS=NO meaning a
+#   first guess will NOT be encoded in PREPBUFR file
+               if [ $modhr -eq 0  -o "$NEMSIO_IN" = .true. ]; then
+                  if [ "$NEMSIO_IN" = .true. ]; then
+                     set +x
+                     echo
+echo "problem obtaining global nemsio-based guess;"
+                  else
+                     set +x
+                     echo
+echo "problem obtaining global sigio-based guess valid  0 hrs relative to \
 center PREPBUFR date/time;"
+                  fi
 echo "ABNORMAL EXIT!!!!!!!!!!!"
                   echo
                   set -x
                   $DATA/err_exit
-                  [ $? != 0 ] && exit 55  # for extra measure
+                  exit 55  # for extra measure
                else
-echo "problem obtaining global sigma guess valid at the nearest cycle time "
+                  set +x
+                  echo
+echo "problem obtaining global atmos guess valid at the nearest cycle time "
                   if [ "$sfx" != 'A' ]; then
 echo "prior to center PREPBUFR processing date/time which is a multiple of 3"
                   else
@@ -1338,7 +1385,7 @@ echo "after center PREPBUFR processing date/time which is a multiple of 3"
 echo "will continue running but a GUESS will NOT be encoded in PREPBUFR file!!"
                   echo
                   set -x
-                  msg="PROBLEM OBTAINING ONE OR BOTH SPANNING SIGMA GUESS \
+                  msg="PROBLEM OBTAINING ONE OR BOTH SPANNING ATMOS GUESS \
 FILES, GUESS NOT ENCODED IN PREPBUFR FILE  --> non-fatal"
                   [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
                   GETGUESS=NO
@@ -1369,13 +1416,18 @@ echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 #  --------------------------------------------------------------------------
 
                qual_last=".$tmmark"  # need this because gfs and gdas don't add
-                                     #  $tmmark qualifer to end of output sigma
+                                     #  $tmmark qualifer to end of output atmos
                                      #  guess files
                [ $NET = gfs -o $NET = gdas ]  &&  qual_last=""
-               if [ -s ${tstsp}sgesprep${qual_last} ]; then
-                  echo "${tstsp}sgesprep${qual_last}" > sgesprep${sfx}_pathname
-               elif [ -s ${COMSP}sgesprep${qual_last} ]; then
-                  echo "${COMSP}sgesprep${qual_last}" > sgesprep${sfx}_pathname
+               if [ "$NEMSIO_IN" = .true. ]; then 
+                  gesbase="atmges.nemsio"
+                else
+                  gesbase="sgesprep"
+               fi
+               if [ -s ${tstsp}${gesbase}${qual_last} ]; then
+                 echo "${tstsp}${gesbase}${qual_last}" > sgesprep${sfx}_pathname
+               elif [ -s ${COMSP}${gesbase}${qual_last} ]; then
+                 echo "${COMSP}${gesbase}${qual_last}" > sgesprep${sfx}_pathname
                fi
             else
 
@@ -1435,7 +1487,7 @@ echo "ABNORMAL EXIT!!!!!!!!!!!"
 echo
                set -x
                $DATA/err_exit
-               [ $? != 0 ] && exit 55  # for extra measure
+               exit 55  # for extra measure
             fi
          fi
       fi
@@ -1462,7 +1514,7 @@ echo " time (but is in BUFRLIST); ABNORMAL EXIT!!!!!!!!!!!"
 echo
          set -x
          $DATA/err_exit
-         [ $? != 0 ] && exit 55  # for extra measure
+         exit 55  # for extra measure
       fi
 
    fi
@@ -1483,14 +1535,17 @@ echo
    echo "      $CDATE10" > cdate10.dat
 
 # If GETGUESS=YES, then either ...
-#   a global sigma guess file valid at the center PREPBUFR processing date/time
-#   which is a multiple of 3-hrs is valid at this point
+#   a global sigio-based guess file valid at the center PREPBUFR processing
+#   date/time which is a multiple of 3-hrs is valid at this point
 #                                 -- or --
-#   global sigma guess files valid at times which are multiples of 3-hrs and
-#   span the center PREPBUFR processing date/time which is NOT a multiple of
+#   global sigio-based guess files valid at times which are multiples of 3-hrs
+#   and span the center PREPBUFR processing date/time which is NOT a multiple of
 #   3-hrs are available and valid at this point
+#                                 -- or --
+#   a global nemsio-based guess file valid at the center PREPBUFR processing
+#   date/time for any hour is valid at this point
 
-#  In either case, namelist "GBLEVN" with PREVEN=T is cat'ed to the beginning
+#  In any case, namelist "GBLEVN" with PREVEN=T is cat'ed to the beginning
 #  of the PREPOBS_PREPDATA program data cards file - this means
 #  PREPOBS_PREPDATA will call w3emc routine GBLEVENTS to do the "prevents"
 #  processing (otherwise PREVEN=F by default)
@@ -1587,16 +1642,15 @@ cat <<\EOFmpp > MP_PREPDATA
 #   MPCOPYX  - path to PREPOBS_MPCOPYBUFR program executable
 #   PRPT     - path to PREPOBS_PREPDATA bufrtable file
 #   LANDC    - path to land/sea mask file
-#   SGES     - path to COPY OF global simga first guess file valid at either
-#               center PREPBUFR processing date/time or nearest cycle time
-#               prior to center PREPBUFR processing date/time which is a
-#               multiple of 3
-#   SGESA    - path to COPY OF global simga first guess file either null if
-#               SGES is valid at center PREPBUFR processing date/time or valid
-#               at nearest cycle time after center PREPBUFR processing date/
-#               time which is a multiple of 3 if SGES is valid at nearest
-#               cycle time prior to center PREPBUFR processing date/time which
-#               is a multiple of 3
+#   SGES     - path to COPY OF global sigio-based or nemsio-based first guess
+#               file valid at either center PREPBUFR processing date/time or,
+#               for global sigio-based guess only, nearest 3-hrly cycle time
+#               prior to center PREPBUFR processing date/time
+#   SGESA    - path to COPY OF global sigio-based guess file valid at nearest
+#               3-hrly cycle AFTER center PREPBUFR processing date/time (if
+#               needed, otherwise /dev/null). Only used if SGES is valid at
+#               3-hrly cycle time PRIOR to center PREPBUFR processing date/time
+#               (and thus not used if NEMSIO_IN=.true.)
 #   PRVT     - path to observation error table file
 #   PRPX     - path to PREPOBS_PREPDATA program executable
 #   LISTHDX  - path to PREPOBS_LISTHEADERS program executable
@@ -1728,12 +1782,11 @@ export FORT15=$LANDC
 ##   export FORT18=$SGES
 ##   export FORT19=$SGESA
 
-# The PREPOBS_PREPDATA code will soon, or may now, open GFS spectral
-# coefficient guess files using sigio routines (via W3EMC routine GBLEVENTS)
-# via explicit open(unit=number,file=filename) statements.  This conflicts with
-# the FORTxx statements above.  One can either remove the explicit open
-# statements in the code or replace the above FORTxx lines with soft links.
-# The soft link approach is taken below.
+# The PREPOBS_PREPDATA code opens GFS spectral coefficient guess files using 
+# sigio routines or GFS gaussian grid guess files using nemsio routines (via
+# W3EMC routine GBLEVENTS) in a manner that may not recognize the FORTxx
+# variables above.  So, the above statements setting FORTxx vars for $SGES and
+# $SGESA are replaced by the soft links below.
 
 ln -sf $SGES              fort.18
 ln -sf $SGESA             fort.19
@@ -1899,14 +1952,14 @@ set -x
             export MP_STDOUTMODE=ordered
             mpirun.lsf
             export err=$?; $DATA/err_chk
-            [ $? != 0 ] && exit 55  # for extra measure
+            [ $err != 0 ] && exit 55  # for extra measure
          elif [ "$launcher_PREP" = cfp ]; then
             export MP_CSS_INTERRUPT=yes
             export MP_LABELIO=yes
             export MP_STDOUTMODE=ordered
             mpirun.lsf cfp $DATA/prep_exec.cmd
             export err=$?; $DATA/err_chk
-            [ $? != 0 ] && exit 55  # for extra measure
+            [ $err != 0 ] && exit 55  # for extra measure
          elif [ "$launcher_PREP" = aprun ]; then
             ## Determine tasks per node (PREPDATAtpn) and
             ##    max number of concurrent procs (PREPDATAprocs) for cfp
@@ -1922,7 +1975,7 @@ set -x
                echo
                set -x
                $DATA/err_exit
-               [ $? != 0 ] && exit 55  # for extra measure
+               exit 55  # for extra measure
             fi
             if [[ -z ${PREPDATAtpn:-""} ]]; then
                PREPDATAtpn=$((($NSPLIT+$ncnodes-1)/$ncnodes))
@@ -1935,11 +1988,11 @@ set -x
             fi
             aprun -j 1 -n${PREPDATAprocs} -N${PREPDATAtpn} -d1 cfp $DATA/prep_exec.cmd
             export err=$?; $DATA/err_chk
-            [ $? != 0 ] && exit 55  # for extra measure
+            [ $err != 0 ] && exit 55  # for extra measure
          else  # unknown launcher and options (eg, for use on R&D system) 
             $launcher_PREP
             export err=$?; $DATA/err_chk
-            [ $? != 0 ] && exit 55  # for extra measure
+            [ $err != 0 ] && exit 55  # for extra measure
          fi
       elif [ $BACK = 'YES' ] ; then
          if [ "$sys_tp" = Cray-XC40 -o "$SITE" = SURGE -o "$SITE" = LUNA ]; then
@@ -2041,7 +2094,7 @@ echo
 
    if [ "$errSTATUS" -gt '0' ]; then
       $DATA/err_exit
-      [ $? != 0 ] && exit 55  # for extra measure
+      exit 55  # for extra measure
    fi
 
    [ "$errPREPDATA" -eq '4' -a "$four_check" = 'no' ]  && errPREPDATA=0
@@ -2070,7 +2123,7 @@ echo
    pgm=`basename  $PRPX`
    touch errfile
    $DATA/err_chk
-   [ $? != 0 ] && exit 55  # for extra measure
+   [ $err != 0 ] && exit 55  # for extra measure
 
    if [ "$PARALLEL" = 'YES' ]; then
 
@@ -2217,7 +2270,7 @@ echo "The foreground exit status for PREPOBS_MONOPREPBUFR is " $err
 echo
 set -x
 $DATA/err_chk
-[ $? != 0 ] && exit 55  # for extra measure
+[ $err != 0 ] && exit 55  # for extra measure
 
 exit 0
 EOFmrg
@@ -2239,7 +2292,7 @@ set -x
       then
 #  problem with merge script
          $DATA/err_exit
-         [ $? != 0 ] && exit 55  # for extra measure
+         exit 55  # for extra measure
       fi
    else
 

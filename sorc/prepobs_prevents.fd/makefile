@@ -45,13 +45,11 @@ FC = ifort
 #LDFLAGS = -Xlinker -t -mkl
 #LDFLAGS = -Xlinker -M -mkl
 LDFLAGS = -mkl
-LIBS = ${W3NCO_LIB4} ${W3EMC_LIB4} ${BUFR_LIB4} ${SIGIO_LIB4} ${SP_LIB4} ${BACIO_LIB4}
+LIBS = ${W3EMC_LIB4} ${NEMSIO_LIB} ${BUFR_LIB4} ${W3NCO_LIB4} ${SIGIO_LIB4} ${SP_LIB4} ${BACIO_LIB4}
 CMD = prepobs_prevents
 
-# For now DO NOT comment out DEBUG2 option - want to run in ops with debugger on to make sure
-#  no problems
 DEBUG =                -g -traceback
-DEBUG2 =        -ftrapuv -check all -check nooutput_conversion -fp-stack-check -fstack-protector
+#DEBUG2 =        -ftrapuv -check all -check nooutput_conversion -fp-stack-check -fstack-protector
 FFLAGS = -O2 -convert big_endian -list -assume noold_ldout_format -auto $(DEBUG) $(DEBUG2)
 
 

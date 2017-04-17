@@ -1,5 +1,5 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-obsproc_prep release 4.0.0 --> released ??? ??, 2017
+obsproc_prep release 4.0.0 --> released Apr 17, 2017
                            --> implemented ??? ??, 2017
 
 files:
@@ -44,7 +44,7 @@ files:
    obsproc_prep/sorc/prepobs_prepanow.fd/prepanow.f
    obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
    obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
-   obsproc_prep/sorc/prepobs_prepdata.fd/makefile
+ M obsproc_prep/sorc/prepobs_prepdata.fd/makefile
    obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
@@ -54,11 +54,11 @@ files:
    obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
    obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
    obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
-   obsproc_prep/sorc/prepobs_prevents.fd/makefile
+ M obsproc_prep/sorc/prepobs_prevents.fd/makefile
    obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
    obsproc_prep/sorc/prepobs_profcqc.fd/makefile
  M obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
-   obsproc_prep/sorc/syndat_syndata.fd/makefile
+ M obsproc_prep/sorc/syndat_syndata.fd/makefile
  M obsproc_prep/sorc/syndat_syndata.fd/syndata.f
  M obsproc_prep/sorc/build.sh
    obsproc_prep/sorc/clean.sh
@@ -68,6 +68,8 @@ files:
  M obsproc_prep/sorc/setlibs.rc
  M obsproc_prep/ush/prepobs_cqcbufr.sh
  M obsproc_prep/ush/prepobs_cqcvad.sh
+ A obsproc_prep/ush/getges.sh
+ A obsproc_prep/ush/getges_sig.sh
  M obsproc_prep/ush/prepobs_makeprepbufr.sh
  M obsproc_prep/ush/prepobs_oiqcbufr.sh
  M obsproc_prep/ush/prepobs_prepacqc.sh
@@ -79,12 +81,23 @@ files:
 
 
  USH script changes:
+   getges.sh:
+    - New. Version of getges.sh to pick up global atmoshperic files following
+      the naming convention to be used as of the next GFS upgrade. (This version
+      was copied from global_shared.v14.0.0 and modified to pick up gfs or gdas
+      files valid at any hour rather than limited to multiples of 3).  The
+      naming convention changes are related to the transition from sigma to
+      nemsio for gfs and gdas atmoshpheric files and from use of "gdas1" to "gdas"
+      as the prefix for gdas file names.
+   getges_sig.sh:
+    - New. A copy of the older getges.sh to pick up gfs/gdas atmoshperic files
+      following the naming convention used prior to the upcoming GFS upgrade.
    prepobs_makeprepbufr.sh:
     - Updated to run on Cray-XC40 (as well as IBM iDataPlex).
       - Environment variable $SITE or getsystem.pl are used to determine if
         running on Cray-XC40.
       - If running on Cray-XC40, the default parallel scripting launching 
-        mechanism is cfp inovked by aprun. 
+        mechanism is cfp invoked by aprun. 
       - Included an optional background threads option via aprun on Cray-XC40
         if needed for some reason (but the above cfp option is faster).
       - Made $COMDATEROOT (if set) the primary default (ahead of $COMROOT) for
@@ -94,11 +107,31 @@ files:
         directory to recognize full path name (as needed on luna/surge).
       - Added IOBUF_PARAMS to improve performance of $PRPX on Cray-XC40.
     - Changed the variable name specifying optional poe-like launching
-      mechanism for prepbufr processing from "launcher" to "launcher_PREP".
+      mechanism for prepbufr processing from "$launcher" to "$launcher_PREP".
     - If old-style background threads are requested, the thread scripts are
       collected and launched at once via a script rather than kicked off as
       soon as the thread script is created. (This was done to share logic with
       the background thread option launched via aprun).
+    - Updated to pick up global background fields that follow the new "nemsio"
+      naming convention in addition to the "sigma" naming convention.
+      - The style to be used is determined by new variable $NEMSIO_IN.  If
+        "NEMSIO_IN=.true.", pick up nemsio files. Otherwise, pick up sigma
+        files.  The default for NEMSIO_IN is currently an empty string so that
+        this version of obsproc_prep can be implemented into production prior
+        to the GFS switch from sigma to nemsio output.
+      - If a getges script is to be invoked, use new variable $GETGESprep to
+        point to an appropriate version, with the default depending on whether
+        a nemsio or sigma guess file is needed.
+      - For nemsio runs, pick up a single guess file valid at the prepbufr
+        center hour, even if that hour is not a multiple of 3.  (That is not the
+        case for sigma runs which still require two surrounding 3-hourly
+        forecast files if the center hour is not a multiple of 3)
+    - For the alerts of relocation status files, the dbn_alert subtype is now
+      dependent upon $RUN rather than hardwired in preparation for change of
+      naming convention for gdas filenames from "gdas1" to "gdas".
+    - Copy rather than move tcvitals.relocate.$tmmark to tcvitals in the working
+      directory to benefit the gfs parallel workflow that runs the
+      tropcy_qc_relocate and prepbufr processing in the same job.
     - Changed exit values of 555 (which is out of the acceptable range) to 55
       to ensure that the parent script sees the intended value.
     - Added default of empty string for variable jlogfile to eliminate the
@@ -154,25 +187,41 @@ files:
       the makefiles. (FC exported from build.sh overrides setting in makefiles).
     - Cray-XC40 builds include a load of module iobuf/2.0.7 to allow controlled
       i/o buffering upon request.
+    - Upgrade from ics/12.1 to ics/16.0.3 for builds on IBM iDataPlex.
+    - Added logic to build on theia.
    load_libs.rc in sorc directory:
     - Modified to handle library module patterns used on WCOSS IBM and Cray.
-    - Added special variable for version of sigio on Cray since we currently use
-      different versions on the two platforms (1.0.1 on IBM and 2.0.1 on Cray)
+    - Added load of nemsio library module (version 2.2.2).
+    - Upgraded w3emc version from 2.2.0 to 2.3.0.
+    - Upgraded bacio version from 2.0.1 to 2.0.2.
+    - Added special variables to allow for different sigio and nemsio versions
+      on Cray vs IBM if needed.
+    - Added section for theia.
    setlibs.rc in sorc directory:
     - Modified to handle library pathnames used on WCOSS IBM and Cray-XC40.
       (on Cray-XC40, point to libs built with intel compiler)
-    - Added special variable for version of sigio on Cray since we currently use
-      different versions on the two platforms (1.0.1 on IBM and 2.0.1 on Cray)
+    - Added nemsio version number (2.2.2) and var NEMSIO_LIB
+    - Upgraded w3emc library version from 2.2.0 to 2.3.0.
+    - Upgraded bacio library version from 2.0.1 to 2.0.2.
+    - Added special variables to allow for different sigio and nemsio versions
+      on Cray vs IBM if needed.
+    - Added section for theia.
    README.build in sorc directory:
     - Reorganized and removed instructions for compiling without build.sh.
    prepobs_cqcvad:
     - Increased NSTN (maximum number of stations to process) from 200 to 300.
     - Minor logic correction to ensure the station info for the "NSTN'th" id
       is stored if there are at least that many unique ids.
+   prepobs_prepdata:
+    - Updated makefile to link to nemsio library.
+   prepobs_prevents:
+    - Updated makefile to link to nemsio library.
+    - Commented extra runtime checks (DEBUG2) in makefile to improve run time.
    prepobs_profcqc:
     - Increased NT (max allowable number of times per station) from 26 to 100.
     - Skip reports and print warning if that limit is exceeded.
    syndat_syndata:
+    - Updated makefile to link to nemsio library.
     - Replaced rewind with close statement for reusable read/write file IUNTFE
       after it is updated with information for the current storm by routine
       FENBOG.  This prevents inadvertent input of residual content from a
@@ -210,12 +259,12 @@ files:
  ----------
    w3nco   2.0.6 (all)
    bufr   11.1.0 (all)
-   w3emc   2.2.0 (prepobs_cqcbufr, prepobs_prepacpf, prepobs_prepacqc,
+   w3emc   2.3.0 (prepobs_cqcbufr, prepobs_prepacpf, prepobs_prepacqc,
                   prepobs_prepdata, prepobs_prevents, syndat_syndata)
-   bacio   2.0.1 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   bacio   2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
    sp      2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
-   sigio   2.0.1 on Cray-XC40, otherwise 1.0.1 
-                 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   sigio   2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   nemsio  2.2.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
 
 
  Build Instructions:
