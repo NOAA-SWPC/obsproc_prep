@@ -6,7 +6,7 @@
 # Script name:         prepobs_makeprepbufr.sh
 # Script description:  Prepares & quality controls PREPBUFR file
 #
-# Author:       Keyser              Org: EMC          Date: 2017-03-19
+# Author:       Keyser              Org: EMC          Date: 2017-04-20
 #
 # Abstract: This script creates the PREPBUFR file containing observational data
 #   assimilated by all versions of NCEP atmospheric analyses.  It points to BUFR
@@ -233,6 +233,8 @@
 #      file valid at the prepbufr center time is picked up, even for runs with
 #      center time that is not a multiple of 3.  Also the dbn_alert subtype is
 #      now dependent upon $RUN (for transition from "gdas1" to "gdas").
+# 2017-04-20  D.C. Stokes -- Relocated assignments of variable stype to ensure
+#      it always passes the proper value to the getges utility script.
 #     
 #
 # Usage:  prepobs_makeprepbufr.sh yyyymmddhh
@@ -975,10 +977,8 @@ if [ "$GETGUESS" = 'YES' ]; then
    USHGETGES=${USHGETGES:-${HOMEobsproc_prep}/ush}
    if [ "$NEMSIO_IN" = .true. ]; then
       GETGESprep=${GETGESprep:-$USHGETGES/getges.sh}
-      stype=${stype:="natges"}
    else
       GETGESprep=${GETGESprep:-$USHGETGES/getges_sig.sh}
-      stype=${stype:="sigges"}
    fi
 fi
 
@@ -1090,27 +1090,27 @@ if [ "$RELOCATION_HAS_RUN" != 'YES' -a "$GETGUESS" != 'NO' ]; then
 
    if [ "$NET" = 'gfs' -o "$NET" = 'gdas' ]; then
       for fhr in -3 +3 ;do
-       if [ "$NEMSIO_IN" = .true. ]; then 
-         if [ $fhr = "-3" ] ; then
-            sges=sgm3prep
-            stype=natgm3
-            echo $sges
+         if [ "$NEMSIO_IN" = .true. ]; then 
+           if [ $fhr = "-3" ] ; then
+              sges=sgm3prep
+              stype=natgm3
+              echo $sges
+           else
+              sges=sgp3prep
+              stype=natgp3
+              echo $sges
+           fi
          else
-            sges=sgp3prep
-            stype=natgp3
-            echo $sges
+           if [ $fhr = "-3" ] ; then
+              sges=sgm3prep
+              stype=siggm3
+              echo $sges
+           else
+              sges=sgp3prep
+              stype=siggp3
+              echo $sges
+           fi
          fi
-       else
-         if [ $fhr = "-3" ] ; then
-            sges=sgm3prep
-            stype=siggm3
-            echo $sges
-         else
-            sges=sgp3prep
-            stype=siggp3
-            echo $sges
-         fi
-       fi
          if [ ! -s $sges ]; then
             set +x
             echo
@@ -1141,7 +1141,7 @@ relative to center PREPBUFR date/time;"
 echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
             echo
             set -x
-        fi
+         fi
       done
    fi
    fi
@@ -1308,8 +1308,10 @@ if [ "$PREPDATA" = 'YES' -o "$SYNDATA" = 'YES' -o "$PREVENTS" = 'YES' ]; then
             fhr=any
             if [ "$NEMSIO_IN" = .true. ]; then 
                dhr=0
+               stype=natges
             else
                dhr=`expr 0 - $modhr`
+               stype=sigges
             fi
             if [ $modhr -eq 0 -o "$NEMSIO_IN" = .true. ]; then
                [ "$sfx" = 'A' ]  &&  break
