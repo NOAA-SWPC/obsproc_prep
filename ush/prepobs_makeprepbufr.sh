@@ -1067,7 +1067,7 @@ fi
 
 if [ -s ${COMSP}tropcy_relocation_status.$tmmark ]; then
    if [ "$SENDDBN" = "YES" ]; then
-      if [ "$NET" = 'gdas' ]; then
+      if [ "$NET" = 'gfs' -o "$NET" = 'gdas' ]; then
          RUN_uc=$(echo $RUN | tr [a-z] [A-Z])
          $DBNROOT/bin/dbn_alert MODEL ${RUN_uc}_TCI $job \
              ${COMSP}tropcy_relocation_status.$tmmark

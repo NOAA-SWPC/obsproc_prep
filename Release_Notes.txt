@@ -1,5 +1,6 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-obsproc_prep release 4.0.0 --> released Apr 17, 2017, updated Apr 20, 2017
+obsproc_prep release 4.0.0 --> released Apr 17, 2017, updated Apr 20, 2017,
+                               updated May 01, 2017
                            --> implemented ??? ??, 2017
 
 files:
@@ -263,7 +264,7 @@ files:
                   prepobs_prepdata, prepobs_prevents, syndat_syndata)
    bacio   2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
    sp      2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
-   sigio   2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   sigio   2.0.1 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
    nemsio  2.2.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
 
 
