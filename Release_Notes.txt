@@ -1,7 +1,5 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-obsproc_prep release 4.0.0 --> released Apr 17, 2017, updated Apr 20, 2017,
-                               updated May 01, 2017
-                           --> implemented ??? ??, 2017
+obsproc_prep release 4.1.0 --> released ??? ??, ????
 
 files:
    obsproc_prep/fix/prepobs_anow.bufrtable
@@ -13,7 +11,7 @@ files:
    obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
    obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
    obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
- M obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
+   obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
    obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
    obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
    obsproc_prep/sorc/prepobs_listheaders.fd/makefile
@@ -45,7 +43,7 @@ files:
    obsproc_prep/sorc/prepobs_prepanow.fd/prepanow.f
    obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
    obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
- M obsproc_prep/sorc/prepobs_prepdata.fd/makefile
+   obsproc_prep/sorc/prepobs_prepdata.fd/makefile
    obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
@@ -55,15 +53,95 @@ files:
    obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
    obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
    obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
- M obsproc_prep/sorc/prepobs_prevents.fd/makefile
+   obsproc_prep/sorc/prepobs_prevents.fd/makefile
    obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
    obsproc_prep/sorc/prepobs_profcqc.fd/makefile
+   obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
+   obsproc_prep/sorc/syndat_syndata.fd/makefile
+   obsproc_prep/sorc/syndat_syndata.fd/syndata.f
+   obsproc_prep/sorc/build.sh
+   obsproc_prep/sorc/clean.sh
+   obsproc_prep/sorc/install.sh
+   obsproc_prep/sorc/load_libs.rc
+   obsproc_prep/sorc/README.build
+   obsproc_prep/sorc/setlibs.rc
+   obsproc_prep/ush/prepobs_cqcbufr.sh
+   obsproc_prep/ush/prepobs_cqcvad.sh
+   obsproc_prep/ush/getges.sh
+   obsproc_prep/ush/getges_sig.sh
+ M obsproc_prep/ush/prepobs_makeprepbufr.sh
+   obsproc_prep/ush/prepobs_oiqcbufr.sh
+   obsproc_prep/ush/prepobs_prepacqc.sh
+   obsproc_prep/ush/prepobs_prevents.sh
+   obsproc_prep/ush/prepobs_profcqc.sh
+   obsproc_prep/ush/prepobs_syndata.sh
+
+( A - added,  M - modified, D - deleted)
+
+
+ USH script changes:
+   prepobs_makeprepbufr.sh:
+    - Added logic to accommodate NET=cfs.
+    - Added arithmetic evaluation of "err_this" to remove any whitespace prior
+      to use of that variable in arithmetic comparison statements.  (Done to 
+      avoid syntax error under ksh 93v).
+
+
+ Output changes:
+ ---------------
+   <???>  
+ 
+
+ Libraries:
+ ----------
+   w3nco   2.0.6 (all)
+   bufr   11.1.0 (all)
+   w3emc   2.3.0 (prepobs_cqcbufr, prepobs_prepacpf, prepobs_prepacqc,
+                  prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   bacio   2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   sp      2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   sigio   2.0.1 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   nemsio  2.2.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+
+
+ Build Instructions:
+ -------------------
+   - See sorc/README.build
+
+
+ Preimplementation Testing Requirements:
+ ---------------------------------------
+   There are no jobs in obsproc_prep.  Jobs executing this version of
+   obsproc_prep will be tested.
+
+
+ Dissemination:
+ --------------
+   See information about dissemination in the release notes for
+   obsproc_<NETWORK> packages which execute this version of obsproc_prep.
+
+
+ Special Instructions:
+ ---------------------
+   This is part of OBSPROC.v??????
+   Please install on both iDataPlex (tide/gyre) and Cray-XC40 (luna/surge).
+
+   Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
+   needed.
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+obsproc_prep release 4.0.0 --> released Apr 17, 2017, updated Apr 20, 2017,
+                               updated May 01, 2017
+                           --> implemented May 22, 2017
+
+files added, modified or deleted since last release:
+ M obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/makefile
+ M obsproc_prep/sorc/prepobs_prevents.fd/makefile
  M obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
  M obsproc_prep/sorc/syndat_syndata.fd/makefile
  M obsproc_prep/sorc/syndat_syndata.fd/syndata.f
  M obsproc_prep/sorc/build.sh
-   obsproc_prep/sorc/clean.sh
-   obsproc_prep/sorc/install.sh
  M obsproc_prep/sorc/load_libs.rc
  M obsproc_prep/sorc/README.build
  M obsproc_prep/sorc/setlibs.rc
@@ -78,7 +156,7 @@ files:
  M obsproc_prep/ush/prepobs_profcqc.sh
  M obsproc_prep/ush/prepobs_syndata.sh
 
-( M - modified)
+( A - added,  M - modified, D - deleted)
 
 
  USH script changes:
@@ -193,6 +271,7 @@ files:
    load_libs.rc in sorc directory:
     - Modified to handle library module patterns used on WCOSS IBM and Cray.
     - Added load of nemsio library module (version 2.2.2).
+    - Upgraded sigio library version from 1.0.1 to 2.0.1.
     - Upgraded w3emc version from 2.2.0 to 2.3.0.
     - Upgraded bacio version from 2.0.1 to 2.0.2.
     - Added special variables to allow for different sigio and nemsio versions
@@ -202,6 +281,7 @@ files:
     - Modified to handle library pathnames used on WCOSS IBM and Cray-XC40.
       (on Cray-XC40, point to libs built with intel compiler)
     - Added nemsio version number (2.2.2) and var NEMSIO_LIB
+    - Upgraded sigio library version from 1.0.1 to 2.0.1.
     - Upgraded w3emc library version from 2.2.0 to 2.3.0.
     - Upgraded bacio library version from 2.0.1 to 2.0.2.
     - Added special variables to allow for different sigio and nemsio versions

@@ -6,7 +6,7 @@
 # Script name:         prepobs_makeprepbufr.sh
 # Script description:  Prepares & quality controls PREPBUFR file
 #
-# Author:       Keyser              Org: EMC          Date: 2017-04-20
+# Author:       Keyser              Org: EMC          Date: 2017-06-10
 #
 # Abstract: This script creates the PREPBUFR file containing observational data
 #   assimilated by all versions of NCEP atmospheric analyses.  It points to BUFR
@@ -235,6 +235,9 @@
 #      now dependent upon $RUN (for transition from "gdas1" to "gdas").
 # 2017-04-20  D.C. Stokes -- Relocated assignments of variable stype to ensure
 #      it always passes the proper value to the getges utility script.
+# 2017-06-10  D.C. Stokes -- Added logic to accommodate NET=cfs.  Added
+#      arithmetic evaluation of "err_this" to remove any whitespace prior to
+#      use of that variable in arithmetic comparison statements.
 #     
 #
 # Usage:  prepobs_makeprepbufr.sh yyyymmddhh
@@ -883,10 +886,14 @@ set -x
 envir=${envir:-prod}
 
 envir_getges=${envir_getges:-$envir}
-if [ $modhr -eq 0 -o "$NEMSIO_IN" = .true. ]; then
-   network_getges=${network_getges:-global}
+if [ $NET = cfs ]; then 
+   network_getges=${network_getges:-"cfs-cdas"}
 else
-   network_getges=${network_getges:-gfs}
+  if [ $modhr -eq 0 -o "$NEMSIO_IN" = .true. ]; then
+     network_getges=${network_getges:-global}
+  else
+     network_getges=${network_getges:-gfs}
+  fi
 fi
 
 pgmout=${pgmout:-/dev/null}
@@ -1156,7 +1163,7 @@ elif [ "$RELOCATION_HAS_RUN" = 'YES' ]; then
 
    qual_last=".$tmmark"  # need this because gfs and gdas don't add $tmmark
                          #  qualifier to end of output atmos guess files
-   [ $NET = gfs -o $NET = gdas ]  &&  qual_last=""
+   [ $NET = gfs -o $NET = gdas -o $NET = cfs ]  &&  qual_last=""
    for file in sgm3prep sgesprep sgp3prep tcvitals.relocate.$tmmark; do
       case $file in
         tcvitals.relocate.$tmmark) infile=$file; qual_last="";; #  already has $tmmark at end
@@ -2088,6 +2095,7 @@ echo
          errSTATUS=99
       else
          err_this=`cut -f 2 -d = $status`
+         ((err_this+=0))
          [ "$err_this" -gt "$errPREPDATA" ]  && errPREPDATA=$err_this
          [ "$err_this" -eq '0' ]  && four_check=no
       fi
