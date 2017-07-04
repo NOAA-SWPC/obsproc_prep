@@ -1,7 +1,7 @@
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    IW3UNPBF
-C   PRGMMR: KEYSER           ORG: NP22       DATE: 2017-01-11
+C   PRGMMR: KEYSER           ORG: NP22       DATE: 2017-07-03
 C
 C ABSTRACT: READS AND UNPACKS ONE REPORT FROM INPUT NCEP BUFR DUMP
 C   FILE INTO SPECIFIED FORMAT.  FUNCTION RETURNS THE UNPACKED REPORT
@@ -470,6 +470,13 @@ C 2017-01-11  C. Hill --
 C     For TAMDARB reports, always set moisture quality mark (QQM) to 13
 C     if temperature quality mark (TQM) was set to 13 earlier in subr.
 C     R05UBF .
+C 2017-07-03  D. A. KEYSER -- (changes are in function R04UBF)
+C     Mesonet reports now look for SDMEDIT quality marks in dump and
+C     store that information.  If missing then, as before, interpret
+C     MADIS quality mark and use that.
+C     BENFEFIT: Corrects a bug in code. SDMEDIT quality marks on
+C               mesonet reports will now be honored (and will not be
+C               overwritten by interpreted MADIS quality marks).
 C              
 C
 C
@@ -1354,7 +1361,7 @@ C  THE JWFILE INDICATOR: =0 IF UNOPENED; =2 IF OPENED AND NCEP BUFR
 C  ----------------------------------------------------------------
  
       IF(JWFILE(LUNIT).EQ.0) THEN
-         PRINT'(" ===> IW3UNPBF - WCOSS VERSION: 01-11-2017")'
+         PRINT'(" ===> IW3UNPBF - WCOSS VERSION: 07-03-2017")'
 
 C  DETERMINE MACHINE WORD LENGTH (BYTES) FOR BOTH INTEGERS AND REALS
 C  -----------------------------------------------------------------
@@ -2720,6 +2727,7 @@ CCCCCCCCCCC MQMUBF =  1   ! good
          ELSE
             MQMUBF = 15   ! missing or unknown (make 15 for now
                           !  for diag. checks, later change to 13)
+                          ! DAK: 7/2017: believe this ends up as a 2 (?)
          END IF
          RETURN
 
@@ -3891,18 +3899,18 @@ C  ------------------------------------------------------
       CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'TMDB');STM=UFBINT_8
       CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'TMDP');DPD=UFBINT_8
 
-      IF(SUBSET(1:5).NE.'NC255')  THEN
+C  All surface types come here for possible SDMEDIT q. mark assignment
+C  -------------------------------------------------------------------
 
-C  Quality markers for all types except mesonets ....
-         CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'QMPR');QSL=UFBINT_8
-         CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'QMPR');QSP=UFBINT_8
-         CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'QMWN');QMW=UFBINT_8
-         CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'QMAT');QMT=UFBINT_8
-         CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'QMDD');QMD=UFBINT_8
-         QPR = 2 ! precip. rate (no q. marker available, set to neutral)
-         QPT = 2 ! tot. precip. (no q. marker available, set to neutral)
+      CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'QMPR');QSL=UFBINT_8
+      CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'QMPR');QSP=UFBINT_8
+      CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'QMWN');QMW=UFBINT_8
+      CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'QMAT');QMT=UFBINT_8
+      CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'QMDD');QMD=UFBINT_8
+      QPR = 2 ! precip. rate (no q. marker available, set to neutral)
+      QPT = 2 ! tot. precip. (no q. marker available, set to neutral)
 
-         IF(SUBSET(6:8).EQ.'007')  THEN
+      IF(SUBSET.EQ.'NC000007')  THEN
 
 C  METARs transfer the quality marker from pstn to altimeter setting if
 C   pstn q.m. was either a purge or reject value (pstn is missing for
@@ -3910,44 +3918,57 @@ C   METARS, so most will obtain this from altimeter setting in
 C   PREPDATA and assign the pstn q.m. to be same as that of the
 C   altimeter setting - the logic here ensures that a purge or reject
 C   flag on pressure in the sdmedit file will be honored)
-            QAL = BMISS
-            IF(NINT(QSP).EQ.14.OR.NINT(QSP).EQ.12) then
-               QAL = QSP
-            END IF
-         END IF
-      ELSE
+C  --------------------------------------------------------------------
 
-C  Quality markers for mesonets ....
-         QSL = BMISS           ! mean-sea lvl pressure (PMSL missing)
+         QAL = BMISS
+         IF(NINT(QSP).EQ.14.OR.NINT(QSP).EQ.12) then
+            QAL = QSP
+         END IF
+      END IF
+
+      IF(SUBSET(1:5).EQ.'NC255')  THEN
+
+C  If no SDMEDIT quality mark assigned above, mesonets check for
+C    MADIS quality marks which are then converted to standard QM values
+C  --------------------------------------------------------------------
+
+         if(qsl.gt.14) QSL = BMISS        ! msl pressure (PMSL missing)
+
          CALL UFBREP(LUNIT,RMSO_8,2,1,IRET,'PRES QCD')
          RQCD_8 = RMSO_8(2)
-cdak     print'(" PRES  QM is ",A)', QCD
-         QSP = MQMUBF(QCD)  ! station pressure
+cdak     print'(" MADIS PRES  QM is ",A)', QCD
+         if(qsp.gt.14) QSP = MQMUBF(QCD)  ! station pressure
+
          CALL UFBREP(LUNIT,RMSO_8,2,1,IRET,'ALSE QCD')
          RQCD_8 = RMSO_8(2)
-cdak     print'(" ALSE  QM is ",A)', QCD
-         QAL = MQMUBF(QCD)  ! altimeter
+cdak     print'(" MADIS ALSE  QM is ",A)', QCD
+         QAL = MQMUBF(QCD)                ! altimeter
+
          CALL UFBREP(LUNIT,RMSO_8,2,1,IRET,'TMDB QCD')
          RQCD_8 = RMSO_8(2)
-cdak     print'(" TMDB  QM is ",A)', QCD
-         QMT = MQMUBF(QCD)  ! temperature
+cdak     print'(" MADIS TMDB  QM is ",A)', QCD
+         if(qmt.gt.14) QMT = MQMUBF(QCD)  ! temperature
+
          CALL UFBREP(LUNIT,RMSO_8,2,1,IRET,'TMDP QCD')
          RQCD_8 = RMSO_8(2)
-cdak     print'(" TMDP  QM is ",A)', QCD
-         QMD = MQMUBF(QCD)  ! dewpoint
+cdak     print'(" MADIS TMDP  QM is ",A)', QCD
+         if(qmd.gt.14) QMD = MQMUBF(QCD)  ! dewpoint temperature
+
          CALL UFBREP(LUNIT,RMSO_8,2,1,IRET,'WDIR QCD')
          RQCD_8 = RMSO_8(2)
-cdak     print'(" WDIR  QM is ",A)', QCD
+cdak     print'(" MADIS WDIR  QM is ",A)', QCD
          QWD = MQMUBF(QCD)  ! wind direction
          CALL UFBREP(LUNIT,RMSO_8,2,1,IRET,'WSPD QCD')
          RQCD_8 = RMSO_8(2)
-cdak     print'(" WSPD  QM is ",A)', QCD
+cdak     print'(" MADIS WSPD  QM is ",A)', QCD
          QWS = MQMUBF(QCD)  ! wind speed
-         QMW = MAX(QWD,QWS)    ! wind (overall)
+         if(qmw.gt.14) QMW = MAX(QWD,QWS) ! wind (overall)
+
          CALL UFBREP(LUNIT,RMSO_8,2,1,IRET,'REQV QCD')
          RQCD_8 = RMSO_8(2)
-cdak     print'(" REQV  QM is ",A)', QCD
+cdak     print'(" MADIS REQV  QM is ",A)', QCD
          QPR = MQMUBF(QCD)  ! precipitation rate
+
          CALL UFBINT(LUNIT,TOPC_8,1,255,IRETU,'TOPC')
          IRET = 0
          IF(IRETU.GT.0)CALL UFBSEQ(LUNIT,TOPC_8,5,IRETU,IRET,'MNTOPCSQ')
@@ -3957,11 +3978,11 @@ cdak     print'(" REQV  QM is ",A)', QCD
             DO I = 1,IRET
                IF(NINT(TOPC_8(1,I)).EQ.1)  THEN
                   RQCD_8 = TOPC_8(3,I)
-cdak              print'(" 1-hr total precip. QM is ",A)', QCD
+cdak              print'(" MADIS 1-hr total precip. QM is ",A)', QCD
                   QPT1 = MQMUBF(QCD)   ! total precip. over 1-hr
                ELSE  IF(NINT(TOPC_8(1,I)).EQ.24)  THEN
                   RQCD_8 = TOPC_8(3,I)
-cdak              print'(" 24-hr total precip. QM is ",A)', QCD
+cdak              print'(" MADIS 24-hr total precip. QM is ",A)', QCD
                   QPT24 = MQMUBF(QCD)  ! total precip. over 24-hr
                END IF
             ENDDO
@@ -5008,35 +5029,35 @@ C  -----------------------------------------------------------------
       IF(SUBSET.EQ.'NC004008'.OR.SUBSET.EQ.'NC004012'.OR.
      $   SUBSET.EQ.'NC004013') THEN
 
-C  Qual. markers for MADIS/TAMDAR (HONOR ALL BUT QM=2 FROM JUST ABOVE)
-C  -------------------------------------------------------------------
+C  MADIS qual. markers for MADIS/TAMDAR (HONOR ALL BUT QM=2 FROM ABOVE)
+C  --------------------------------------------------------------------
 
          CALL UFBREP(LUNIT,RTAM_8,2,1,IRET,'PRLC QCD')
          RQCD_8 = RTAM_8(2)
-cdak     print'(" PRLC  QM is ",A)', QCD
+cdak     print'(" MADIS PRLC  QM is ",A)', QCD
          IF(PQM(1).EQ.2.AND.IBFMS(RTAM_8(1)).EQ.0)  PQM(1) = MQMUBF(QCD)
          CALL UFBREP(LUNIT,RTAM_8,2,1,IRET,'TMDB QCD')
          RQCD_8 = RTAM_8(2)
-cdak     print'(" TMDB  QM is ",A)', QCD
+cdak     print'(" MADIS TMDB  QM is ",A)', QCD
          IF(TQM(1).EQ.2.AND.IBFMS(RTAM_8(1)).EQ.0)  TQM(1) = MQMUBF(QCD)
          CALL UFBREP(LUNIT,RTAM_8,2,1,IRET,'REHU QCD')
          RQCD_8 = RTAM_8(2)
-cdak     print'(" REHU  QM is ",A)', QCD
+cdak     print'(" MADIS REHU  QM is ",A)', QCD
          IF(QQM(1).EQ.2.AND.IBFMS(RTAM_8(1)).EQ.0)  QQM(1) = MQMUBF(QCD)
          CALL UFBREP(LUNIT,RTAM_8,2,1,IRET,'WDIR QCD')
          RQCD_8 = RTAM_8(2)
-cdak     print'(" WDIR  QM is ",A)', QCD
+cdak     print'(" MADIS WDIR  QM is ",A)', QCD
          QWD = MQMUBF(QCD)  ! wind direction
          RTAM_WDIR_8=RTAM_8(1)
          CALL UFBREP(LUNIT,RTAM_8,2,1,IRET,'WSPD QCD')
          RQCD_8 = RTAM_8(2)
-cdak     print'(" WSPD  QM is ",A)', QCD
+cdak     print'(" MADIS WSPD  QM is ",A)', QCD
          QWS = MQMUBF(QCD)  ! wind speed
          AMAXIMUM_8 = MAX(RTAM_WDIR_8,RTAM_8(1))
          IF(WQM(1).EQ.2.AND.IBFMS(AMAXIMUM_8).EQ.0) WQM(1) =MAX(QWD,QWS)
          CALL UFBREP(LUNIT,RTAM_8,2,1,IRET,'TRBX QCD')
          RQCD_8 = RTAM_8(2)
-cdak     print'(" TRBX  QM is ",A)', QCD
+cdak     print'(" MADIS TRBX  QM is ",A)', QCD
          QTRBX = MQMUBF(QCD)  ! turbulence index
 
       else if(subset.eq.'NC004010') then

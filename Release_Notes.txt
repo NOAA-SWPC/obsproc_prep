@@ -42,7 +42,7 @@ files:
    obsproc_prep/sorc/prepobs_prepanow.fd/makefile
    obsproc_prep/sorc/prepobs_prepanow.fd/prepanow.f
    obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
-   obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
    obsproc_prep/sorc/prepobs_prepdata.fd/makefile
    obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
@@ -85,6 +85,16 @@ files:
     - Added arithmetic evaluation of "err_this" to remove any whitespace prior
       to use of that variable in arithmetic comparison statements.  (Done to 
       avoid syntax error under ksh 93v).
+
+ Source code changes:
+   prepobs_prepdata:
+      iw3unpbf.f (subroutine) (changes are in function R04UBF):
+       - Mesonet reports now look for SDMEDIT quality marks in dump and store
+         that information.  If missing then, as before, interpret MADIS quality
+         mark and use that.
+         BENFEFIT: Corrects a bug in code. SDMEDIT quality marks on mesonet
+                   reports will now be honored (and will not be overwritten by
+                   interpreted MADIS quality marks).
 
 
  Output changes:
