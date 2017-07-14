@@ -1,11 +1,13 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-obsproc_prep release 4.1.0 --> released ??? ??, ????
+obsproc_prep release 5.0.0 --> released Jul 14, 2017
+                           --> implemented ??? ??, 2017
 
 files:
+ A obsproc_prep/fix/glerldict.lmd
    obsproc_prep/fix/prepobs_anow.bufrtable
    obsproc_prep/fix/prepobs_cqc_statbge
    obsproc_prep/fix/prepobs_landc
-   obsproc_prep/fix/prepobs_prep.bufrtable
+ M obsproc_prep/fix/prepobs_prep.bufrtable
    obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
    obsproc_prep/fix/syndat_weight
    obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
@@ -13,6 +15,17 @@ files:
    obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
    obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
    obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
+ A obsproc_prep/sorc/prepobs_glerladj.fd/glerldictmod.f90
+ A obsproc_prep/sorc/prepobs_glerladj.fd/glerlmain.f90
+ A obsproc_prep/sorc/prepobs_glerladj.fd/indict.f90
+ A obsproc_prep/sorc/prepobs_glerladj.fd/landtowater.f90
+ A obsproc_prep/sorc/prepobs_glerladj.fd/makefile
+ A obsproc_prep/sorc/prepobs_glerladj.fd/spd_to_dir.f90
+ A obsproc_prep/sorc/prepobs_glerladj.fd/td_to_q.f90
+ A obsproc_prep/sorc/prepobs_glerladj.fd/uv_to_sd.f90
+ A obsproc_prep/sorc/prepobs_glerladj.fd/uz.f
+ A obsproc_prep/sorc/prepobs_glerladj.fd/uzl.f
+ A obsproc_prep/sorc/prepobs_glerladj.fd/watertoland.f90
    obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
    obsproc_prep/sorc/prepobs_listheaders.fd/makefile
    obsproc_prep/sorc/prepobs_monoprepbufr.fd/makefile
@@ -52,7 +65,7 @@ files:
    obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
    obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
-   obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
+ M obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
    obsproc_prep/sorc/prepobs_prevents.fd/makefile
    obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
    obsproc_prep/sorc/prepobs_profcqc.fd/makefile
@@ -69,6 +82,7 @@ files:
    obsproc_prep/ush/prepobs_cqcvad.sh
    obsproc_prep/ush/getges.sh
    obsproc_prep/ush/getges_sig.sh
+ A obsproc_prep/ush/prepobs_glerladj.sh
  M obsproc_prep/ush/prepobs_makeprepbufr.sh
    obsproc_prep/ush/prepobs_oiqcbufr.sh
    obsproc_prep/ush/prepobs_prepacqc.sh
@@ -80,13 +94,37 @@ files:
 
 
  USH script changes:
+   prepobs_glerladj.sh:
+    - New. Executes program prepobs_glerladj (see below).
    prepobs_makeprepbufr.sh:
     - Added logic to accommodate NET=cfs.
     - Added arithmetic evaluation of "err_this" to remove any whitespace prior
       to use of that variable in arithmetic comparison statements.  (Done to 
       avoid syntax error under ksh 93v).
+    - Added logic to execute new GLERL adjustment processing. Imports new
+      environment variables GLERLBUFR (which determines if GLERL adjustment
+      processing should be executed, default is NO), USHGLERL (path to ush
+      script prepobs_glerladj.sh), GLRX (path to executable prepobs_glerladj),
+      GLRD (path to pictionary glerldict.lmd) and TANK (path to directory
+      containing daily lake average temperature files).
 
  Source code changes:
+   prepobs_glerladj (glerlmain.f90, glerldictmod.f90, indict.f90,
+   landtowater.f90, spd_to_dir.f90, td_to_q.f90, uv_to_sd.f90, uz.f, uzl.f,
+   watertoland.f90 and makefile):
+    - New. Performs GLERL adjustments to surface observations in (currently
+      only) URMA PREPBUFR files.  It reads in a PREPBUFR file containing all
+      reports.  Select stations matching an input "dictionary" list (fixed file
+      glerldict.lmd, see below) can either have their obs adjusted at their
+      existing location, or they can be either copied or moved to a new location
+      with adjusted obs.  Existing reports can also be removed from the PREPBUFR
+      file. New reports get PREPBUFR report types based on whether they over
+      water and relocated (x96), copied from land to water and adjusted (x97),
+      over land and relocated (x98), or copied from water to land and adjusted
+      (x99) (where x=1 for mass, =2 for wind). The new GLERL program code (17)
+      is used for these "events". This program is executed by
+      prepobs_glerladj.sh (see above).
+      BENEFIT: .... Steve please add info here ..
    prepobs_prepdata:
       iw3unpbf.f (subroutine) (changes are in function R04UBF):
        - Mesonet reports now look for SDMEDIT quality marks in dump and store
@@ -95,11 +133,26 @@ files:
          BENFEFIT: Corrects a bug in code. SDMEDIT quality marks on mesonet
                    reports will now be honored (and will not be overwritten by
                    interpreted MADIS quality marks).
+   prepobs_prevents:
+      gblevents_cdas.f (subroutine):
+       -  Initializes REJT as TRUE in "RULES FOR TEMPERATURE" section in
+          subroutine cgblevn02 so it will be set in the rare case where TOB is
+          missing and QOB is not missing (since REJT is referenced in the next
+          "RULES FOR SPECIFIC HUMIDITY" section).
+          BENEFIT: Prevents a code failure due to undefined REJT in this case
+                   (when full debugging is turned on).
+
+ Fixed file changes:
+   glerldict.lmd:
+    - New.  GLERL dictionary file, read by prepobs_glerladj (see above).
+   prepobs_prep.bufrtable:
+    - Added Table D entry "GLERL" to hold new event program code 17.
 
 
  Output changes:
  ---------------
-   <???>  
+  (For specific network changes see " Output changes" in Release Notes for that
+   network, if that network executes this version of obsproc_prep.)
  
 
  Libraries:
@@ -133,8 +186,13 @@ files:
 
  Special Instructions:
  ---------------------
-   This is part of OBSPROC.v??????
-   Please install on both iDataPlex (tide/gyre) and Cray-XC40 (luna/surge).
+   This is part of OBSPROC.v8.1.0.
+   This can be implemented prior to, but no later than, the implementations of:
+      v3.1.0 of obsproc_dump_post,
+      v3.0.0 of obsproc_rtma,
+      v3.0.0 of obsproc_utma.
+   It can also be implemented prior to, but no later than, the RTMA/URMA v2.6
+   upgrade.
 
    Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
    needed.
@@ -385,7 +443,7 @@ files added, modified or deleted since last release:
 
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 obsproc_prep release 3.8.0 --> released Jan 12, 2017
-                           --> implemented ??? ??, 2017
+                           --> implemented Feb 21, 2017
 
 files added, modified or deleted since last release:
  M obsproc_prep/fix/prepobs_prep.bufrtable

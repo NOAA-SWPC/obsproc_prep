@@ -220,6 +220,8 @@
 *          |        |  (PREPACQC program)                                      |
 | GSI      | 363016 | GSI ANALYSIS STEP                                        |
 *          |        |  (various GSI programs)                                  |
+| GLERL    | 363017 | GLERL OBSERVATION ADJUSTMENT PROCESSING STEP             |
+*          |        |  (GLERLADJ program)                                      |
 | DEFAULT  | 363099 | NON-DEFINED STEP (DEFAULT)                               |
 *                                                                              |
 *                                                                              |

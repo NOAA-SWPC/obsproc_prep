@@ -1,7 +1,7 @@
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    GBLEVENTS_CDAS  PRE/POST PROCESSING OF PREPBUFR EVENTS 
-C   PRGMMR: J.Whiting        ORG: EMC        DATE: 2014-01-24
+C   PRGMMR: D. Keyser        ORG: EMC        DATE: 2017-07-12
 C
 C ABSTRACT: THIS IS A FROZEN VERSION OF THE 2006-07-14 VERSION OF W3LIB
 C   (LATER W3NCO) ROUTINE GBLEVENTS (OTHER THAN CHANGES TO RENAME
@@ -172,7 +172,13 @@ C     STATEMENTS WHERE PREVIOUSLY UNFORMATTED PRINT WAS > 80
 C     CHARACTERS; RENAME ALL REAL(8) VARIABLES AS *_8
 C 2014-01-24 JWhiting - added logic to trap input XOB=360.0 values and
 C     reset them to zero; left untrapped, this value leads to out of 
-c     bounds referencing of IAR_8 array in the CGBLEVN06() subroutine.
+C     bounds referencing of IAR_8 array in the CGBLEVN06() subroutine.
+C 2017-07-12 D. Keyser - Initializes REJT as TRUE in "RULES FOR
+C     TEMPERATURE" section in subroutine cgblevn02 so it will be set in
+C     the rare case where TOB is missing and QOB is not missing (since
+C     REJT is referenced in the next "RULES FOR SPECIFIC HUMIDITY"
+C     section). BENEFIT: Prevents a code failure due to undefined REJT
+C     in this case (when full debugging is turned on).
 C
 C USAGE:    CALL GBLEVENTS_CDAS(IDATEP,IUNITF,IUNITE,IUNITP,IUNITS,
 C          $                    SUBSET,NEWTYP)
@@ -433,7 +439,7 @@ C -------------------------------
          IFIRST = 1
          PRINT 700
   700 FORMAT(/1X,100('#')/' =====> SUBROUTINE GBLEVENTS_CDAS INVOKED ',
-     $ 'FOR THE FIRST TIME - VERSION LAST UPDATED 2014-01-24'/)
+     $ 'FOR THE FIRST TIME - VERSION LAST UPDATED 2017-07-12'/)
 
 C  INITIALIZE NAMELIST SWITCHES TO DEFAULT VALUES
 C  ----------------------------------------------
@@ -950,6 +956,9 @@ C  REJECTION FOR ALL BUT LAST RULE MEANS Q.M. SET TO 9
 C  REJECTION FOR LAST RULE MEANS Q.M. SET TO 8
 C  -------------------------------------------------------------------
 
+! initialize REJT as T so it will be set if TOB is missing (since
+!  referenced in "RULES FOR SPECIFIC HUMIDITY" below)
+         REJT = .TRUE.
          IF(TOB.LT.BMISS) THEN
             REJT = OEFG01_C(POB,TYP,2).GE.BMISS         .OR. 
      $             (SOLN60.AND.NINT(POB*10.).GE.1000)   .OR.

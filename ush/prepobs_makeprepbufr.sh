@@ -377,6 +377,8 @@
 #                   are invoked by aprun.
 #     USHSYND       String indicating directory path for SYNDATA ush file
 #                   Default is "${HOMEobsproc_prep}/ush"
+#     USHGLERL      String indicating directory path for GLERLBUFR ush file
+#                   Default is "${HOMEobsproc_prep}/ush}"
 #     USHPREV       String indicating directory path for PREVENTS ush file
 #                   Default is "${HOMEobsproc_prep}/ush"
 #     USHCQC        String indicating directory path for CQCBUFR ush file
@@ -456,6 +458,8 @@
 #                   pressure data "near" storms; and, possibly, flagging of
 #                   dropwinsonde wind data "near" storms)
 #                   Default is "YES"
+#     GLERLBUFR     String: if = "YES" will perform GLERL adjustment processing
+#                   Default is "NO"
 #     DO_QC         String: if = "YES" will perform quality control
 #                   Default is "YES"
 #     PREVENTS      String: if = "YES" will encode background and obs. errors
@@ -532,6 +536,12 @@
 #                   Default is "$EXECSYND/syndat_syndata"
 #     SYNDC         String indicating data card path for SYNDAT_SYNDATA program
 #                   Default is "$PARMSYND/syndat_syndata.${NET}.parm"
+#     GLRX          String indicating executable path for PREPOBS_GLERLADJ
+#                   program
+#                   Default is "$EXECPREP/prepobs_glerladj"
+#     GLRD          String indicating GLERL dictionary file path for
+#                   PREPOBS_GLERLADJ program
+#                   Default is "$FIXPREP/glerldict.lmd"
 #     PREX          String indicating executable path for PREPOBS_PREVENTS
 #                   program
 #                   Default is "$EXECPREP/prepobs_prevents"
@@ -576,6 +586,10 @@
 #                   "$HOMEobsproc_network/fix/prepobs_oiqc.oberrs.cdas"; 
 #                   otherwise default is
 #                   "$HOMEobsproc_network/fix/prepobs_oiqc.oberrs"
+#     TANK          String indicating path to directory containing daily lake
+#                   average temperature files (invoked only if GLERLBUFR=YES)
+#                   Default is "$DCOMROOT/us007003", where default for $DCOMROOT
+#                   is "/dcom"
 #
 #     These do not have to be exported to this script.  If they are, they will
 #      be used by the script.  If they are not, they will be skipped
@@ -720,6 +734,7 @@
 #     scripts    : $USHGETGES/getges.sh
 #                  $USHGETGES/getges_sig.sh
 #                  $USHSYND/prepobs_syndata.sh
+#                  $USHGLERL/prepobs_glerladj.sh
 #                  $USHPREV/prepobs_prevents.sh
 #                  $USHCQC/prepobs_cqcbufr.sh
 #                  $USHPQC/prepobs_profcqc.sh
@@ -751,6 +766,10 @@
 #                                 weights: $FIXSYND/syndat_weight
 #                                 obs. error table: $PRVT
 #                                 data cards: $SYNDC
+#          PREPOBS_GLERLADJ     - executable: $GLRX
+#                                 dictionary: $GLRD
+#                                 lake temperatures:
+#                          $DCOMROOT/us007003/<yyyymmdd>/wtxtbul/glsea-temps.dat
 #          PREPOBS_PREVENTS     - executable: $PREX
 #                                 obs. error table: $PRVT
 #                                 data cards: $PREC
@@ -963,6 +982,7 @@ echo "********************************************************************"
 fi
 
 USHSYND=${USHSYND:-${HOMEobsproc_prep}/ush}
+USHGLERL=${USHGLERL:-${HOMEobsproc_prep}/ush}
 USHPREV=${USHPREV:-${HOMEobsproc_prep}/ush}
 USHCQC=${USHCQC:-${HOMEobsproc_prep}/ush}
 USHPQC=${USHPQC:-${HOMEobsproc_prep}/ush}
@@ -992,6 +1012,8 @@ fi
 PREPDATA=${PREPDATA:-YES}
 
 SYNDATA=${SYNDATA:-YES}
+
+GLERLBUFR=${GLERLBUFR:-NO} # normally only runs in URMA
 
 DO_QC=${DO_QC:-YES}
 
@@ -1025,6 +1047,8 @@ LISTHDX=${LISTHDX:-$EXECPREP/prepobs_listheaders}
 MONOBFRX=${MONOBFRX:-$EXECPREP/prepobs_monoprepbufr}
 SYNDX=${SYNDX:-$EXECSYND/syndat_syndata}
 SYNDC=${SYNDC:-$PARMSYND/syndat_syndata.${NET}.parm}
+GLRX=${GLRX:-$EXECPREP/prepobs_glerladj}
+GLRD=${GLRD:-$FIXPREP/glerldict.lmd}
 PREX=${PREX:-$EXECPREP/prepobs_prevents}
 PREC=${PREC:-$PARMPREP/prepobs_prevents.${NET}.parm}
 AQCX=${AQCX:-$EXECPREP/prepobs_prepacqc}
@@ -2415,8 +2439,18 @@ if [ "$SYNDATA"  = 'YES' ]; then
    fi
 fi
 
-[ "$PREPDATA" = 'YES' ]  &&  cp prepda.${cycle} prepda.prepdata
 
+######################################
+# EXECUTE GLERL ADJUSTMENT PROCESSING
+######################################
+
+if [ "$GLERLBUFR" = 'YES' ]; then
+    $TIMEIT $USHGLERL/prepobs_glerladj.sh $DATA/prepda.${cycle} $CDATE10
+    errsc=$?
+    [ "$errsc" -ne '0' ] && exit $errsc
+fi
+
+[ "$PREPDATA" = 'YES' ]  &&  cp prepda.${cycle} prepda.prepdata
 
 ###########################################
 #  EXECUTE GSI QUALITY-CONTROL PROCESSING
