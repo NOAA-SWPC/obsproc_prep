@@ -6,7 +6,7 @@
 # Script name:         prepobs_makeprepbufr.sh
 # Script description:  Prepares & quality controls PREPBUFR file
 #
-# Author:       Keyser              Org: EMC          Date: 2017-06-10
+# Author:       Keyser              Org: EMC          Date: 2017-07-02
 #
 # Abstract: This script creates the PREPBUFR file containing observational data
 #   assimilated by all versions of NCEP atmospheric analyses.  It points to BUFR
@@ -238,14 +238,24 @@
 # 2017-06-10  D.C. Stokes -- Added logic to accommodate NET=cfs.  Added
 #      arithmetic evaluation of "err_this" to remove any whitespace prior to
 #      use of that variable in arithmetic comparison statements.
-#     
+# 2017-07-02 JWhiting/D. Keyser -- Added optional 2nd input script argument
+#      specifying cycle center time minutes value and, if present, this value
+#      (set to CDATEMM) is written into a new second line of the file
+#      cdate10.dat (later read by program PREPOBS_PREPDATA) (if 2nd input
+#      script argument is not present, then only YYYYMMDDHH is written into
+#      cdate10.dat as before).
 #
-# Usage:  prepobs_makeprepbufr.sh yyyymmddhh
+# Usage:  prepobs_makeprepbufr.sh YYYYMMDDHH <mm>
 #
 #   Input script positional parameters:
-#     1             String indicating the center date/time for the PREPBUFR
-#                   processing <yyyymmddhh> - if missing, then this time
-#                   is obtained from the ${COMDATEROOT}/date/$cycle file
+#     1             String indicating the 10-digit center date/time for the
+#                   PREPBUFR processing <YYYYMMDDHH> - if missing, then this
+#                   time is obtained from the ${COMDATEROOT}/date/$cycle file
+#                   (note: minutes value of center date/time for the PREPBUFR
+#                          processing always assumed to be zero in this case)
+#     2  (optional) String indicating the minutes value of the center date/time
+#                   for the PREPBUFR processing <mm> - if missing, center
+#                   date/time minutes are assumed to be zero.
 #
 #   Imported Shell Variables:
 #
@@ -672,8 +682,10 @@
 #     PRPI_p24      See documentation in $USHCQC/prepobs_cqcbufr.sh
 #
 #   Exported Shell Variables:
-#     CDATE10       String indicating the center date/time for the PREPBUFR
-#                   processing <yyyymmddhh>
+#     CDATE10       String indicating the center (cycle) date for the PREPBUFR
+#                   processing <YYYYMMDDHH>
+#     CDATEMM       String indicating the minutes value of the center (cycle)
+#                   date for the PREPBUFR processing <mm> (if set in script)
 #     SGES          Either ...
 #                    1) String indicating the full path name for global
 #                       sigio-based or nemsio-based guess file valid at the
@@ -858,20 +870,28 @@ echo sys_tp is set to: $sys_tp
 
 #-------------------------------------------------------------------------------
 
-#  obtain the center date/time for PREPBUFR processing
-#  ---------------------------------------------------
+#  obtain the center (cycle) date for PREPBUFR processing
+#  ------------------------------------------------------
 
-if [ $# -ne 1 ] ; then
+CDATEMM=""
+if [ $# -eq 0 ] ; then
    cp ${COMDATEROOT:-$COMROOT}/date/$cycle ncepdate
    err0=$?
    CDATE10=`cut -c7-16 ncepdate`
-else 
+else
    CDATE10=$1
    if [ "${#CDATE10}" -ne '10' ]; then
       err0=1
    else
       cycle=t`echo $CDATE10|cut -c9-10`z
       err0=0
+      if [ $# -eq 2 ]; then
+         CDATEMM=$2
+         if [ "${#CDATEMM}" -ne '2' ]; then
+            err0=2
+         fi
+         cycle=t`echo $CDATE10|cut -c9-10`${CDATEMM}z
+      fi
    fi
 fi
 
@@ -891,9 +911,12 @@ fi
 cyc=`echo $CDATE10|cut -c9-10`
 modhr=`expr $cyc % 3`
 
+msg="CENTER DATE/TIME FOR PREPBUFR PROCESSING IS ${CDATE10}"
+[ -n "$CDATEMM" ]  &&  msg="$msg:${CDATEMM}"
+
 set +x
 echo
-echo "CENTER DATE/TIME FOR PREPBUFR PROCESSING IS $CDATE10"
+echo $msg
 echo
 set -x
 
@@ -1565,7 +1588,14 @@ echo
 
    > prepda.${cycle}
 
-   echo "      $CDATE10" > cdate10.dat
+
+# write center (cycle) date (YYYYMMDDHH) into local file cdate10.dat
+#  if minutes available write (mm) into line 2 - this file is read by program
+#  PREPOBS_PREPDATA
+
+   echo "      $CDATE10" > cdate10.dat               # YYYYMMDDHH format(6x,i10)
+   [ -n "$CDATEMM" ] && echo "      $CDATEMM" >> cdate10.dat # mm format(6x,i2.2)
+
 
 # If GETGUESS=YES, then either ...
 #   a global sigio-based guess file valid at the center PREPBUFR processing
@@ -1654,7 +1684,7 @@ cat <<\EOFmpp > MP_PREPDATA
 #  IMPORTANT: This script assumes that the BUFR data dump files it is to
 #             process have been copied into the $DATA directory and that each
 #             file name is the same as in $BUFRLIST. It also assumes that the
-#             NCEP production date file is present in the $DATA directory and
+#             center (cycle) date file is present in the $DATA directory and
 #             that it is called cdate10.dat.  Finally, it assumes that the
 #             PREPOBS_PREPDATA program data cards (parm) file is present in the
 #             $DATA directory and it is called prepdata.stdin

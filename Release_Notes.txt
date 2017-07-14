@@ -57,7 +57,7 @@ files:
    obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
  M obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
    obsproc_prep/sorc/prepobs_prepdata.fd/makefile
-   obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
@@ -108,6 +108,7 @@ files:
       GLRD (path to pictionary glerldict.lmd) and TANK (path to directory
       containing daily lake average temperature files).
 
+
  Source code changes:
    prepobs_glerladj (glerlmain.f90, glerldictmod.f90, indict.f90,
    landtowater.f90, spd_to_dir.f90, td_to_q.f90, uv_to_sd.f90, uz.f, uzl.f,
@@ -130,9 +131,16 @@ files:
        - Mesonet reports now look for SDMEDIT quality marks in dump and store
          that information.  If missing then, as before, interpret MADIS quality
          mark and use that.
-         BENFEFIT: Corrects a bug in code. SDMEDIT quality marks on mesonet
-                   reports will now be honored (and will not be overwritten by
-                   interpreted MADIS quality marks).
+         BENEFIT: Corrects a bug in code. SDMEDIT quality marks on mesonet
+                  reports will now be honored (and will not be overwritten by
+                  interpreted MADIS quality marks).
+      prepdata.f (program) (changes are in main routine and all subroutines 
+       containing common block /DATA/):
+       - Program now handles off hour (non-zero minute) cycles; expects a 2nd
+	 line in center date file specifying minutes (even for on-hour,
+	 zero-minute cycles); new variable IDATMM in common/DATA/ to pass
+         minutes values.
+         BENEFIT: Supports 15 minute cycle RTMA_RU Rapid Update processing.
    prepobs_prevents:
       gblevents_cdas.f (subroutine):
        -  Initializes REJT as TRUE in "RULES FOR TEMPERATURE" section in
