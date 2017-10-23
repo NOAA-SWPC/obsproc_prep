@@ -1,13 +1,13 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-obsproc_prep release 5.0.0 --> released Jul 14, 2017
-                           --> implemented ??? ??, 2017
+obsproc_prep release Y.Y.Z --> released ??? ??, ????
+                           --> implemented ??? ??, ????
 
 files:
- A obsproc_prep/fix/glerldict.lmd
+   obsproc_prep/fix/glerldict.lmd
    obsproc_prep/fix/prepobs_anow.bufrtable
    obsproc_prep/fix/prepobs_cqc_statbge
    obsproc_prep/fix/prepobs_landc
- M obsproc_prep/fix/prepobs_prep.bufrtable
+   obsproc_prep/fix/prepobs_prep.bufrtable
    obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
    obsproc_prep/fix/syndat_weight
    obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
@@ -15,17 +15,17 @@ files:
    obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
    obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
    obsproc_prep/sorc/prepobs_cqcvad.fd/makefile
- A obsproc_prep/sorc/prepobs_glerladj.fd/glerldictmod.f90
- A obsproc_prep/sorc/prepobs_glerladj.fd/glerlmain.f90
- A obsproc_prep/sorc/prepobs_glerladj.fd/indict.f90
- A obsproc_prep/sorc/prepobs_glerladj.fd/landtowater.f90
- A obsproc_prep/sorc/prepobs_glerladj.fd/makefile
- A obsproc_prep/sorc/prepobs_glerladj.fd/spd_to_dir.f90
- A obsproc_prep/sorc/prepobs_glerladj.fd/td_to_q.f90
- A obsproc_prep/sorc/prepobs_glerladj.fd/uv_to_sd.f90
- A obsproc_prep/sorc/prepobs_glerladj.fd/uz.f
- A obsproc_prep/sorc/prepobs_glerladj.fd/uzl.f
- A obsproc_prep/sorc/prepobs_glerladj.fd/watertoland.f90
+   obsproc_prep/sorc/prepobs_glerladj.fd/glerldictmod.f90
+   obsproc_prep/sorc/prepobs_glerladj.fd/glerlmain.f90
+   obsproc_prep/sorc/prepobs_glerladj.fd/indict.f90
+   obsproc_prep/sorc/prepobs_glerladj.fd/landtowater.f90
+   obsproc_prep/sorc/prepobs_glerladj.fd/makefile
+   obsproc_prep/sorc/prepobs_glerladj.fd/spd_to_dir.f90
+   obsproc_prep/sorc/prepobs_glerladj.fd/td_to_q.f90
+   obsproc_prep/sorc/prepobs_glerladj.fd/uv_to_sd.f90
+   obsproc_prep/sorc/prepobs_glerladj.fd/uz.f
+   obsproc_prep/sorc/prepobs_glerladj.fd/uzl.f
+   obsproc_prep/sorc/prepobs_glerladj.fd/watertoland.f90
    obsproc_prep/sorc/prepobs_listheaders.fd/listheaders.f90
    obsproc_prep/sorc/prepobs_listheaders.fd/makefile
    obsproc_prep/sorc/prepobs_monoprepbufr.fd/makefile
@@ -55,7 +55,7 @@ files:
    obsproc_prep/sorc/prepobs_prepanow.fd/makefile
    obsproc_prep/sorc/prepobs_prepanow.fd/prepanow.f
    obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
- M obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
    obsproc_prep/sorc/prepobs_prepdata.fd/makefile
  M obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
@@ -65,7 +65,7 @@ files:
    obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
    obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
- M obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
+   obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
    obsproc_prep/sorc/prepobs_prevents.fd/makefile
    obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
    obsproc_prep/sorc/prepobs_profcqc.fd/makefile
@@ -82,14 +82,84 @@ files:
    obsproc_prep/ush/prepobs_cqcvad.sh
    obsproc_prep/ush/getges.sh
    obsproc_prep/ush/getges_sig.sh
- A obsproc_prep/ush/prepobs_glerladj.sh
+   obsproc_prep/ush/prepobs_glerladj.sh
  M obsproc_prep/ush/prepobs_makeprepbufr.sh
    obsproc_prep/ush/prepobs_oiqcbufr.sh
    obsproc_prep/ush/prepobs_prepacqc.sh
    obsproc_prep/ush/prepobs_prevents.sh
    obsproc_prep/ush/prepobs_profcqc.sh
    obsproc_prep/ush/prepobs_syndata.sh
+( A - added,  M - modified, D - deleted)
 
+
+ USH script changes:
+   prepobs_makeprepbufr.sh:
+    - Added logic to change the line in file prevents.filtering.prepdata listing
+      the "CENTER DATE FOR PREPBUFR FILE" to include minutes if $CDATEMM exists
+      (see notes for obsproc_prep.v5.0.0 release below for info on $CDATEMM).
+      BENEFIT: File prevents.filtering.prepdata is cat'ed to stdout.  This
+               corrects the listed PREPBUFR file center date for cases where
+               RTMA_RU runs at 15, 30 and 45 minutes.
+      {Note: Someday w3emc routine gblevents, the code that creates
+             prevents.filtering.prepdata, should be updated to change this but
+             for now this was the easiest way to do it (although logic is
+             clumsy)}.
+
+ Source code changes:
+   prepobs_prepdata prepdata.f (main program):
+    - Added minutes to print statements invoked when a new message type is
+      opened in output PREPBUFR file or when no data is written to PREPBUFR
+      file (and a single ADPUPA message is written just to store the date).
+      BENEFIT: Corrects a printout bug added in obsproc_prep.v5.0.0 with the
+               update to process 15 minute cycle RTMA_RU Rapid Update.
+    - Fixed a bug where minutes (if non-zero) were not encoded into Section 1 of
+      a newly opened BUFR message (via OPENMG) in some logic that is currently
+      not invoked.
+      BENEFIT: Ensures minutes will be encoded into Section 1 of messages if
+               this logic is ever invoked.
+    - Added minutes to every print statement that includes the central dump
+      time.  Central dump time minutes is obtained from Section 1 of first
+      (dummy) message of input dump file via call to BUFRLIB routine IUPVS01.
+      Fixed bug that did not test central dump time minutes against center
+      (cycle) PRPBUFR minutes in date check (i.e., only YYYYMMDDHH were tested
+      for a match).
+      BENEFIT: Until now, central dump time minutes was always zero.  However,
+               with the implementation of the new RTMA_RU, central dump time can
+               now also have minutes = 15, 30 or 45 (since the RTMA_RU runs 4
+               times per hour). This change allows the print statements to
+               reflect this new center dump time format.  It also ensures that
+               the dump vs. PREPBUFR center dates are correctly tested.
+    - Added minutes to print statement listing center (cycle) date in PREPBUFR
+      file in subr. GOESDG.
+      BENEFIT: Accounts for possibility of center (cycle) date in PREPBUFR file
+               not being zero with addition of new RTMA_RU where minutes here
+               can be 15, 30 or 45.
+
+  < more to come >
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+obsproc_prep release 5.0.0 --> released Jul 14, 2017
+                           --> implemented ??? ??, 2017
+
+files added, modified or deleted since last release:
+ A obsproc_prep/fix/glerldict.lmd
+ M obsproc_prep/fix/prepobs_prep.bufrtable
+ A obsproc_prep/sorc/prepobs_glerladj.fd/glerldictmod.f90
+ A obsproc_prep/sorc/prepobs_glerladj.fd/glerlmain.f90
+ A obsproc_prep/sorc/prepobs_glerladj.fd/indict.f90
+ A obsproc_prep/sorc/prepobs_glerladj.fd/landtowater.f90
+ A obsproc_prep/sorc/prepobs_glerladj.fd/makefile
+ A obsproc_prep/sorc/prepobs_glerladj.fd/spd_to_dir.f90
+ A obsproc_prep/sorc/prepobs_glerladj.fd/td_to_q.f90
+ A obsproc_prep/sorc/prepobs_glerladj.fd/uv_to_sd.f90
+ A obsproc_prep/sorc/prepobs_glerladj.fd/uz.f
+ A obsproc_prep/sorc/prepobs_glerladj.fd/uzl.f
+ A obsproc_prep/sorc/prepobs_glerladj.fd/watertoland.f90
+ M obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
+ M obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
+ A obsproc_prep/ush/prepobs_glerladj.sh
+ M obsproc_prep/ush/prepobs_makeprepbufr.sh
 ( A - added,  M - modified, D - deleted)
 
 
@@ -101,13 +171,17 @@ files:
     - Added arithmetic evaluation of "err_this" to remove any whitespace prior
       to use of that variable in arithmetic comparison statements.  (Done to 
       avoid syntax error under ksh 93v).
+    - Added optional 2nd input script argument specifying cycle center time
+      minutes value and, if present, this value (set to CDATEMM) is written into
+      a new second line of the file cdate10.dat (later read by program
+      PREPOBS_PREPDATA) (if 2nd input script argument is not present, then only
+      YYYYMMDDHH is written into cdate10.dat as before).
     - Added logic to execute new GLERL adjustment processing. Imports new
       environment variables GLERLBUFR (which determines if GLERL adjustment
       processing should be executed, default is NO), USHGLERL (path to ush
       script prepobs_glerladj.sh), GLRX (path to executable prepobs_glerladj),
       GLRD (path to pictionary glerldict.lmd) and TANK (path to directory
       containing daily lake average temperature files).
-
 
  Source code changes:
    prepobs_glerladj (glerlmain.f90, glerldictmod.f90, indict.f90,
@@ -125,7 +199,7 @@ files:
       (x99) (where x=1 for mass, =2 for wind). The new GLERL program code (17)
       is used for these "events". This program is executed by
       prepobs_glerladj.sh (see above).
-      BENEFIT: .... Steve please add info here ..
+      BENEFIT: .... Steve please add info here ..    ?????????????????????????????????????
    prepobs_prepdata:
       iw3unpbf.f (subroutine) (changes are in function R04UBF):
        - Mesonet reports now look for SDMEDIT quality marks in dump and store
@@ -136,10 +210,11 @@ files:
                   interpreted MADIS quality marks).
       prepdata.f (program) (changes are in main routine and all subroutines 
        containing common block /DATA/):
-       - Program now handles off hour (non-zero minute) cycles; expects a 2nd
-	 line in center date file specifying minutes (even for on-hour,
-	 zero-minute cycles); new variable IDATMM in common/DATA/ to pass
-         minutes values.
+       - Program now handles off hour (non-zero minute) cycles; looks for
+         optional 2nd line in input center (cycle) date file specifying minutes
+         (this could even be present as "00" for on-hour cycles); new variable
+         IDATMM in common/DATA/ to pass minutes values; encode minutes value
+         into section 1 of each output BUFR message header if non-zero
          BENEFIT: Supports 15 minute cycle RTMA_RU Rapid Update processing.
    prepobs_prevents:
       gblevents_cdas.f (subroutine):
@@ -208,7 +283,7 @@ files:
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 obsproc_prep release 4.0.0 --> released Apr 17, 2017, updated Apr 20, 2017,
                                updated May 01, 2017
-                           --> implemented May 22, 2017
+                           --> implemented Jul 19, 2017
 
 files added, modified or deleted since last release:
  M obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
@@ -231,7 +306,6 @@ files added, modified or deleted since last release:
  M obsproc_prep/ush/prepobs_prevents.sh
  M obsproc_prep/ush/prepobs_profcqc.sh
  M obsproc_prep/ush/prepobs_syndata.sh
-
 ( A - added,  M - modified, D - deleted)
 
 
@@ -346,21 +420,21 @@ files added, modified or deleted since last release:
     - Added logic to build on theia.
    load_libs.rc in sorc directory:
     - Modified to handle library module patterns used on WCOSS IBM and Cray.
-    - Added load of nemsio library module (version 2.2.2).
-    - Upgraded sigio library version from 1.0.1 to 2.0.1.
+    - Added nemsio version number (2.2.2) and module load.
     - Upgraded w3emc version from 2.2.0 to 2.3.0.
     - Upgraded bacio version from 2.0.1 to 2.0.2.
-    - Added special variables to allow for different sigio and nemsio versions
+    - Upgraded sigio version from 1.0.1 to 2.0.1.
+    - Added special variables to allow for different versions of sigio and nemsio
       on Cray vs IBM if needed.
     - Added section for theia.
    setlibs.rc in sorc directory:
     - Modified to handle library pathnames used on WCOSS IBM and Cray-XC40.
       (on Cray-XC40, point to libs built with intel compiler)
     - Added nemsio version number (2.2.2) and var NEMSIO_LIB
-    - Upgraded sigio library version from 1.0.1 to 2.0.1.
     - Upgraded w3emc library version from 2.2.0 to 2.3.0.
     - Upgraded bacio library version from 2.0.1 to 2.0.2.
-    - Added special variables to allow for different sigio and nemsio versions
+    - Upgraded sigio version from 1.0.1 to 2.0.1.
+    - Added special variables to allow for different versions of sigio and nemsio
       on Cray vs IBM if needed.
     - Added section for theia.
    README.build in sorc directory:
@@ -417,11 +491,11 @@ files added, modified or deleted since last release:
    w3nco   2.0.6 (all)
    bufr   11.1.0 (all)
    w3emc   2.3.0 (prepobs_cqcbufr, prepobs_prepacpf, prepobs_prepacqc,
-                  prepobs_prepdata, prepobs_prevents, syndat_syndata)
-   bacio   2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+                  prepobs_prepdata, prepobs_prevents, syndat_syndata) (previously 2.2.0)
+   bacio   2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata) (previously 2.0.1)
    sp      2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
-   sigio   2.0.1 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
-   nemsio  2.2.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   sigio   2.0.1 (prepobs_prepdata, prepobs_prevents, syndat_syndata) (previously 1.0.1)
+   nemsio  2.2.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata) (new)
 
 
  Build Instructions:
@@ -431,8 +505,8 @@ files added, modified or deleted since last release:
 
  Preimplementation Testing Requirements:
  ---------------------------------------
-   There are no jobs in obsproc_prep.  Jobs executing this version of
-   obsproc_prep will be tested.
+   There are no jobs in obsproc_prep.  All jobs executing this version of
+   obsproc_prep should be tested.
 
 
  Dissemination:
@@ -749,8 +823,8 @@ files added, modified or deleted since last release:
 
  Preimplementation Testing Requirements:
  ---------------------------------------
-   There are no jobs in obsproc_prep.  Jobs executing this version of
-   obsproc_prep will be tested.
+   There are no jobs in obsproc_prep.  All jobs executing this version of
+   obsproc_prep should be tested.
 
 
  Dissemination:
@@ -911,8 +985,8 @@ files added, modified or deleted since last release:
 
  Preimplementation Testing Requirements:
  ---------------------------------------
-   There are no jobs in obsproc_prep.  Jobs executing this version of
-   obsproc_prep will be tested.
+   There are no jobs in obsproc_prep.  All jobs executing this version of
+   obsproc_prep should be tested.
 
 
  Dissemination:
@@ -948,8 +1022,7 @@ files added, modified or deleted since last release:
  M obsproc_prep/sorc/load_libs.rc
  M obsproc_prep/sorc/setlibs.rc
  M obsproc_prep/ush/prepobs_makeprepbufr.sh
-
-( M - modified)
+( A - added,  M - modified, D - deleted)
 
 
  USH script changes:
@@ -1020,8 +1093,8 @@ files added, modified or deleted since last release:
 
  Preimplementation Testing Requirements:
  ---------------------------------------
-   There are no jobs in obsproc_prep.  Jobs executing this version of
-   obsproc_prep will be tested.
+   There are no jobs in obsproc_prep.  All jobs executing this version of
+   obsproc_prep should be tested.
 
 
  Dissemination:
@@ -1271,8 +1344,8 @@ files added, modified or deleted since last release:
 
  Preimplementation Testing Requirements:
  ---------------------------------------
-   There are no jobs in obsproc_prep.  Jobs executing this version of
-   obsproc_prep will be tested.
+   There are no jobs in obsproc_prep.  All jobs executing this version of
+   obsproc_prep should be tested.
 
 
  Dissemination:
@@ -1378,8 +1451,8 @@ files added, modified or deleted since last release:
 
  Preimplementation Testing Requirements:
  ---------------------------------------
-   There are no jobs in obsproc_prep.  Jobs executing this version of
-   obsproc_prep will be tested.
+   There are no jobs in obsproc_prep.  All jobs executing this version of
+   obsproc_prep should be tested.
 
 
  Dissemination:
@@ -1447,8 +1520,8 @@ files added, modified or deleted since last release:
 
  Preimplementation Testing Requirements:
  ---------------------------------------
-   There are no jobs in obsproc_prep.  Jobs executing this version of
-   obsproc_prep will be tested.
+   There are no jobs in obsproc_prep.  All jobs executing this version of
+   obsproc_prep should be tested.
 
 
  Dissemination:
@@ -1787,8 +1860,8 @@ files added, modified or deleted since last release:
 
  Preimplementation Testing Requirements:
  ---------------------------------------
-   There are no jobs in obsproc_prep.  Jobs executing this version of
-   obsproc_prep will be tested.
+   There are no jobs in obsproc_prep.  All jobs executing this version of
+   obsproc_prep should be tested.
 
 
  Dissemination:

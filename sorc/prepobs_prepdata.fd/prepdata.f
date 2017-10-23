@@ -1,7 +1,7 @@
 C$$$  MAIN PROGRAM DOCUMENTATION BLOCK
 C
 C MAIN PROGRAM: PREPOBS_PREPDATA
-C   PRGMMR: Keyser                ORG: NP22   DATE: 2017-06-22
+C   PRGMMR: Keyser                ORG: NP22   DATE: 2017-10-20
 C
 C ABSTRACT: PREPARES DATA FOR USE IN ANALYSES FOR THE NDAS, NAM, GDAS,
 C   GFS, RAP (RAPID REFRESH), RTMA, AND URMA NETWORKS.  ALL ANALYSES
@@ -1282,11 +1282,45 @@ C        is changed from 3050 to 16500 meters to provide capability to
 C        process the full vertical profile of TAMDARB reports (made
 C        available by ARINC 01/17/2017).
 C 2017-06-22 JWhiting - handles off hour (non-zero minute) cycles;
-C         looks for optional 2nd line in center (cycle) date file
+C         looks for optional 2nd line in input center (cycle) date file
 C         specifying minutes (this could even be present as "00" for on-
 C         hour cycles); new variable IDATMM in common/DATA/ to pass minutes
-C         values; encode minutes value into section 1 of message header
-C         if non-zero
+C         values; encode minutes value into section 1 of each output
+C         BUFR message header if non-zero
+C 2017-10-20  D. A. Keyser -- 
+C      Changes in subroutine W3FIZZ:
+C      - Added minutes to print statements invoked when a new message
+C        type is opened in output PREPBUFR file or when no data is
+C        written to PREPBUFR file (and a single ADPUPA message is
+C        written just to store the date).
+C        BENEFIT: Corrects a printout bug added in obsproc_prep.v5.0.0
+C                 with the update to process 15 minute cycle RTMA_RU
+C                 Rapid Update.
+C      - Fixed a bug where minutes (if non-zero) were not encoded into
+C        Section 1 of a newly opened BUFR message (via OPENMG) in some
+C        logic that is currently not invoked.
+C        BENEFIT: Ensures minutes will be encoded into Section 1 of
+C                 messages if this logic is ever invoked.
+C      Changes in subroutines PREP, UNPREPBF, GOESDG, GETSCATT, GETGPSIPW:
+C      - Added minutes to every print statement that includes the
+C        central dump time.  Central dump time minutes is obtained from
+C        Section 1 of first (dummy) message of input dump file via call
+C        to BUFRLIB routine IUPVS01. Fixed bug that did not test central
+C        dump time minutes against center (cycle) PRPBUFR minutes in
+C        date check (i.e., only YYYYMMDDHH were tested for a match).
+C        BENEFIT: Until now, central dump time minutes was always zero.
+C                 However, with the implementation of the new RTMA_RU,
+C                 central dump time can now also have minutes = 15, 30
+C                 or 45 (since the RTMA_RU runs 4 times per hour). This
+C                 change allows the print statements to reflect this new
+C                 center dump time format.  It also ensures that the
+C                 dump vs. PREPBUFR center dates are correctly tested.
+C      Change in subroutine GOESDG:
+C      - Added minutes to print statement listing center (cycle) date in
+C        PREPBUFR file.
+C        BENEFIT: Accounts for possibility of center (cycle) date in
+C                 PREPBUFR file not being zero with addition of new
+C                 RTMA_RU where minutes here can be 15, 30 or 45.
 C
 C
 C USAGE:
@@ -1426,7 +1460,7 @@ C       W3EMC    - ORDERS     GBLEVENTS  W3FA03     W3FA04     W3FB04
 C       BUFRLIB  - DATEBF     OPENBF     OPENMB     CLOSBF     STATUS
 C                  UFBINT     WRITSB     UFBCNT     UFBQCD     DATELEN
 C                  CLOSMG     OPENMG     PKBS1      SETBMISS   GETBMISS
-C                  NEMSPECS   BVERS      MINIMG
+C                  NEMSPECS   BVERS      MINIMG     iupvs01
 C
 C   EXIT STATES:
 C     COND =   0 - SUCCESSFUL RUN
@@ -3057,7 +3091,7 @@ C  IN INTERFACE WITH SUBROUTINE IW3UNPBF
      $ FLACMS,IACFTH,SUBSKP,JPGPSD,GWINDO,RASS,TWINDO,JPWDSD,IWWNDO,
      $ FLDMFR,WRMISS,SKGP45,JPASCD,IAWNDO,npkrpt,SKGNSS
       NAMELIST/PARM/IUNIT
-      CALL W3TAGB('PREPOBS_PREPDATA',2017,0173,0500,'NP22')
+      CALL W3TAGB('PREPOBS_PREPDATA',2017,0293,0500,'NP22')
 C DETERMINE MACHINE WORD LENGTH (BYTES) FOR BOTH INTEGERS AND REALS
       CALL WORDLENGTH(LWI,LWR)
       PRINT 2213, LWI,LWR
@@ -3100,7 +3134,7 @@ C    CARDS FILE, JUST AFTER NAMELIST TASK, BY THE MAKE_PREPBUFR SCRIPT)
          PRINT 321, NET(1)
       END IF
   321 FORMAT(/37X,'WELCOME TO THE UNIVERSAL ',A14,' DATA PREPROCESSOR'/
-     $ 48X,'WCOSS VERSION CREATED 22 Jun 2017')
+     $ 48X,'WCOSS VERSION CREATED 20 Oct 2017')
       call bvers(cvstr)
       print 3211, cvstr
  3211 FORMAT(48X,'--BUFRLIB VERSION USED = v',a,/)
@@ -3577,7 +3611,7 @@ C-----------------------------------------------------------------------
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    PREP
-C   PRGMMR: Keyser           ORG: NP22       DATE: 2016-11-30
+C   PRGMMR: Keyser           ORG: NP22       DATE: 2017-10-20
 C
 C ABSTRACT: PERFORMS SEVERAL FUNCTIONS - UNPACKS REPORTS ONE AT A TIME
 C   INTO UNPACKED IW3UNPBF FMT, PERFORMING SEVERAL CHECKS SUCH AS
@@ -3756,6 +3790,20 @@ C        KSKNOW, and INAC were all increased to (6,9).
 C 2016-11-30  D. A. KEYSER -- Accounts for new output argument "OBS8_8"
 C     returned from W3UNPKB7 for unpacked reports (REAL*8 2-word array
 C     containing latitude and longitude of report).
+C 2017-10-20  D. A. KEYSER -- Added minutes to every print statement
+C     that includes the central dump time.  Central dump time minutes is
+C     obtained from Section 1 of first (dummy) message of input dump
+C     file via call to BUFRLIB routine IUPVS01. Fixed bug that did not
+C     test central dump time minutes against center (cycle) PRPBUFR
+C     minutes in date check (i.e., only YYYYMMDDHH were tested for a
+C     match).
+C     BENEFIT: Until now, central dump time minutes was always zero.
+C              However, with the implementation of the new RTMA_RU,
+C              central dump time can now also have minutes = 15, 30 or
+C              45 (since the RTMA_RU runs 4 times per hour). This change
+C              allows the print statements to reflect this new center
+C              dump time format.  It also ensures that the dump vs.
+C              PREPBUFR center dates are correctly tested.
 C
 C USAGE:    CALL PREP
 C   INPUT FILES:
@@ -4386,11 +4434,20 @@ C SPLIT CENTER DATE INTO COMPONENTS (MDATE)
             MDATE(2) = MOD((IDSDAT/10000),100)
             MDATE(3) = MOD((IDSDAT/100),100)
             MDATE(4) = MOD(IDSDAT,100)
-            PRINT 1101, DSNAME,MDATE,IDSDMP_8
+c-----------------------------------------------------------------------
+c  Read 1st dummy message in file so can then call iupvs01 to get iminu
+            call readmg(nfile,subset,ibdate,kret)
+            iminu = iupvs01(nfile,'MINU')
+c  Close file and reopen so W3UNPKB7 will handle things as though this
+c   block of code never exited
+            call closbf(nfile)
+            call openbf(nfile,'IN',nfile)
+c-----------------------------------------------------------------------
+            PRINT 1101, DSNAME,MDATE,iminu,IDSDMP_8
  1101 FORMAT(/20X,'DATASET NAME: ',A8,'  --  DATE: ',I4.4,2('-',I2.2),
-     $ 1X,I2.2,'Z  -- DUMP DATE (I12 FORMAT): ',I12.12/)
+     $ 1X,I2.2,':',i2.2,'Z  -- DUMP DATE (I12 FORMAT): ',I12.12/)
 C DOES DATE FROM DATA SET MATCH CENTER (CYCLE) DATE?
-            IF(IDSDAT.NE.IDAT10)  THEN
+            IF(IDSDAT.NE.IDAT10 .and. iminu.ne.idatmm)  THEN
                PRINT 324
   324 FORMAT(/13X,'>>>>>   P R O B L E M :   D A T E   D O E S   N O T',
      $ '   M A T C H   C E N T E R  (C Y C L E)  D A T E   <<<<<'/)
@@ -4869,7 +4926,7 @@ C***********************************************************************
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    UNPREPBF
-C   PRGMMR: Keyser           ORG: NP22       DATE: 2016-11-30
+C   PRGMMR: Keyser           ORG: NP22       DATE: 2017-10-20
 C
 C ABSTRACT: GENERALIZED CODE TO UNPACK RPTS FROM BUFR DATA SETS VIA
 C   FCN IW3UNPBF.  REPORTS ARE PLACED INTO SPECIFIED UNPACKED FORMAT.
@@ -4918,6 +4975,20 @@ C     aircraft types right now).
 C 2016-11-30  D. A. KEYSER -- Accounts for new output argument "OBS8_8"
 C     returned from IW3UNPBF for unpacked reports (REAL*8 2-word array
 C     containing latitude and longitude of report).
+C 2017-10-20  D. A. KEYSER -- Added minutes to every print statement
+C     that includes the central dump time.  Central dump time minutes is
+C     obtained from Section 1 of first (dummy) message of input dump
+C     file via call to BUFRLIB routine IUPVS01. Fixed bug that did not
+C     test central dump time minutes against center (cycle) PRPBUFR
+C     minutes in date check (i.e., only YYYYMMDDHH were tested for a
+C     match).
+C     BENEFIT: Until now, central dump time minutes was always zero.
+C              However, with the implementation of the new RTMA_RU,
+C              central dump time can now also have minutes = 15, 30 or
+C              45 (since the RTMA_RU runs 4 times per hour). This change
+C              allows the print statements to reflect this new center
+C              dump time format.  It also ensures that the dump vs.
+C              PREPBUFR center dates are correctly tested.
 C
 C USAGE:    CALL UNPREPBF(IFLAG,CYCLET,IOPENED,DSNAME,IDSDAT,IDSDMP_8,*)
 C   INPUT  ARGUMENT LIST:
@@ -5021,11 +5092,14 @@ C SPLIT CENTER DATE INTO COMPONENTS (MDATE)
          MDATE(2) = MOD((IDSDAT/10000),100)
          MDATE(3) = MOD((IDSDAT/100),100)
          MDATE(4) = MOD(IDSDAT,100)
-         PRINT 101, DSNAME,MDATE,IDSDMP_8
+c  1st dummy message in file is open, call iupvs01 to get iminu
+         iminu = iupvs01(nfile,'MINU')
+         PRINT 101, DSNAME,MDATE,iminu,IDSDMP_8
   101    FORMAT(/19X,'DATASET NAME: ',A8,'  --  DATE: ',I4.4,2('-',
-     $    I2.2),1X,I2.2,'Z  -- DUMP DATE (I12 FORMAT): ',I12.12/)
+     $    I2.2),1X,I2.2,':',i2.2,'Z  -- DUMP DATE (I12 FORMAT): ',
+     $    I12.12/)
 C DOES DATE FROM DATA SET MATCH CENTER (CYCLE) DATE?
-         IF(IDSDAT.NE.IDAT10)  THEN
+         IF(IDSDAT.NE.IDAT10 .and. iminu.ne.idatmm)  THEN
             PRINT 324
   324 FORMAT(/13X,'>>>>>   P R O B L E M :   D A T E   D O E S   N O T',
      $ '   M A T C H   C E N T E R  (C Y C L E)  D A T E   <<<<<'/)
@@ -13803,7 +13877,7 @@ C FINISHED PROCESSING RPTS IN THIS FILE; SUBR. SNDTBL SUMMARIZES IN TBL
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    GOESDG
-C   PRGMMR: Keyser           ORG: NP22       DATE: 2016-11-30
+C   PRGMMR: Keyser           ORG: NP22       DATE: 2017-10-20
 C
 C ABSTRACT: DECODES GOES REPORTS FROM INPUT BUFR DATA DUMP FILE,
 C   PROCESSING ONE REPORT AT A TIME.  DEPENDING UPON USER REQUEST MAY
@@ -13909,6 +13983,25 @@ C     in GOES cloud reports).
 C 2016-11-30  D. A. KEYSER -- Accounts for new output argument "OBS8_8"
 C     returned from W3UNPKB7 for unpacked reports (REAL*8 2-word array
 C     containing latitude and longitude of report).
+C 2017-10-20  D. A. KEYSER --
+C      - Added minutes to every print statement that includes the
+C        central dump time.  Central dump time minutes is obtained from
+C        Section 1 of first (dummy) message of input dump file via call
+C        to BUFRLIB routine IUPVS01. Fixed bug that did not test central
+C        dump time minutes against center (cycle) PRPBUFR minutes in
+C        date check (i.e., only YYYYMMDDHH were tested for a match).
+C        BENEFIT: Until now, central dump time minutes was always zero.
+C                 However, with the implementation of the new RTMA_RU,
+C                 central dump time can now also have minutes = 15, 30
+C                 or 45 (since the RTMA_RU runs 4 times per hour). This
+C                 change allows the print statements to reflect this new
+C                 center dump time format. It also ensures that the dump
+C                 vs. PREPBUFR center dates are correctly tested.
+C      - Added minutes to print statement listing center (cycle) date in
+C        PREPBUFR file.
+C        BENEFIT: Accounts for possibility of center (cycle) date in
+C                 PREPBUFR file not being zero with addition of new
+C                 RTMA_RU where minutes here can be 15, 30 or 45.
 C
 C USAGE:    CALL GOESDG
 C   INPUT FILES:
@@ -14019,9 +14112,9 @@ C INITIALIZE NUMOB, KEPOB, AND MSTOB ARRAYS
       PRINT 9003, IUNIT(8)
  9003 FORMAT(//32X,' ***** GOES SATELLITE SOUNDING/RETRIEVAL/RADIANCE',
      $ ' FILE    UNIT =',I4,' *****')
-      PRINT 550, IDATE
+      PRINT 550, IDATE,idatmm
   550 FORMAT(31X,'LOOKING FOR FILE WITH CENTER DATE: ',2X,I4.4,
-     $ 2('-',I2.2),1X,I2.2,'Z  BASED ON CENTER (CYCLE) DATE')
+     $ 2('-',I2.2),1X,I2.2,':',i2.2,'Z  BASED ON CENTER (CYCLE) DATE')
       IF(GOESRD(1))  PRINT 588
   588 FORMAT(/49X,'==>  WILL PROCESS 5x5 RADIANCES  <==')
       IF(GOESRD(2))  PRINT 688
@@ -14076,11 +14169,20 @@ C.......................................................................
       IF(IRET.EQ.1)  THEN
          IFLAG = 1
 C IRET = 1 RETURNS DATA SET INFO (ONLY) AFTER FIRST CALL
-         PRINT 7000, DSNAME,IDSDAT,IDSDMP_8
+c-----------------------------------------------------------------------
+c  Read 1st dummy message in file so can then call iupvs01 to get iminu
+         call readmg(IUNIT(8),subset,ibdate,kret)
+         iminu = iupvs01(IUNIT(8),'MINU')
+c  Close file and reopen so W3UNPKB7 will handle things as though this
+c   block of code never exited
+         call closbf(IUNIT(8))
+         call openbf(IUNIT(8),'IN',IUNIT(8))
+c-----------------------------------------------------------------------
+         PRINT 7000, DSNAME,IDSDAT,iminu,IDSDMP_8
  7000    FORMAT(//22X,'--> DATA SET INFORMATION: NAME: ',A8,'; DATE: ',
-     $    I10.10,'; DUMP TIME: ',I12.12,' <--'//)
+     $    I10.10,':',i2.2,'; DUMP TIME: ',I12.12,' <--'//)
 C DOES DATE FROM DATA SET MATCH CENTER (CYCLE) DATE?
-         IF(IDSDAT.NE.IDAT10)  THEN
+         IF(IDSDAT.NE.IDAT10 .and. iminu.ne.idatmm)  THEN
             PRINT 324
   324 FORMAT(/13X,'>>>>>   P R O B L E M :   D A T E   D O E S   N O T',
      $ '   M A T C H   C E N T E R  (C Y C L E)  D A T E   <<<<<'/)
@@ -16768,7 +16870,7 @@ C BRIEFLY SUMMARIZE
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    GETSCATT
-C   PRGMMR: Keyser           ORG: NP22       DATE: 2016-11-30
+C   PRGMMR: Keyser           ORG: NP22       DATE: 2017-10-20
 C
 C ABSTRACT: UNPACKS ERS, QUIKSCAT, WINDSAT OR ASCAT SCATTEROMETER WIND
 C   PRODUCT REPORTS FROM BUFR FILE.  HANDLES ONE REPORT AT A TIME,
@@ -16829,6 +16931,20 @@ C     ENCODED WITH ASCAT REPORTS)
 C 2016-11-30  D. A. KEYSER -- Accounts for new output argument "OBS8_8"
 C     returned from W3UNPKB7 for unpacked reports (REAL*8 2-word array
 C     containing latitude and longitude of report).
+C 2017-10-20  D. A. KEYSER -- Added minutes to every print statement
+C     that includes the central dump time.  Central dump time minutes is
+C     obtained from Section 1 of first (dummy) message of input dump
+C     file via call to BUFRLIB routine IUPVS01. Fixed bug that did not
+C     test central dump time minutes against center (cycle) PRPBUFR
+C     minutes in date check (i.e., only YYYYMMDDHH were tested for a
+C     match).
+C     BENEFIT: Until now, central dump time minutes was always zero.
+C              However, with the implementation of the new RTMA_RU,
+C              central dump time can now also have minutes = 15, 30 or
+C              45 (since the RTMA_RU runs 4 times per hour). This change
+C              allows the print statements to reflect this new center
+C              dump time format.  It also ensures that the dump vs.
+C              PREPBUFR center dates are correctly tested.
 C
 C USAGE:    CALL GETSCATT(ISCTP)
 C   INPUT ARGUMENT LIST:
@@ -16942,11 +17058,20 @@ C SPLIT CENTER DATE INTO COMPONENTS (MDATE)
          MDATE(2) = MOD((IDSDAT/10000),100)
          MDATE(3) = MOD((IDSDAT/100),100)
          MDATE(4) = MOD(IDSDAT,100)
-         PRINT 1101, DSNAME,MDATE,IDSDMP_8
+c-----------------------------------------------------------------------
+c  Read 1st dummy message in file so can then call iupvs01 to get iminu
+         call readmg(nfile,subset,ibdate,kret)
+         iminu = iupvs01(nfile,'MINU')
+c  Close file and reopen so W3UNPKB7 will handle things as though this
+c   block of code never exited
+         call closbf(nfile)
+         call openbf(nfile,'IN',nfile)
+c-----------------------------------------------------------------------
+         PRINT 1101, DSNAME,MDATE,iminu,IDSDMP_8
  1101 FORMAT(/20X,'DATASET NAME: ',A8,'  --  DATE: ',I4.4,2('-',I2.2),
-     $ 1X,I2.2,'Z  -- DUMP DATE (I12 FORMAT): ',I12.12/)
+     $ 1X,I2.2,':',i2.2,'Z  -- DUMP DATE (I12 FORMAT): ',I12.12/)
 C DOES DATE FROM DATA SET MATCH CENTER (CYCLE) DATE?
-         IF(IDSDAT.NE.IDAT10)  THEN
+         IF(IDSDAT.NE.IDAT10 .and. iminu.ne.idatmm)  THEN
             PRINT 324
   324 FORMAT(/13X,'>>>>>   P R O B L E M :   D A T E   D O E S   N O T',
      $ '   M A T C H   C E N T E R  (C Y C L E)  D A T E   <<<<<'/)
@@ -17157,7 +17282,7 @@ C BRIEFLY SUMMARIZE
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    GETGPSIPW
-C   PRGMMR: Keyser           ORG: NP22       DATE: 2016-11-30
+C   PRGMMR: Keyser           ORG: NP22       DATE: 2017-10-20
 C
 C ABSTRACT: DECODES GLOBAL POSITIONING SATELLITE INTEGRATED PRECIPITABLE
 C   WATER/ZENITH TOTAL DELAY (GPS-IPW/ZTD) DUMP FILE ("GPSIPW"),
@@ -17187,6 +17312,20 @@ C      time. Controlled by new namelist switch SKGNSS = T (default).
 C 2016-11-30  D. A. KEYSER -- Accounts for new output argument "OBS8_8"
 C     returned from W3UNPKB7 for unpacked reports (REAL*8 2-word array
 C     containing latitude and longitude of report).
+C 2017-10-20  D. A. KEYSER -- Added minutes to every print statement
+C     that includes the central dump time.  Central dump time minutes is
+C     obtained from Section 1 of first (dummy) message of input dump
+C     file via call to BUFRLIB routine IUPVS01. Fixed bug that did not
+C     test central dump time minutes against center (cycle) PRPBUFR
+C     minutes in date check (i.e., only YYYYMMDDHH were tested for a
+C     match).
+C     BENEFIT: Until now, central dump time minutes was always zero.
+C              However, with the implementation of the new RTMA_RU,
+C              central dump time can now also have minutes = 15, 30 or
+C              45 (since the RTMA_RU runs 4 times per hour). This change
+C              allows the print statements to reflect this new center
+C              dump time format.  It also ensures that the dump vs.
+C              PREPBUFR center dates are correctly tested.
 C
 C USAGE:    CALL GETGPSIPW
 C   INPUT FILES:
@@ -17276,11 +17415,20 @@ C SPLIT CENTER DATE INTO COMPONENTS (MDATE)
          MDATE(2) = MOD((IDSDAT/10000),100)
          MDATE(3) = MOD((IDSDAT/100),100)
          MDATE(4) = MOD(IDSDAT,100)
-         PRINT 101, DSNAME,MDATE,IDSDMP_8
-  101    FORMAT(/19X,'DATASET NAME: ',A8,'  --  DATE: ',I4.4,2('-',
-     $    I2.2),1X,I2.2,'Z  -- DUMP DATE (I12 FORMAT): ',I12.12/)
+c-----------------------------------------------------------------------
+c  Read 1st dummy message in file so can then call iupvs01 to get iminu
+         call readmg(nfile,subset,ibdate,kret)
+         iminu = iupvs01(nfile,'MINU')
+c  Close file and reopen so W3UNPKB7 will handle things as though this
+c   block of code never exited
+         call closbf(nfile)
+         call openbf(nfile,'IN',nfile)
+c-----------------------------------------------------------------------
+         PRINT 101, DSNAME,MDATE,iminu,IDSDMP_8
+  101 FORMAT(/20X,'DATASET NAME: ',A8,'  --  DATE: ',I4.4,2('-',I2.2),
+     $ 1X,I2.2,':',i2.2,'Z  -- DUMP DATE (I12 FORMAT): ',I12.12/)
 C DOES DATE FROM DATA SET MATCH CENTER (CYCLE) DATE?
-         IF(IDSDAT.NE.IDAT10)  THEN
+         IF(IDSDAT.NE.IDAT10 .and. iminu.ne.idatmm)  THEN
             PRINT 324
   324 FORMAT(/13X,'>>>>>   P R O B L E M :   D A T E   D O E S   N O T',
      $ '   M A T C H   C E N T E R  (C Y C L E)  D A T E   <<<<<'/)
@@ -17445,7 +17593,7 @@ C BRIEFLY SUMMARIZE
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    W3FIZZ
-C   PRGMMR: Keyser           ORG: EMC        DATE: 2017-06-22
+C   PRGMMR: Keyser           ORG: EMC        DATE: 2017-10-20
 C
 C ABSTRACT: INTERFACES BETWEEN A PREPROCESSED REPORT (IN "HDR/MOBS
 C   IPMSL/PWAT/xRAD/REQV/CLTOP" ARRAYS) AND THE GENERALIZED BUFR
@@ -17685,6 +17833,19 @@ C           lat/lon (ALAT_8, ALON_8) in print statements.
 C        BENEFIT: Values are now precise to 10**5 degrees.
 C 2017-06-22 JWhiting - encode minutes value into section 1 of message
 C         header if non-zero
+C 2017-10-20  D. A. Keyser --
+C      - Added minutes to print statements invoked when a new message
+C        type is opened in output PREPBUFR file or when no data is
+C        written to PREPBUFR file (and a single ADPUPA message is
+C        written just to store the date).
+C        BENEFIT: Corrects a printout bug added in obsproc_prep.v5.0.0
+C                 with the update to process 15 minute cycle RTMA_RU
+C                 Rapid Update.
+C      - Fixed a bug where minutes (if non-zero) were not encoded into
+C        Section 1 of a newly opened BUFR message (via OPENMG) in some
+C        logic that is currently not invoked.
+C        BENEFIT: Ensures minutes will be encoded into Section 1 of
+C                 messages if this logic is ever invoked.
 C
 C USAGE:    CALL W3FIZZ(IER)
 C   OUTPUT ARGUMENT LIST:
@@ -18099,11 +18260,11 @@ C  ON THE DATA SET
 C ENCODE MINUTES VALUE INTO SECTION 1 OF MESSAGE HEADER IF NON-ZERO
 C  (NOTE DEFAULT IS ZERO)
                IF (IDATMM.NE.0) call MINIMG(IUNITP,IDATMM)
-               PRINT 9105, IUNITP,IDAT10
+               PRINT 9105, IUNITP,IDAT10,idatmm
  9105 FORMAT(/' $$$$ NO DATA WRITTEN TO PREPBUFR DATA SET, WILL WRITE ',
      $ 'A SINGLE MESSAGE WITH NO DATA IN ORDER TO STORE THE DATE'/
      $ ' ===> NEW TABLE A MESSAGE OPENED IN PREPBUFR DATA SET IN UNIT',
-     $ I3,' -- TABLE A ENTRY IS "ADPUPA" AND DATE IS',I11/)
+     $ I3,' -- TABLE A ENTRY IS "ADPUPA" AND DATE IS',I11,':',i2.2/)
             ELSE
 C IF NO DATA WAS WRITTEN TO DATA SET AND APPENDING, PRINT A DIAGNOSTIC
 C  WARNING
@@ -18169,9 +18330,10 @@ C ENCODE MINUTES VALUE INTO SECTION 1 OF MESSAGE HEADER IF NON-ZERO
 C  (NOTE DEFAULT IS ZERO)
       IF (IDATMM.NE.0) call MINIMG(IUNITP,IDATMM)
       IF(ITYPL.NE.ITYP)  THEN
-         PRINT 105, IUNITP,SUBSET(ITYP),IDAT10
+         PRINT 105, IUNITP,SUBSET(ITYP),IDAT10,idatmm
   105 FORMAT(/' ===> NEW TABLE A MESSAGE OPENED IN PREPBUFR DATA SET ',
-     $ 'IN UNIT',I3,' -- TABLE A ENTRY IS "',A8,'" AND DATE IS',I11/)
+     $ 'IN UNIT',I3,' -- TABLE A ENTRY IS "',A8,'" AND DATE IS',I11,':',
+     $ i2.2/)
          CALL UFBCNT(IUNITP,IRECL,ISUB)
          NEWTYP = 1
       END IF
@@ -18216,6 +18378,9 @@ C          RESTRICTED RES. 40 SYNOPS WHICH WILL NEVER BE IN THESE METAR
 C          SUBTYPE MESSAGES)
                   call closmg(iunitp)
                   call openmg(iunitp,subset(ityp),idat10)
+C Encode minutes value into Section 1 of message header if non-zero
+C  (note default is zero)
+                  if(idatmm.ne.0) call MINIMG(IUNITP,IDATMM)
                   print'(" First METAR encountered, close last ",
      $             "(SYNOP) message and open new message")'
                end if
@@ -18238,6 +18403,9 @@ C          METAR REPORT INTO
                   call pkbs1(msbt,mbay(1,lun),'MSBT')
                   call closmg(iunitp)
                   call openmg(iunitp,subset(ityp),idat10)
+C Encode minutes value into Section 1 of message header if non-zero
+C  (note default is zero)
+                  if(idatmm.ne.0) call MINIMG(IUNITP,IDATMM)
                   print'(" First SYNOP encountered, close last ",
      $             "(METAR) message and open new message")'
                end if

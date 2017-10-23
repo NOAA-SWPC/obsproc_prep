@@ -6,7 +6,7 @@
 # Script name:         prepobs_makeprepbufr.sh
 # Script description:  Prepares & quality controls PREPBUFR file
 #
-# Author:       Keyser              Org: EMC          Date: 2017-07-02
+# Author:       Keyser              Org: EMC          Date: 2017-10-20
 #
 # Abstract: This script creates the PREPBUFR file containing observational data
 #   assimilated by all versions of NCEP atmospheric analyses.  It points to BUFR
@@ -238,12 +238,30 @@
 # 2017-06-10  D.C. Stokes -- Added logic to accommodate NET=cfs.  Added
 #      arithmetic evaluation of "err_this" to remove any whitespace prior to
 #      use of that variable in arithmetic comparison statements.
-# 2017-07-02 JWhiting/D. Keyser -- Added optional 2nd input script argument
-#      specifying cycle center time minutes value and, if present, this value
-#      (set to CDATEMM) is written into a new second line of the file
-#      cdate10.dat (later read by program PREPOBS_PREPDATA) (if 2nd input
-#      script argument is not present, then only YYYYMMDDHH is written into
-#      cdate10.dat as before).
+# 2017-07-02 JWhiting/D. Keyser 
+#      - Added optional 2nd input script argument specifying cycle center time
+#        minutes value and, if present, this value (set to CDATEMM) is written
+#        into a new second line of the file cdate10.dat (later read by program
+#        PREPOBS_PREPDATA) (if 2nd input script argument is not present, then
+#        only YYYYMMDDHH is written into cdate10.dat as before).
+#      - Added logic to execute new GLERL adjustment processing. Imports new
+#        environment variables GLERLBUFR (which determines if GLERL adjustment
+#        processing should be executed, default is NO), USHGLERL (path to ush
+#        script prepobs_glerladj.sh), GLRX (path to executable
+#        prepobs_glerladj), GLRD (path to pictionary glerldict.lmd) and TANK
+#        (path to directory containing daily lake average temperature files).
+# 2017-10-20  D.A. Keyser -- Added logic to change the line in file
+#        prevents.filtering.prepdata listing the "CENTER DATE FOR PREPBUFR FILE"
+#        to include minutes if $CDATEMM exists (see 2017-07-02 change above for
+#        for info on $CDATEMM).
+#        BENEFIT: File prevents.filtering.prepdata is cat'ed to stdout.  This
+#                 corrects the listed PREPBUFR file center date for cases where
+#                 RTMA_RU runs at 15, 30 and 45 minutes.
+#        {Note: Someday w3emc routine gblevents, the code that creates
+#               prevents.filtering.prepdata, should be updated to change this
+#               but for now this was the easiest way to do it (although logic is
+#               clumsy)}.
+#
 #
 # Usage:  prepobs_makeprepbufr.sh YYYYMMDDHH <mm>
 #
@@ -1890,6 +1908,27 @@ export IOBUF_PARAMS='*prevents.filtering.prepdata:verbose'
 $TIMEIT $PRPX <prepdata.stdin >>$mp_pgmout 2>&1
 errPREPDATA=$?
 unset IOBUF_PARAMS
+#------------------------------------------------------------------------------
+if [ -n "$CDATEMM" ]; then
+# This logic changes the line in prevents.filtering.prepdata listing the
+#  "CENTER DATE FOR PREPBUFR FILE" to include minutes if $CDATEMM exists
+#  (Note: Someday w3emc routine gblevents, the code that creates
+#         prevents.filtering.prepdata, should be updated to change this, but
+#         for now this was the easiest way to do it (although logic is clumsy)
+# 
+   grep "CENTER DATE FOR PREPBUFR FILE IS" prevents.filtering.prepdata > grepit
+   cut -c1-83 grepit > grepit_cut
+   echo "$CDATEMM <--" > grepit_cut_r
+   paste -d":"  grepit_cut grepit_cut_r > adjline
+   aline=`grep -n "CENTER DATE FOR PREPBUFR FILE IS" prevents.filtering.prepdata | cut -f1 -d:`
+   nline=`cat prevents.filtering.prepdata | wc -l`
+   head -n `expr $aline - 1` prevents.filtering.prepdata > top_prevents.filtering.prepdata
+   tail -n `expr $nline - $aline` prevents.filtering.prepdata > bottom_prevents.filtering.prepdata
+   cat top_prevents.filtering.prepdata adjline bottom_prevents.filtering.prepdata  > prevents.filtering.prepdataX
+   mv prevents.filtering.prepdataX prevents.filtering.prepdata
+   rm bottom_prevents.filtering.prepdata top_prevents.filtering.prepdata adjline grepit_cut_r grepit_cut grepit
+fi
+#------------------------------------------------------------------------------
 cat prevents.filtering.prepdata >> $mp_pgmout
 set +x
 echo
