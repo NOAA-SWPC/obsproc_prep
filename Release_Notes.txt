@@ -139,7 +139,7 @@ files:
 
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 obsproc_prep release 5.0.0 --> released Jul 14, 2017
-                           --> implemented ??? ??, 2017
+                           --> implemented Dec 13, 2017
 
 files added, modified or deleted since last release:
  A obsproc_prep/fix/glerldict.lmd
