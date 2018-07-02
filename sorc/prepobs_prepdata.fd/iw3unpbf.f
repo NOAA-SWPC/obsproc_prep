@@ -1,7 +1,7 @@
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    IW3UNPBF
-C   PRGMMR: KEYSER           ORG: NP22       DATE: 2017-07-03
+C   PRGMMR: Melchior         ORG: NP22       DATE: 2018-07-02
 C
 C ABSTRACT: READS AND UNPACKS ONE REPORT FROM INPUT NCEP BUFR DUMP
 C   FILE INTO SPECIFIED FORMAT.  FUNCTION RETURNS THE UNPACKED REPORT
@@ -477,7 +477,9 @@ C     MADIS quality mark and use that.
 C     BENFEFIT: Corrects a bug in code. SDMEDIT quality marks on
 C               mesonet reports will now be honored (and will not be
 C               overwritten by interpreted MADIS quality marks).
-C              
+C 2018-07-02  S.Melchior-- In function R04UBF, added call to UFBINT
+C     routine to pull in HOVI (horizontal visibility) value for mesonet
+C     message types (NC255).
 C
 C
 C USAGE:    II = IW3UNPBF(NUNIT, OBS, STNID, CRES1, CRES2, CBULL, OBS2,
@@ -3710,6 +3712,7 @@ C DBUOYs store sub-sfc temp, use 1st lvl if SST1 msg (unless > 10m down)
          NOBS3(5) = IRET
       ELSE IF(SUBSET(1:5).EQ.'NC255')  THEN              ! All Mesonets
             CALL UFBINT(LUNIT,OBS2_8(15),2,1,IRET,'MXGS MXGD')
+            CALL UFBINT(LUNIT,OBS2_8( 8),1,1,IRET,'HOVI')
             CALL UFBINT(LUNIT,OBS2_8( 3),1,1,IRET,'ALSE')
             CALL UFBINT(LUNIT,OBS3_8(1,1,1),5,255,IRET,'TPHR TOPC')
             IF(IRET.EQ.1) THEN ! reset iret from 1 to 0 if all obs msng
