@@ -18599,6 +18599,7 @@ c - end of CEILING processing
      $                                   NOBS3(5),IRET,'DOSW HOSW POSW')
 
          ELSE IF(SUBSET(ITYP).EQ.'MSONET  ') THEN
+            CALL UFBINT(IUNITP,OBS2_8( 8), 1,1,IRET,'HOVI')
             CALL UFBINT(IUNITP,OBS2_8(15), 2,1,IRET,'MXGS MXGD')
             IF(NOBS3(1).GT.0) CALL UFBINT(IUNITP,OBS3_8(1,1,1),5,
      $                                    NOBS3(1),IRET,'.DTHTOPC TOPC')

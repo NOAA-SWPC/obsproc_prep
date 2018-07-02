@@ -1,13 +1,13 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-obsproc_prep release Y.Y.Z --> released ??? ??, ????
-                           --> implemented ??? ??, ????
+obsproc_prep release 5.1.0 --> released Jul ??, 2018
+                           --> implemented Dec ??, 2018
 
 files:
    obsproc_prep/fix/glerldict.lmd
    obsproc_prep/fix/prepobs_anow.bufrtable
    obsproc_prep/fix/prepobs_cqc_statbge
    obsproc_prep/fix/prepobs_landc
-   obsproc_prep/fix/prepobs_prep.bufrtable
+ M obsproc_prep/fix/prepobs_prep.bufrtable
    obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
    obsproc_prep/fix/syndat_weight
    obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
@@ -55,7 +55,7 @@ files:
    obsproc_prep/sorc/prepobs_prepanow.fd/makefile
    obsproc_prep/sorc/prepobs_prepanow.fd/prepanow.f
    obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
-   obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
    obsproc_prep/sorc/prepobs_prepdata.fd/makefile
  M obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
@@ -106,36 +106,97 @@ files:
              clumsy)}.
 
  Source code changes:
-   prepobs_prepdata prepdata.f (main program):
-    - Added minutes to print statements invoked when a new message type is
-      opened in output PREPBUFR file or when no data is written to PREPBUFR
-      file (and a single ADPUPA message is written just to store the date).
-      BENEFIT: Corrects a printout bug added in obsproc_prep.v5.0.0 with the
-               update to process 15 minute cycle RTMA_RU Rapid Update.
-    - Fixed a bug where minutes (if non-zero) were not encoded into Section 1 of
-      a newly opened BUFR message (via OPENMG) in some logic that is currently
-      not invoked.
-      BENEFIT: Ensures minutes will be encoded into Section 1 of messages if
-               this logic is ever invoked.
-    - Added minutes to every print statement that includes the central dump
-      time.  Central dump time minutes is obtained from Section 1 of first
-      (dummy) message of input dump file via call to BUFRLIB routine IUPVS01.
-      Fixed bug that did not test central dump time minutes against center
-      (cycle) PRPBUFR minutes in date check (i.e., only YYYYMMDDHH were tested
-      for a match).
-      BENEFIT: Until now, central dump time minutes was always zero.  However,
-               with the implementation of the new RTMA_RU, central dump time can
-               now also have minutes = 15, 30 or 45 (since the RTMA_RU runs 4
-               times per hour). This change allows the print statements to
-               reflect this new center dump time format.  It also ensures that
-               the dump vs. PREPBUFR center dates are correctly tested.
-    - Added minutes to print statement listing center (cycle) date in PREPBUFR
-      file in subr. GOESDG.
-      BENEFIT: Accounts for possibility of center (cycle) date in PREPBUFR file
-               not being zero with addition of new RTMA_RU where minutes here
-               can be 15, 30 or 45.
+   prepobs_prepdata:
+      prepdata.f (main program):
+       - Added minutes to print statements invoked when a new message type is
+         opened in output PREPBUFR file or when no data is written to PREPBUFR
+         file (and a single ADPUPA message is written just to store the date).
+         BENEFIT: Corrects a printout bug added in obsproc_prep.v5.0.0 with the
+                  update to process 15 minute cycle RTMA_RU Rapid Update.
+       - Fixed a bug where minutes (if non-zero) were not encoded into Section 1
+         of a newly opened BUFR message (via OPENMG) in some logic that is
+         currently not invoked.
+         BENEFIT: Ensures minutes will be encoded into Section 1 of messages if
+                  this logic is ever invoked.
+       - Added minutes to every print statement that includes the central dump
+         time.  Central dump time minutes is obtained from Section 1 of first
+         (dummy) message of input dump file via call to BUFRLIB routine IUPVS01.
+         Fixed bug that did not test central dump time minutes against center
+         (cycle) PRPBUFR minutes in date check (i.e., only YYYYMMDDHH were tested
+         for a match).
+         BENEFIT: Until now, central dump time minutes was always zero.  However,
+                  with the implementation of the new RTMA_RU, central dump time
+                  can now also have minutes = 15, 30 or 45 (since the RTMA_RU runs
+                  4 times per hour). This change allows the print statements to
+                  reflect this new center dump time format.  It also ensures that
+                  the dump vs. PREPBUFR center dates are correctly tested.
+       - Added minutes to print statement listing center (cycle) date in PREPBUFR
+         file in subr. GOESDG.
+         BENEFIT: Accounts for possibility of center (cycle) date in PREPBUFR file
+                  not being zero with addition of new RTMA_RU where minutes here
+                  can be 15, 30 or 45.
+       - Added call to UFBINT to retrieve HOVI data.
+         BENEFIT: Mesonet reports may now contain non-missing horizontal
+                  visibility data encoded into the prepbufr file.
+      iw3unpbf.f:
+       - Added call to UFBINT to retrieve HOVI data.
+         BENEFIT: Mesonet reports may now contain non-missing horizontal
+                  visibility data encoded into the prepbufr file.
 
-  < more to come >
+ Fixed file changes:
+   prepobs_prep.bufrtable:
+    - Added new horizontal visibility sequence <VISB2SEQ> to MSONET group.
+      BENEFIT: Mesonet reports may now contain non-missing horizontal
+               visibility data encoded into the prepbufr file.
+
+
+ Output changes:
+ ---------------
+  (For specific network changes see " Output changes" in Release Notes for that
+   network, if that network executes this version of obsproc_prep.)
+ 
+
+ Libraries:
+ ----------
+   w3nco   2.0.6 (all)
+   bufr   11.1.0 (all)
+   w3emc   2.3.0 (prepobs_cqcbufr, prepobs_prepacpf, prepobs_prepacqc,
+                  prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   bacio   2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   sp      2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   sigio   2.0.1 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   nemsio  2.2.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+
+
+ Build Instructions:
+ -------------------
+   - See sorc/README.build
+
+
+ Preimplementation Testing Requirements:
+ ---------------------------------------
+   There are no jobs in obsproc_prep.  Jobs executing this version of
+   obsproc_prep will be tested.
+
+
+ Dissemination:
+ --------------
+   See information about dissemination in the release notes for
+   obsproc_<NETWORK> packages which execute this version of obsproc_prep.
+
+
+ Special Instructions:
+ ---------------------
+   This is part of OBSPROC.v10.0.0.
+   This can be implemented prior to, but no later than, the implementations of:
+      v3.2.0 of obsproc_dump_post,
+      v3.1.0 of obsproc_rtma,
+      v3.1.0 of obsproc_utma.
+   It can also be implemented prior to, but no later than, the RTMA/URMA v2.7
+   upgrade.
+
+   Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
+   needed.
 
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 obsproc_prep release 5.0.0 --> released Jul 14, 2017

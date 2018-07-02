@@ -615,7 +615,7 @@
 |          |                                                                   |
 | MSONET   | HEADR   PRVSTG      SPRVSTG     CAT        <P___INFO>  <Q___INFO> |
 | MSONET   |        <T___INFO>  <Z___INFO>  <W___INFO>  [W2_EVENT]  <PMSL_SEQ> |
-| MSONET   |        <ALTIMSEQ>  {TOPC_SEQ}  <GUST2SEQ>                         |
+| MSONET   |        <ALTIMSEQ>  {TOPC_SEQ}  <GUST2SEQ>  <VISB2SEQ>             |
 |          |                                                                   |
 | GPSIPW   | HEADR   CAT         PW__INFO   <APDS_SEQ>                         |
 |          |                                                                   |
