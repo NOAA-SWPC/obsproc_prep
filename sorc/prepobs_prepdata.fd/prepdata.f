@@ -1321,6 +1321,9 @@ C        PREPBUFR file.
 C        BENEFIT: Accounts for possibility of center (cycle) date in
 C                 PREPBUFR file not being zero with addition of new
 C                 RTMA_RU where minutes here can be 15, 30 or 45.
+C 2018-07-02  S.Melchior-- In function W3FIZZ, added call to UFBINT
+C     routine to pull in HOVI (horizontal visibility) value for mesonet
+C     message types (NC255).
 C
 C
 C USAGE:
