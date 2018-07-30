@@ -1,5 +1,5 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-obsproc_prep release 5.1.0 --> released Jul ??, 2018
+obsproc_prep release 5.1.0 --> released Jul 30, 2018
                            --> implemented Dec ??, 2018
 
 files:
@@ -188,10 +188,20 @@ files:
  Special Instructions:
  ---------------------
    This is part of OBSPROC.v10.0.0.
+  It should be installed on both WCOSS systems (IBM iDataPlex and Cray-XC40).
+
    This can be implemented prior to, but no later than, the implementations of:
-      v3.2.0 of obsproc_dump_post,
-      v3.1.0 of obsproc_rtma,
-      v3.1.0 of obsproc_utma.
+      v3.1.0 of obsproc_rtma 
+      v3.1.0 of obsproc_utma 
+      v4.1.0 of obsproc_dump *
+      v1.6.0 of obsproc_shared/bufr_dumplist *
+      v3.2.0 of obsproc_dump_post
+      v5.1.0 of obsproc_prep
+      v3.0.1 of obsproc_prep_post
+      v2.0.1 of obsproc_shared/bufr_remorest
+
+    * - these were previously released in OBSPROC.v8.3.2 in May 2018
+
    It can also be implemented prior to, but no later than, the RTMA/URMA v2.7
    upgrade.
 
