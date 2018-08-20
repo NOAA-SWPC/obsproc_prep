@@ -60,7 +60,7 @@ elif [ -s ${TANK}/${PDYm1}/wtxtbul/glsea-temps.dat ] ; then
     msg="WARNING: Lake temperatures for GLERL adjustment ${PDY} ${cyc}Z are \
 dated by 1 day.  Missing lake temperature file is: \
 ${TANK}/${PDY}/wtxtbul/glsea-temps.dat."
-    echo "$msg" | mail.py -c Steven.Levine@noaa.gov
+#   echo "$msg" | mail.py -c Steven.Levine@noaa.gov
     [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
 elif [ -s ${TANK}/${PDYm2}/wtxtbul/glsea-temps.dat ] ; then
     export FORT11=${TANK}/${PDYm2}/wtxtbul/glsea-temps.dat
