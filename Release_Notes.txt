@@ -1,13 +1,13 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-obsproc_prep release 5.1.0 --> released Jul 30, 2018
-                           --> implemented Dec ??, 2018
+obsproc_prep release 5.2.0 --> released Aug ??, 2018
+                           --> implemented ??? ??, 201?
 
 files:
    obsproc_prep/fix/glerldict.lmd
    obsproc_prep/fix/prepobs_anow.bufrtable
    obsproc_prep/fix/prepobs_cqc_statbge
    obsproc_prep/fix/prepobs_landc
- M obsproc_prep/fix/prepobs_prep.bufrtable
+   obsproc_prep/fix/prepobs_prep.bufrtable
    obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
    obsproc_prep/fix/syndat_weight
    obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
@@ -55,9 +55,9 @@ files:
    obsproc_prep/sorc/prepobs_prepanow.fd/makefile
    obsproc_prep/sorc/prepobs_prepanow.fd/prepanow.f
    obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
- M obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
    obsproc_prep/sorc/prepobs_prepdata.fd/makefile
- M obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
@@ -72,23 +72,129 @@ files:
    obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
    obsproc_prep/sorc/syndat_syndata.fd/makefile
    obsproc_prep/sorc/syndat_syndata.fd/syndata.f
-   obsproc_prep/sorc/build.sh
+ M obsproc_prep/sorc/build.sh
    obsproc_prep/sorc/clean.sh
    obsproc_prep/sorc/install.sh
-   obsproc_prep/sorc/load_libs.rc
+ M obsproc_prep/sorc/load_libs.rc
    obsproc_prep/sorc/README.build
    obsproc_prep/sorc/setlibs.rc
    obsproc_prep/ush/prepobs_cqcbufr.sh
    obsproc_prep/ush/prepobs_cqcvad.sh
-   obsproc_prep/ush/getges.sh
+ A obsproc_prep/ush/getges_driver.sh
+ M obsproc_prep/ush/getges.sh
    obsproc_prep/ush/getges_sig.sh
- M obsproc_prep/ush/prepobs_glerladj.sh
+   obsproc_prep/ush/prepobs_glerladj.sh
  M obsproc_prep/ush/prepobs_makeprepbufr.sh
    obsproc_prep/ush/prepobs_oiqcbufr.sh
    obsproc_prep/ush/prepobs_prepacqc.sh
    obsproc_prep/ush/prepobs_prevents.sh
    obsproc_prep/ush/prepobs_profcqc.sh
    obsproc_prep/ush/prepobs_syndata.sh
+( A - added,  M - modified, D - deleted)
+
+
+ USH script changes:
+   getges_driver.sh:
+    - New.  Driver for getges.sh.  Needed in order to handle new FV3 GFS (with
+      suffix cycle time directory in GDAS and GFS "com" file pathnames), but
+      also handles legacy (pre-FV3) NEMSIO GFS. Will allow "best" global guess
+      to still be obtained by getges.sh, even for FV3 GFS.  Works with getges.sh
+      file types "natget", "natgm3" and "natgp3".  No other file types are
+      needed here.  (See getges_driver.sh Docblock for more information.)
+   getges.sh:
+    - Adapted to be executed by new driver script getges_driver.sh (but still
+      works properly otherwise).
+      BENEFIT: Handles information passed from getges_driver.sh allowing it to
+               still obtain the "best" global guess, in the most efficient
+               manner possible, even for FV3 GFS (where suffix cycle time
+               directory is included in GDAS and GFS "com" file pathnames).
+   prepobs_makeprepbufr.sh:
+    - Added new environment variable $GETGESprep_driver which points to the full
+      path to the new GETGES driver script (getges_driver.sh) which is executed
+      in place of the getges.sh itself for cases when NEMSIO_IN is imported as
+      TRUE.
+      BENEFIT: See getges_driver.sh and getges.sh changes above.
+    - Default location for PRVT changed for gdas or gfs runs to point to GSI
+      version of prepobs_errtable.global: $HOMEgfs/fix/fxi_gsi.
+      BENEFIT: one file shared between ObsProc and GSI will require less
+               maintenance and ease coordination confusion.
+    - Replaced usage of $NET with $RUN for gdas and gfs logic tests since
+      $RUN=gdas and not "gdas1" as of obsproc_global.v3.0.0 implementation.
+    - Updated to run on Dell-p3 (as well as Cray-XC40 and IBM iDataPlex).
+
+ Source code and build changes (in sorc directory):
+   build.sh:
+    - Updated to build codes on Dell-p3, Cray-XC40 or IBM iDataPlex.
+   load_libs.rc:
+    - Updated to load modules for Dell-p3.
+
+ Output changes:
+ ---------------
+  (For specific network changes see " Output changes" in Release Notes for that
+   network, if that network executes this version of obsproc_prep.)
+
+
+ Libraries:
+ ----------
+   w3nco   2.0.6 (all)
+   bufr   11.2.0 (all) (11.1.0 Cray-XC40 and IBM iDataPlex)
+   w3emc   2.3.0 (prepobs_cqcbufr, prepobs_prepacpf, prepobs_prepacqc,
+                  prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   bacio   2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   sp      2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   sigio   2.0.3 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+           2.0.1 (Cray-XC40 and IBM iDataPlex)
+   nemsio  2.2.3 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+           2.2.2 (Cray-XC40 and IBM iDataPlex)
+
+
+ Build Instructions:
+ -------------------
+   - See sorc/README.build
+
+
+ Preimplementation Testing Requirements:
+ ---------------------------------------
+   There are no jobs in obsproc_prep.  Jobs executing this version of
+   obsproc_prep will be tested.
+
+
+ Dissemination:
+ --------------
+   See information about dissemination in the release notes for
+   obsproc_<NETWORK> packages which execute this version of obsproc_prep.
+
+
+ Special Instructions:
+ ---------------------
+   This is part of OBSPROC.v11.0.0.
+   This can be implemented prior to, but no later than, the implementation of:
+      v3.2.0 of obsproc_global,
+      v3.3.0 of obsproc_nam,
+      v3.1.0 of obsproc_rap.
+   This can be implemented simultaneously with the implementations of:
+      v5.0.0 of obsproc_dump,
+      v3.3.0 of obsproc_dump_post,
+      v3.1.0 of obsproc_prep_post,
+      v2.1.0 of obsproc_shared_bufr_avgdata,
+      v2.0.0 of obsproc_shared_bufr_dumplist,
+      v2.1.0 of obsproc_shared_bufr_remorest.
+   This can also be implemented prior to, but no later than, the FV3 GFS upgrade.
+   This must be installed on all WCOSS systems (IBM iDataPlex, Cray-XC40, Dell-p3).
+
+   Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
+   needed.
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+obsproc_prep release 5.1.0 --> released Jul 30, 2018
+                           --> implemented Dec ??, 2018
+
+files added, modified or deleted since last release:
+ M obsproc_prep/fix/prepobs_prep.bufrtable
+ M obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
+ M obsproc_prep/ush/prepobs_glerladj.sh
+ M obsproc_prep/ush/prepobs_makeprepbufr.sh
 ( A - added,  M - modified, D - deleted)
 
 
@@ -156,8 +262,8 @@ files:
  ---------------
   (For specific network changes see " Output changes" in Release Notes for that
    network, if that network executes this version of obsproc_prep.)
- 
 
+ 
  Libraries:
  ----------
    w3nco   2.0.6 (all)
@@ -190,7 +296,7 @@ files:
  Special Instructions:
  ---------------------
    This is part of OBSPROC.v10.0.0.
-  It should be installed on both WCOSS systems (IBM iDataPlex and Cray-XC40).
+   It should be installed on both WCOSS systems (IBM iDataPlex and Cray-XC40).
 
    This can be implemented prior to, but no later than, the implementations of:
       v3.1.0 of obsproc_rtma 
@@ -553,10 +659,8 @@ files added, modified or deleted since last release:
 
  Output changes:
  ---------------
-  Some networks that upgrade to this version of obsproc_prep might see quality
-  marks applied to more VADWND and PROFLR stations due to increases in the max
-  number of stations that can be qc'd in prepobs_cqcvad and prepobs_profcqc,
-  respectively.
+  (For specific network changes see " Output changes" in Release Notes for that
+   network, if that network executes this version of obsproc_prep.)
  
 
  Libraries:

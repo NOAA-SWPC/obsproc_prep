@@ -71,13 +71,37 @@
 #          2016 May         Menlove       Changed GETGES_COM variable to $COMINmodel
 #          2016 November    Iredell       Adapted getges for NEMS GSM
 #                                         Also removed a lot of dead wood
+#          20?? ??????      Stokes        <might have done something - obviously
+#                                         made this getges specific to obsproc_prep>
+#          2018 March       Keyser        Adapted getges for FV3 GFS (but still works
+#                                         for legacy GFS too):
+#                                          1) Allow $fhend default of 384 (no change)
+#                                             to be overridden if imported as
+#                                             something else.
+#                                          2) Removed checking of gfs and gdas files
+#                                             with root $GETGES_NWG when netwk=global
+#                                             and typef=natges,natgm3,natgp3 (these
+#                                             don't exist in legacy or FV3 GFS).
+#                                          3) Removed checking of FV3 GFS files whose
+#                                             suffix cycle time directory does not
+#                                             match cycle time of guess file (avoids
+#                                             wasting time chekcing for files that
+#                                             can never exist). 
+#####
 #
 ################################################################################
 #-------------------------------------------------------------------------------
 # Set some default parameters.
 fhbeg=03                         # hour to begin searching backward for guess
 fhinc=03                         # hour to increment backward in search
-fhend=384                        # hour to end searching backward for guess
+####fhinc=06                         # hour to increment backward in search
+    # DAK: For FV3 GFS I initially thought changing fhinc from 3 to 6 hrs made sense
+    #      since there are no GFS or GDAS fcst files with off-off time cycles (e.g.,
+    #      21z, 09z, etc.).  However, for reasons I don't quite understand, the
+    #      change caused a guess file to not be found in a couple of cases I tested.
+    #      So we'll keep it at 3 hrs although a lot of extra files which we know
+    #      can't possibly exist will be checked.
+fhend=${fhend:-384}              # hour to end searching backward for guess
 
 #-------------------------------------------------------------------------------
 # Get options and arguments.
@@ -1154,9 +1178,7 @@ elif [[ "$netwk" = "global" ]];then
    fhinc=06
    ;;
   natges) geslist='
-   $GETGES_NWG/$envir/gdas.$day/gdas.t${cyc}z.atmf$gh.nemsio
    $COMINgdas/gdas.t${cyc}z.atmf$gh.nemsio
-   $GETGES_NWG/$envir/gfs.$day/gfs.t${cyc}z.atmf$gh.nemsio
    $COMINgfs/gfs.t${cyc}z.atmf$gh.nemsio'
    ((vhr=$valid%100))
    if [[ $(($vhr % 3)) -ne 0 ]]; then
@@ -1164,9 +1186,7 @@ elif [[ "$netwk" = "global" ]];then
    fi
    ;;
   natgm3) geslist='
-   $GETGES_NWG/$envir/gdas.$day/gdas.t${cyc}z.atmf$ghm3.nemsio
    $COMINgdas/gdas.t${cyc}z.atmf$ghm3.nemsio
-   $GETGES_NWG/$envir/gfs.$day/gfs.t${cyc}z.atmf$ghm3.nemsio
    $COMINgfs/gfs.t${cyc}z.atmf$ghm3.nemsio'
    ;;
   natgm2) geslist='
@@ -1194,9 +1214,7 @@ elif [[ "$netwk" = "global" ]];then
    $COMINgfs/gfs.t${cyc}z.atmf$ghp2.nemsio'
    ;;
   natgp3) geslist='
-   $GETGES_NWG/$envir/gdas.$day/gdas.t${cyc}z.atmf$ghp3.nemsio
    $COMINgdas/gdas.t${cyc}z.atmf$ghp3.nemsio
-   $GETGES_NWG/$envir/gfs.$day/gfs.t${cyc}z.atmf$ghp3.nemsio
    $COMINgfs/gfs.t${cyc}z.atmf$ghp3.nemsio'
    ;;
   natcur) geslist='
@@ -1363,6 +1381,11 @@ while [[ $fh -le $fhend ]];do
   eval ges_val=$ges_var
   # Replace the current PDY with the valid date
   ges=${ges_val/$PDY\//$day/}
+  dn=`dirname $ges`
+  bn=`basename $dn`
+  if [[ `echo $bn | cut -c1` != [a-zA-Z] ]];then
+     [[ $cyc -ne $bn ]]  && break 1
+  fi
   [[ $quiet = NO ]]&&echo Checking: $ges >&2
   [[ -r $ges ]]&&break 2
  done

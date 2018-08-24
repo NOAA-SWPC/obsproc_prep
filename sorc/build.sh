@@ -7,9 +7,27 @@ if [[ "$SITE" =~ (theia|THEIA) ]]; then
   . /apps/lmod/lmod/init/sh     # may be needed for some users
 else
   ##  determine system/phase
-  module load prod_util
+
+  ## On Phase 3 with Lua Modules, loading prod_util without preloading
+  ## dependent modules will fail.  This means that we need to know the
+  ## system in order to be able to run the getsystems.pl utility so as
+  ## to determine the system.  To overcome this circular logic, use
+  ## hostname to do special loading of the prod_util module so as to 
+  ## run the getsystems.pl utility.
+
+  module purge
+
+  hname=$(hostname)
+  if [[ $hname =~ ^[vmp][0-9] ]] ; then # Dell-p3: venus mars pluto
+    module load ips/18.0.1.163
+    module load prod_util/1.1.0
+  else 
+    ## non-phase 3 systems can simply load prod_util directly
+    module load prod_util
+  fi
+
   sys_tp=$(getsystem.pl -tp)
-  echo $sys_tp
+  echo "build: running on $sys_tp"
 fi
 
 module purge
@@ -30,6 +48,10 @@ case $sys_tp in
  Cray-CS400)
    module load intel/16.1.150
    module load impi/5.1.2.150
+   ;;
+ Dell-p3)
+   module load ips/18.0.1.163    # req'd for bufr
+   module load impi/18.0.1       # req'd for w3emc
    ;;
  *) echo unexpected system.  Update for $sys_tp;;
 esac

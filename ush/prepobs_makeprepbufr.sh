@@ -6,7 +6,7 @@
 # Script name:         prepobs_makeprepbufr.sh
 # Script description:  Prepares & quality controls PREPBUFR file
 #
-# Author:       Keyser              Org: EMC          Date: 2017-10-20
+# Author:       Keyser              Org: EMC          Date: 2018-03-05
 #
 # Abstract: This script creates the PREPBUFR file containing observational data
 #   assimilated by all versions of NCEP atmospheric analyses.  It points to BUFR
@@ -261,6 +261,24 @@
 #               prevents.filtering.prepdata, should be updated to change this
 #               but for now this was the easiest way to do it (although logic is
 #               clumsy)}.
+# 2018-03-05  D.A. Keyser -- Added new environment variable GETGESprep_driver
+#        which points to the full path to the new GETGES driver script (default
+#        is $USHGETGES/getges_driver.sh).  This is executed in place of the
+#        getges utility script $GETGESprep in cases when NEMSIO_IN=.true.
+#        BENEFIT: The GETGES driver script executes the GETGES utility script
+#                 when NEMSIO_IN=.true. using new logic resulting from the file
+#                 directory path changes being incorporated with the new FV3 GFS
+#                 upgrade.  This driver script can handle either the legacy
+#                 NEMSIO GFS or the new FV3 GFS.
+# 2018-04-04  S. Melchior -- Modified default path for PRVT for GDAS or GFS
+#        runs (prepobs_errtable.global) to point to the same file that is
+#        managed by GFS model developers.  Default location is 
+#        ${HOMEgfs}/fix/fix_gsi/prepobs_errtable.global.  $HOMEgfs is a new
+#        variable exported from the parent job script, JGLOBAL_PREP.
+#        BENEFIT: Only one version of the file needs to be maintained.
+# 2018-08-16  S. Melchior -- Modified to run on Dell-p3 as well as Cray-XC40
+#        and IBM iDataPlex.
+# 
 #
 #
 # Usage:  prepobs_makeprepbufr.sh YYYYMMDDHH <mm>
@@ -397,7 +415,8 @@
 #                   NOTE : This is applicable ONLY if the imported shell
 #                          variable POE is not "NO" and the imported shell
 #                          variable PREPDATA=YES (see below)
-#                   Default on Cray-XC40 is "aprun". Otherwise: "mpirun.lsf"
+#                   Default on Dell-p3 is "mpirun".  Default on Cray-XC40 is
+#                   "aprun". Otherwise: "mpirun.lsf"
 #     BACK          String indicating whether or not to run background shells
 #                   (on the same task) for the PREPBUFR processing (= "YES" -
 #                   run background shells; anything else - do not run
@@ -546,8 +565,8 @@
 #                   PREPOBS_PREPDATA, SYNDAT_SYNDATA and PREPOBS_PREVENTS
 #                   programs (used by GBLEVENTS subroutine)
 #                   NOTE: Only read by gdas, gfs, cdas and nam networks
-#                   If imported "NET=gdas" or "NET=gfs", default is
-#                   "$HOMEobproc_network/fix/prepobs_errtable.global";
+#                   If imported "RUN=gdas" or "RUN=gfs", default is
+#                   "$HOMEgfs/fix/fix_gsi/prepobs_errtable.global";
 #                   if imported "NET=cdas", default is
 #                   "$HOMEobsproc_network/fix/prepobs_errtable.cdas";
 #                   if imported "NET=nam", default is
@@ -679,13 +698,20 @@
 #
 #     NWROOTp1      Root directory for production software on WCOSS Phase 1.
 #
-#     USHGETGES     String indicating directory path for GETGES utility script.
+#     USHGETGES     String indicating directory path for both GETGES utility
+#                   script and GETGES driver script.
 #                   Default is $HOMEobsproc_prep/ush.
 #
 #     GETGESprep    GETGES utility script. If NEMSIO_IN=.true.,  defaults to:
-#                       $USHGETGES/getges.sh
+#                       $USHGETGES/getges.sh (and is executed by
+#                                             $GETGESprep_driver, see below)
 #                   otherwise, defaults to:
-#                       $USHGETGES/getges_sig.sh 
+#                       $USHGETGES/getges_sig.sh
+#
+#     GETGESprep_driver
+#                   GETGES driver script. Defaults to:
+#                       $USHGETGES/getges_driver.sh
+#                   Note: Only invoked if NEMSIO_IN=.true. .
 #
 #     PREPDATAtpn   Tasks per node when invoking cfp on Cray-XC40.  Will be
 #                   computed if needed but was not imported.
@@ -763,6 +789,7 @@
 #                  $DATA/MERGE_MSGS
 #     scripts    : $USHGETGES/getges.sh
 #                  $USHGETGES/getges_sig.sh
+#                  $USHGETGES/getges_driver.sh
 #                  $USHSYND/prepobs_syndata.sh
 #                  $USHGLERL/prepobs_glerladj.sh
 #                  $USHPREV/prepobs_prevents.sh
@@ -990,6 +1017,8 @@ echo
    if [ "$POE" != 'NO' ] ; then
       if [ "$sys_tp" = Cray-XC40 -o "$SITE" = SURGE -o "$SITE" = LUNA ]; then
         launcher_PREP=${launcher_PREP:-aprun}
+      elif [ "$sys_tp" = Dell-p3 -o "$SITE" = VENUS -o "$SITE" = MARS ]; then
+        launcher_PREP=${launcher_PREP:-mpirun}
       else
         launcher_PREP=${launcher_PREP:-mpirun.lsf}
       fi
@@ -1044,6 +1073,7 @@ GETGUESS=${GETGUESS:-YES}
 if [ "$GETGUESS" = 'YES' ]; then
    USHGETGES=${USHGETGES:-${HOMEobsproc_prep}/ush}
    if [ "$NEMSIO_IN" = .true. ]; then
+      GETGESprep_driver=${GETGESprep_driver:-$USHGETGES/getges_driver.sh}
       GETGESprep=${GETGESprep:-$USHGETGES/getges.sh}
    else
       GETGESprep=${GETGESprep:-$USHGETGES/getges_sig.sh}
@@ -1074,8 +1104,8 @@ PRPC=${PRPC:-$PARMPREP/prepobs_prepdata.${NET}.parm}
 PRPT=${PRPT:-$FIXPREP/prepobs_prep.bufrtable}
 cp $PRPT prep.bufrtable
 LANDC=${LANDC:-$FIXPREP/prepobs_landc}
-if [ "$NET" = 'gdas' -o "$NET" = 'gfs' ]; then
-   PRVT=${PRVT:-$HOMEobsproc_network/fix/prepobs_errtable.global}
+if [ "$RUN" = 'gdas' -o "$RUN" = 'gfs' ]; then
+   PRVT=${PRVT:-$HOMEgfs/fix/fix_gsi/prepobs_errtable.global}
 elif [ "$NET" = 'cdas' ]; then
    PRVT=${PRVT:-$HOMEobsproc_network/fix/prepobs_errtable.cdas}
 elif [ "$NET" = 'nam' ]; then
@@ -1139,7 +1169,7 @@ fi
 
 if [ -s ${COMSP}tropcy_relocation_status.$tmmark ]; then
    if [ "$SENDDBN" = "YES" ]; then
-      if [ "$NET" = 'gfs' -o "$NET" = 'gdas' ]; then
+      if [ "$RUN" = 'gfs' -o "$RUN" = 'gdas' ]; then
          RUN_uc=$(echo $RUN | tr [a-z] [A-Z])
          $DBNROOT/bin/dbn_alert MODEL ${RUN_uc}_TCI $job \
              ${COMSP}tropcy_relocation_status.$tmmark
@@ -1160,10 +1190,10 @@ if [ "$RELOCATION_HAS_RUN" != 'YES' -a "$GETGUESS" != 'NO' ]; then
 #   (NOTE 3: This is not done if GETGUESS is NO)
 #
 
-   if [ "$NET" = 'gfs' -o "$NET" = 'gdas' ]; then
-      for fhr in -3 +3 ;do
+   if [ "$RUN" = 'gfs' -o "$RUN" = 'gdas' ]; then
+      for ihr in -3 +3 ;do
          if [ "$NEMSIO_IN" = .true. ]; then 
-           if [ $fhr = "-3" ] ; then
+           if [ $ihr = "-3" ] ; then
               sges=sgm3prep
               stype=natgm3
               echo $sges
@@ -1173,7 +1203,7 @@ if [ "$RELOCATION_HAS_RUN" != 'YES' -a "$GETGUESS" != 'NO' ]; then
               echo $sges
            fi
          else
-           if [ $fhr = "-3" ] ; then
+           if [ $ihr = "-3" ] ; then
               sges=sgm3prep
               stype=siggm3
               echo $sges
@@ -1184,6 +1214,7 @@ if [ "$RELOCATION_HAS_RUN" != 'YES' -a "$GETGUESS" != 'NO' ]; then
            fi
          fi
          if [ ! -s $sges ]; then
+            fhr=$ihr
             set +x
             echo
 echo "VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV"
@@ -1193,9 +1224,14 @@ echo "                     PREPBUFR processing date/time"
 echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
             echo
             set -x
-            $GETGESprep -e $envir_getges -n $network_getges \
-             -v $CDATE10 -t $stype $sges
-            errges=$?
+            if [ "$NEMSIO_IN" = .true. ]; then
+               $GETGESprep_driver
+               errges=$?
+            else
+               $GETGESprep -e $envir_getges -n $network_getges \
+                -v $CDATE10 -t $stype $sges
+               errges=$?
+            fi
             if test $errges -ne 0; then
 #  problem obtaining global atmospheric first guess so exit
                set +x
@@ -1228,7 +1264,7 @@ elif [ "$RELOCATION_HAS_RUN" = 'YES' ]; then
 
    qual_last=".$tmmark"  # need this because gfs and gdas don't add $tmmark
                          #  qualifier to end of output atmos guess files
-   [ $NET = gfs -o $NET = gdas -o $NET = cfs ]  &&  qual_last=""
+   [ $RUN = gfs -o $RUN = gdas -o $NET = cfs ]  &&  qual_last=""
    for file in sgm3prep sgesprep sgp3prep tcvitals.relocate.$tmmark; do
       case $file in
         tcvitals.relocate.$tmmark) infile=$file; qual_last="";; #  already has $tmmark at end
@@ -1422,9 +1458,14 @@ echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
                echo
                set -x
             fi
-            $GETGESprep -e $envir_getges -n $network_getges -t $stype\
-             -f $fhr -v `${NDATE} $dhr $CDATE10` > sgesprep${sfx}_pathname
-            errges=$?
+            if [ "$NEMSIO_IN" = .true. ]; then
+               $GETGESprep_driver
+               errges=$?
+            else
+               $GETGESprep -e $envir_getges -n $network_getges -t $stype\
+                -f $fhr -v `${NDATE} $dhr $CDATE10` > sgesprep${sfx}_pathname
+               errges=$?
+            fi
             if test $errges -ne 0
             then
 #  problem obtaining global sigio-based or nemsio-based guess - exit if center
@@ -1492,7 +1533,7 @@ echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
                qual_last=".$tmmark"  # need this because gfs and gdas don't add
                                      #  $tmmark qualifer to end of output atmos
                                      #  guess files
-               [ $NET = gfs -o $NET = gdas ]  &&  qual_last=""
+               [ $RUN = gfs -o $RUN = gdas ]  &&  qual_last=""
                if [ "$NEMSIO_IN" = .true. ]; then 
                   gesbase="atmges.nemsio"
                 else
@@ -2045,7 +2086,12 @@ set -x
 #   to kick off background processes and wait for them to complete
 #  --------------------------------------------------------------------------
       if [ "$POE" != 'NO' ]; then
-         if [ "$launcher_PREP" = mpirun.lsf ]; then
+         if [ "$launcher_PREP" = mpirun ]; then
+            chmod 755 $DATA/prep_exec.cmd
+            mpirun -l cfp $DATA/prep_exec.cmd
+            export err=$?; $DATA/err_chk
+            [ $err != 0 ] && exit 55  # for extra measure
+         elif [ "$launcher_PREP" = mpirun.lsf ]; then
             export MP_CMDFILE=$DATA/prep_exec.cmd
             export MP_PGMMODEL=mpmd
             export MP_PULSE=0
@@ -2099,6 +2145,9 @@ set -x
       elif [ $BACK = 'YES' ] ; then
          if [ "$sys_tp" = Cray-XC40 -o "$SITE" = SURGE -o "$SITE" = LUNA ]; then
             aprun -n 1 -d $NSPLIT $DATA/prepthrds.sh
+         elif [ "$sys_tp" = Dell-p3 -o "$SITE" = VENUS -o "$SITE" = MARS ]; then
+            launcher_PREP=${launcher_PREP:-mpirun}
+            $launcher_PREP -n 1 $DATA/prepthrds.sh
          else
             $DATA/prepthrds.sh
          fi
@@ -2111,6 +2160,8 @@ set -x
       multi=0
       if [ "$sys_tp" = Cray-XC40 -o "$SITE" = SURGE -o "$SITE" = LUNA ]; then
          aprun -n 1 -N 1 ksh $DATA/MP_PREPDATA $multi
+      elif [ "$sys_tp" = Dell-p3 -o "$SITE" = VENUS -o "$SITE" = MARS ]; then
+         mpirun -n 1 $DATA/MP_PREPDATA $multi
       else
          $DATA/MP_PREPDATA $multi
       fi
