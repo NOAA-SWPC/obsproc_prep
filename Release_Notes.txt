@@ -82,7 +82,7 @@ files:
    obsproc_prep/ush/prepobs_cqcvad.sh
    obsproc_prep/ush/getges.sh
    obsproc_prep/ush/getges_sig.sh
-   obsproc_prep/ush/prepobs_glerladj.sh
+ M obsproc_prep/ush/prepobs_glerladj.sh
  M obsproc_prep/ush/prepobs_makeprepbufr.sh
    obsproc_prep/ush/prepobs_oiqcbufr.sh
    obsproc_prep/ush/prepobs_prepacqc.sh
@@ -104,6 +104,8 @@ files:
              prevents.filtering.prepdata, should be updated to change this but
              for now this was the easiest way to do it (although logic is
              clumsy)}.
+   prepobs_glerladj.sh:
+    - Disabled an email alert warning about 1 day delayed lake temperature data.
 
  Source code changes:
    prepobs_prepdata:
