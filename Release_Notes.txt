@@ -142,7 +142,7 @@ files:
                   prepobs_prepdata, prepobs_prevents, syndat_syndata)
    bacio   2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
    sp      2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
-   sigio   2.0.3 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   sigio   2.1.0 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
            2.0.1 (Cray-XC40 and IBM iDataPlex)
    nemsio  2.2.3 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
            2.2.2 (Cray-XC40 and IBM iDataPlex)
