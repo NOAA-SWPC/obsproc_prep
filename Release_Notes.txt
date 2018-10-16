@@ -1,5 +1,5 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-obsproc_prep release 5.2.0 --> released Aug ??, 2018
+obsproc_prep release 5.2.0 --> released Aug 31, 2018
                            --> implemented ??? ??, 201?
 
 files:
