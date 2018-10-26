@@ -1,7 +1,7 @@
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    IW3UNPBF
-C   PRGMMR: Melchior         ORG: NP22       DATE: 2018-07-02
+C   PRGMMR: KEYSER           ORG: NP22       DATE: 2018-10-22
 C
 C ABSTRACT: READS AND UNPACKS ONE REPORT FROM INPUT NCEP BUFR DUMP
 C   FILE INTO SPECIFIED FORMAT.  FUNCTION RETURNS THE UNPACKED REPORT
@@ -480,6 +480,11 @@ C               overwritten by interpreted MADIS quality marks).
 C 2018-07-02  S.Melchior-- In function R04UBF, added call to UFBINT
 C     routine to pull in HOVI (horizontal visibility) value for mesonet
 C     message types (NC255).
+C 2018-10-22  D. A. KEYSER -- (changes are in function R06UBF)
+C     Changes to handle new GOES-16 & up satellite winds which do not
+C     contain a report id (STNID) and have high-res lat/lon (amongst
+C     other differences vs. GOES-15 & down).
+C              
 C
 C
 C USAGE:    II = IW3UNPBF(NUNIT, OBS, STNID, CRES1, CRES2, CBULL, OBS2,
@@ -527,6 +532,9 @@ C                3500 (NOTE: DOES NOT INCLUDE STATION ID, CHARACTER
 C                RESERVE WORD 1, CHARACTER RESERVE WORD 2 AND CBULL)
 C     STNID    - CHARACTER*8 SINGLE REPORT STATION IDENTIFICATION (UP
 C                TO 8 CHARACTERS, LEFT-JUSTIFIED)
+C                (Note: For GOES-16 & up satellite winds, there is no
+C                       report id; this is hardwirted as 8 dashes:
+C                       "--------".
 C     CRES1    - CHARACTER*8 SINGLE REPORT CHARACTER RESERVE WORD 1
 C                (SEE DOCUMENTATION/COMMENTS IN THIS PROGRAM (VARIES BY
 C                TYPE OF DATA)
@@ -1253,7 +1261,7 @@ C$$$
       COMMON/IUBFII/PWMIN
       COMMON/IUBFJJ/ISET,MANLIN(1001)
       COMMON/IUBFKK/KOUNT(499,18,2),KNTSAT(250:260),KNTMODIS(783:785),
-     $ KNTavhrr(3:224),KNTviirs(224:225),IFLSAT
+     $ KNTavhrr(3:224),KNTviirs(224:225),IFLSAT,knts16(270:274)
       COMMON/IUBFLL/Q8(255,2)
       COMMON/IUBFMM/XIND(255)
       COMMON/IUBFNN/STNIDX,CRES1X,CRES2X
@@ -1301,6 +1309,7 @@ C  --------------------------------------------------------------------
          KSKSMI   =  0
          KOUNT    =  0
          KNTSAT   =  0
+         knts16   =  0
          KNTMODIS =  0
          KNTavhrr =  0
          KNTviirs =  0
@@ -1363,7 +1372,7 @@ C  THE JWFILE INDICATOR: =0 IF UNOPENED; =2 IF OPENED AND NCEP BUFR
 C  ----------------------------------------------------------------
  
       IF(JWFILE(LUNIT).EQ.0) THEN
-         PRINT'(" ===> IW3UNPBF - WCOSS VERSION: 07-03-2017")'
+         PRINT'(" ===> IW3UNPBF - WCOSS VERSION: 10-22-2018")'
 
 C  DETERMINE MACHINE WORD LENGTH (BYTES) FOR BOTH INTEGERS AND REALS
 C  -----------------------------------------------------------------
@@ -1530,12 +1539,18 @@ C   this type/subtype with reports present for the diagnostic print
                      MFLAG = 1
                   ENDIF
                ENDDO
+               do  idsat = 270,273
+                  if(knts16(idsat).gt.0)  then
+                     print 8103, idsat,knts16(idsat)
+                     mflag = 1
+                  endif
+               enddo
  8103 FORMAT(15X,'NUMBER FROM SAT. ID',I4,4X,':',I6)
-               IF(KNTSAT(260).GT.0)  THEN
-                  PRINT 8104, KNTSAT(260)
+               IF(KNTSAT(260).GT.0.or.knts16(274).gt.0)  THEN
+                  PRINT 8104, KNTSAT(260)+knts16(274)
                   MFLAG = 1
                ENDIF
- 8104 FORMAT(15X,'NUMBER FROM UNKNOWN SAT. ID:',I6)
+ 8104 FORMAT(15X,'TOTAL NUMBER FROM UNKNOWN SAT. IDs:',I6)
                IF(MFLAG.EQ.0)  PRINT 8110
  8110 FORMAT(15X,'NO REPORTS OF THIS TYPE WERE READ')
                PRINT 8105
@@ -5246,7 +5261,7 @@ C     ---> PROCESSES SATWIND DATA (005/*)
      $              SOB(255),VSG(255),OB8(255),CF8(255)
       COMMON/IUBFFF/PQM(255),QQM(255),TQM(255),ZQM(255),WQM(255)
       COMMON/IUBFKK/KOUNT(499,18,2),KNTSAT(250:260),KNTMODIS(783:785),
-     $ KNTavhrr(3:224),KNTviirs(224:225),IFLSAT
+     $ KNTavhrr(3:224),KNTviirs(224:225),IFLSAT,knts16(270:274)
       COMMON/IUBFLL/Q81(255),Q82(255)
  
       CHARACTER*80 HDSTR,LVSTR,QMSTR,RCSTR
@@ -5273,6 +5288,8 @@ C       only for input data dump files prior to Dec 2000 where report
 C       id has not yet been constructed (these no longer need to be
 C       updated for new satellites, etc. - after Dec 2000 this is
 C       handled in BUFR_DUPSAT)
+C       (Note 1: GOES-16 & up do not construct a report id - it is
+C                hardwired to "--------")
 C=======================================================================
 
       DATA CSAT
@@ -5340,7 +5357,7 @@ C  defined a bit further below
 
 C=======================================================================
 C Note: ISWDL below is valid for all input data dump files regardless
-C       of their date
+C       of their date (Note: it is not used for GOES-16 & up)
 C=======================================================================
 
       DATA ISWDL / ! cloud top/deep-layer indicator for winds generated
@@ -5351,6 +5368,15 @@ C -> Wind type:
 C         IR(LW,SW)  VISIBLE   WV-CLTOP  PTRIPLET  WV-DPLYR  N/A
 C         ---------  --------  --------  --------  --------  ---
      $          2 ,       2 ,       2 ,    99999,       1 ,  2* 99999 /
+
+
+C=======================================================================
+C Note: IPRD16 below is valid only for GOES-16 & up satellite wind
+C       reports
+C=======================================================================
+      integer iprd16(30:39)
+      data iprd16 /16,18,17,99999,18,4*99999,19/
+
 
 C=======================================================================
 
@@ -5381,7 +5407,17 @@ C  ---------------------------------------------------------------------
 C  PUT THE HEADER INFORMATION INTO UNPACKED FORMAT
 C  -----------------------------------------------
  
-      CALL UFBINT(LUNIT,HDR_8,20,1,IRET,HDSTR);HDR(2:)=HDR_8(2:)
+      if(subset(6:7).eq.'03')  then
+
+C  GOES-16 & up (in subsets NC00503x) do not construct a report id and
+C   they have high-res lat/lon
+C  -------------------------------------------------------------------
+         call ufbint(lunit,hdr_8,20,1,iret,
+     $              'NUL CLONH CLATH HOUR MINU SAID');hdr(2:)=hdr_8(2:)
+      else
+         CALL UFBINT(LUNIT,HDR_8,20,1,IRET,HDSTR);HDR(2:)=HDR_8(2:)
+      end if
+
       CALL UFBINT(LUNIT,RCT_8, 5,1,NRCT,RCSTR);RCT=RCT_8
       obs8_8(1) = hdr_8(3)
       obs8_8(2) = hdr_8(2)
@@ -5443,7 +5479,24 @@ C   =19 - HIGH-DENSITY IR (SHORT-WAVE) IMAGER AUTOMATED WINDS
 
       ITP = IMISS
 
-      IF(SID(8:8).LT.'A'.OR.SID(8:8).GT.'Z')  THEN
+      if(subset(6:7).eq.'03')  then
+
+C***********************************************************************
+C  GOES-16 & up (in subsets NC00503x) (which do not construct a report
+C   id) store instrument (product) type as well as cloud top/deep layer
+C   indicator based on last 2 digits of subset; satwind producer
+C   indicator is hardwired as "1" (USA/NOAA/NESDIS);  report id is
+C   hardwired as "--------" since it does not exist
+C***********************************************************************
+
+         rsv1(1:1) = "1"
+         rsv1(3:3) = "2"
+         sid = "--------"
+         read(subset(7:8),'(I2)') isubset78
+         itp = iprd16(isubset78)
+         if(subset(7:8).eq.'31') rsv1(3:3) = "1"
+
+      ELSE IF(SID(8:8).LT.'A'.OR.SID(8:8).GT.'Z')  THEN
 
 C***********************************************************************
 C  IF THE EIGHTH CHARACTER OF THE INPUT STN. ID IS NOT "A" - "Z", THEN
@@ -5748,10 +5801,10 @@ C            = 3 -- Histogram height assignment
 C            = 4 -- H2O intercept height assignment
 C            = 5 -- CO2 slicing height assignment
 C            = 6 -- Original (primary height assignment)
-C   Note: JTP = 1 always for non-GOES, or non-NESDIS GTS, or
-C                 non-MODIS/AVHRR/VIIRS wind types
+C   Note: JTP = 1 always for GOES-16 & up, or non-GOES, or non-NESDIS
+C                 GTS, or non-MODIS/AVHRR/VIIRS wind types
 
-      IF(IRET.EQ.1)  THEN
+      IF(IRET.EQ.1 .or. subset(6:7).eq.'03')  THEN
          JTP = 1
       ELSE
          JTP = 1  ! Here hardwired to be final for GOES, and NESDIS
@@ -5784,7 +5837,14 @@ C  --------------------------------------
       END IF
       QMELV = XMISS
 
-      CALL UFBINT(LUNIT,ARR_8,10,1,IRET,LVSTR);ARR=ARR_8
+      if(subset(6:7).eq.'03')  THEN
+
+C  GOES-16 & up (in subsets NC00503x) store TMDBST rather than TMDB
+C  ----------------------------------------------------------------
+         call ufbint(lunit,arr_8,10,1,iret,'TMDP TMDBST CCST');arr=arr_8
+      else
+         CALL UFBINT(LUNIT,ARR_8,10,1,IRET,LVSTR);ARR=ARR_8
+      end if
 
       QOB(1) = BMISS
       IF(MAX(ARR(1),ARR(2),POB(1)).LT.BMISS)  THEN
@@ -5802,7 +5862,10 @@ C  ----------------------------------------------------------------
       IF(ARR(2).LT.BMISS)  THEN
          ITMP = NINT(ARR(2)*100.)        ! From NESDIS binary FMT &
          TOB(1) = NINT((ITMP-27315)*0.1) !  foreign pre-V10 BUFR,
-                                         !  temp in "TMDB"
+                                         !  temp in "TMDB";
+                                         ! From NESDIS BUFR Fmt
+                                         !  GOES-16 & up,
+                                         !  temp in "TMDBST"
 
       ELSE  IF(ARR(3).LT.BMISS)  THEN
          ITMP = NINT(ARR(3)*100.)        ! From NESDIS BUFR Fmt &
@@ -5826,10 +5889,10 @@ C            = 2 -- First guess
 C            = 3 -- Original
 C            = 4 -- Image 1 to 2
 C            = 5 -- Image 2 to 3
-C   Note: KTP = 1 always for non-GOES, or non-NESDIS GTS, or
-C                 non-MODIS/AVHRR/VIIRS wind types
+C   Note: KTP = 1 always for GOES-16 & up, or non-GOES, or non-NESDIS
+C                 GTS, or non-MODIS/AVHRR/VIIRS wind types
 
-      IF(IRET.EQ.1)  THEN
+      IF(IRET.EQ.1 .or. subset(6:7).eq.'03')  THEN
          KTP = 1
       ELSE
          KTP = 1  ! Here hardwired to be final for GOES, and NESDIS
@@ -5859,6 +5922,7 @@ CVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
       QC_RFF        = BMISS
       EE            = BMISS
       QC_EE         = BMISS
+      QI_without_common = bmiss
 
       IF((SUBSET(7:8).GE.'10'.AND.SUBSET(7:8).LE.'12') .OR.
      $   SUBSET(7:8).EQ.'14'                           .OR.
@@ -5893,7 +5957,8 @@ ccccccccc               !  than or equal to this - flag
             LIMqc =   3 ! if Manual/automatic q.c. indicator greater
                         !  than or equal to this - flag
          ELSE IF(SUBSET(7:8).GE.'15'.AND.SUBSET(7:8).LE.'18') THEN
-                                                             !GOES-GTS
+                                                             ! GOES-15 &
+                                                             ! down-GTS
             INDX  =   5
             IVARS =   2 ! number of variables w/ quality info
             IOFF  =   1
@@ -5905,8 +5970,9 @@ ccccccccc               !  than or equal to this - flag
                         !  than or equal to this - flag
          ELSE IF((SUBSET(7:8).GE.'10'.AND.SUBSET(7:8).LE.'12')  .OR.
      $           (SUBSET(7:8).EQ.'14') .OR. (SUBSET(7:8).EQ.'19')) THEN
-                                                             !GOES-V10
-                                                             !  (server)
+                                                             ! GOES-15 &
+                                                             ! down-V10
+                                                             ! (server)
             INDX  =   5
             IVARS =   2 ! number of variables w/ quality info
             IOFF  =   1
@@ -6093,6 +6159,37 @@ cpppppppppp
 cc       if(wqm(1).lt.13)print'(" SID, QI_with, QC_QI_with = "A,
 cc   $    2(1X,I0))', sid,nint(QI_with),nint(QC_QI_with)
 cpppppppppp
+
+      else if(subset(6:7).GE.'03') then
+
+C  GOES-16 & up (in subsets NC00503x) store GNAP & PCCF in a standard 4
+C   replication sequence, not associated with any particular variable
+C  --------------------------------------------------------------------
+
+C  ... first make sure originating/generating center is NESDIS (160)
+C      -------------------------------------------------------------
+         call ufbint(lunit,ufbint_8,1,1,iret,'OGCE');ogce=ufbint_8
+
+         if(ogce.eq.160) then
+            call ufbrep(lunit,pccf_8, 2,12,iret_pccf,'GNAP PCCF')
+            pccf = pccf_8
+            if(iret_pccf.gt.0) then
+               do iii = 1, iret_pccf
+                  if(pccf(1,iii).eq.5) then
+! Note: Need new Cat. 8 code figure to store this, missing as of 3/28/18
+                     QI_without_common = pccf(2,iii)
+                  else if(pccf(1,iii).eq.1) then
+                     QI_without = pccf(2,iii)
+                  else if(pccf(1,iii).eq.3) then
+                     QI_with = pccf(2,iii)
+                  else if(pccf(1,iii).eq.4) then
+                     EE = pccf(2,iii)
+                  else if(pccf(1,iii).eq.2) then
+                     RFF = pccf(2,iii) ! not available as of 3/28/18
+                  end if
+               end do
+            end if
+         end if
       END IF
 CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
@@ -6115,7 +6212,8 @@ C  --------------------------------------------------------------
 
       CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'RFFL');RFFL=UFBINT_8
       IF(RFFL.GE.BMISS) RFFL = RFF  ! RFFL missing for all types except
-                                    !  NESDIS GOES winds from server
+                                    ! pre-V10 BUFR NESDIS GOES-15 & down
+                                    ! winds from server
       IF(RFFL.LT.BMISS) THEN
          OB8(1) = NINT(RFFL)
          CF8(1) = 355
@@ -6130,9 +6228,10 @@ C  --------------------------------------------------------------
 
       CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'QIFY');QIFY=UFBINT_8
       IF(QIFY.GE.BMISS) QIFY = QI_with ! QIFY missing for all types
-                                       ! except NESDIS GOES winds from
-                                       ! server and possibly MODIS
-                                       ! winds from server
+                                       ! except pre-V10 BUFR NESDIS
+                                       ! GOES-15 & down winds from
+                                       ! server and possibly MODIS winds
+                                       ! from server
       IF(QIFY.LT.BMISS) THEN
          OB8(1) = NINT(QIFY)
          CF8(1) = 356
@@ -6147,9 +6246,10 @@ C  --------------------------------------------------------------
 
       CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'QIFN');QIFN=UFBINT_8
       IF(QIFN.GE.BMISS) QIFN = QI_without ! QIFN missing for all types
-                                          ! except NESDIS GOES winds
-                                          ! from server and possibly
-                                          ! MODIS winds from server
+                                          ! except pre-V10 BUFR NESDIS
+                                          ! GOES-15 & down winds from
+                                          ! server and possibly MODIS
+                                          ! winds from server
       IF(QIFN.LT.BMISS) THEN
          OB8(1) = NINT(QIFN)
          CF8(1) = 357
@@ -6163,8 +6263,9 @@ C  -------------------------------------------------------------------
 
       CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'EEQF');EEQF=UFBINT_8
       IF(EEQF.GE.BMISS) EEQF = EE ! EEQF missing for all types except
-                                  ! NESDIS GOES winds from server and
-                                  ! possibly MODIS winds from server
+                                  ! pre-V10 BUFR NESDIS GOES-15 & down
+                                  ! winds from server and ossibly MODIS
+                                  ! winds from server
       IF(EEQF.LT.BMISS) THEN
          OB8(1) = NINT(EEQF)
          CF8(1) = 358
@@ -6177,8 +6278,8 @@ C  -------------------------------------------------------------------
 
       IF(SUBSET(7:8).LT.'21') THEN
 
-C  KEEP TRACK OF NESDIS GOES SATELLITE WIND COUNTS BY SATELLITE ID
-C  ---------------------------------------------------------------
+C  KEEP TRACK OF NESDIS GOES-15 & DOWN SATELLITE WIND COUNTS BY SAT. ID
+C  --------------------------------------------------------------------
 
          IF(IDS.LT.IMISS)  THEN
             IF(IDS.GT.249.AND.IDS.LT.260)  THEN
@@ -6188,6 +6289,20 @@ C  ---------------------------------------------------------------
             END IF
          END IF
       END IF
+
+      if(subset(6:7).eq.'03') then
+
+C  KEEP TRACK OF NESDIS GOES-16 & UP SATELLITE WIND COUNTS BY SAT. ID
+C  ------------------------------------------------------------------
+
+         if(ids.lt.imiss)  then
+            if(ids.gt.269.and.ids.lt.274)  then
+               knts16(ids) = knts16(ids) + 1
+            else
+               knts16(274) = knts16(274) + 1
+            end if
+         end if
+      end if
 
       IF(SUBSET(7:8).EQ.'70'.OR.SUBSET(7:8).EQ.'71') THEN
 

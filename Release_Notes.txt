@@ -55,7 +55,7 @@ files:
    obsproc_prep/sorc/prepobs_prepanow.fd/makefile
    obsproc_prep/sorc/prepobs_prepanow.fd/prepanow.f
    obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
-   obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
    obsproc_prep/sorc/prepobs_prepdata.fd/makefile
    obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
@@ -123,6 +123,15 @@ files:
     - Updated to run on Dell-p3 (as well as Cray-XC40 and IBM iDataPlex).
 
  Source code and build changes (in sorc directory):
+   iw3unpbf.f:
+    - Added changes in function R06UBF to handle new GOES-16 & up satellite
+      winds which do not contain a report id (STNID) and have high-res
+      lat/lon (amongst other differences vs. GOES-15 & down). Report id
+      for GOES-16 & up is hardwired to "--------".
+      BENEFIT: Aviod garbage report id being generated for GOES-16 & up
+               satellite winds. print lat and lon to nearest 0.00001
+               degree for GOES-16 and up reports since these have high-res
+               lat/lon in their tanks.
    build.sh:
     - Updated to build codes on Dell-p3, Cray-XC40 or IBM iDataPlex.
    load_libs.rc:
