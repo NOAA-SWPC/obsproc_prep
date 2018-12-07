@@ -196,7 +196,7 @@ files:
 
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 obsproc_prep release 5.1.0 --> released Jul 30, 2018
-                           --> implemented Dec ??, 2018
+                           --> implemented Dec 04, 2018
 
 files added, modified or deleted since last release:
  M obsproc_prep/fix/prepobs_prep.bufrtable
