@@ -1020,7 +1020,7 @@ C  COMPUTE THE GEOSTROPHIC WIND ERROR FOR GETWER
 C  ---------------------------------------------
 
       TRPWER = PILNLNP(PRES,PMAND,TROPUV,21)
-      SRWW0  = SQRT(2.0*CHLP(IFIX(PRES)))
+      SRWW0  = SQRT(2.0*CHLP(MAX(IFIX(PRES),1)))
       IF(SLAT.EQ.0.) ALPHA = 0.
       IF(SLAT.NE.0.) ALPHA  = GRAV/(2.*OMEGA*SIN(ABS(SLAT)*PI180)*RADE)
       IY = ABS(SLAT)+1.5
@@ -4064,7 +4064,11 @@ C  STORE THE ERRORS IN THEIR RIGHTFUL PLACE
 C  ----------------------------------------
 
       IF(ZERA.EQ.0 .OR. ZERB.EQ.0. .OR. WERR.EQ.0.) THEN
-         PRINT *, 'STOERR - FORECAST ERROR IS ZERO'
+         print*,'zera=',zera
+         print*,'zerb=',zerb
+         print*,'werr=',werr
+         print*,'ddprs,ddpra,ddprb',ddprs,ddpra,ddprb
+         PRINT *,'STOERR - FORECAST ERROR IS ZERO'
          CALL W3TAGE('PREPOBS_OIQCBUFR')
          CALL ERREXIT(99)
       ENDIF
