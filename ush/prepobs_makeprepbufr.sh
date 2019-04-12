@@ -2160,8 +2160,6 @@ set -x
       multi=0
       if [ "$sys_tp" = Cray-XC40 -o "$SITE" = SURGE -o "$SITE" = LUNA ]; then
          aprun -n 1 -N 1 ksh $DATA/MP_PREPDATA $multi
-      elif [ "$sys_tp" = Dell-p3 -o "$SITE" = VENUS -o "$SITE" = MARS ]; then
-         mpirun -n 1 $DATA/MP_PREPDATA $multi
       else
          $DATA/MP_PREPDATA $multi
       fi
