@@ -393,7 +393,7 @@
 #                   "/gpfstmp/wx22dk/test_dump/ndas.20060612/ndas.t12z." -
 #                   (if tstsp is not imported, the default is used and no
 #                   overriding file would exist; if tstsp is imported then any
-#                   file found would override the correspoding file in $COMSP)
+#                   file found would override the corresponding file in $COMSP)
 #                   Default is "/tmp/null/"
 #     tmmark      - string indicating hour for center PREPBUFR processing date/
 #                   time relative to the analysis time embedded in $tstsp or
