@@ -71,6 +71,7 @@ C 2013-03-26  D. KEYSER   FINAL CHANGES TO RUN ON WCOSS
 C 2013-06-19  J. WOOLLEN  FIX SUBR. SYNCNDD TO PREVENT HANGUP IN
 C         RECEIVE BY A PROCESSOR WHEN THERE IS VERY LITTLE DATA OF A
 C         CERTAIN TYPE
+C 2019-06-20  S. Melchior Explicit declartion of bmiss in subr. STORE
 C
 C USAGE:
 C   INPUT FILES:
@@ -195,10 +196,10 @@ C-----------------------------------------------------------------------
       print*
       print*,'nprocs = ',nprc
       print*
-      CALL W3TAGB('PREPOBS_OIQCBUFR',2013,0170,0088,'NP22')
+      CALL W3TAGB('PREPOBS_OIQCBUFR',2019,0171,0088,'NP22')
       print*
       print*
-      print*, '--> WELCOME TO PREPOBS_OIQCBUFR - VERSION 06-19-2013'
+      print*, '--> WELCOME TO PREPOBS_OIQCBUFR - VERSION 06-20-2019'
       print*
       print*
       endif
@@ -4127,6 +4128,7 @@ C 1986-03-21  G. DIMEGO  - ORIGINAL AUTHOR
 C 1988-11-24  D. DEAVEN  - CODED FOR CYBER 205
 C 1990-11-06  J. WOOLLEN - MODIFIED COMMON /BUFFS/ FOR QCOI
 C 1992-07-28  J. WOOLLEN - MODIFIED FOR STORSTAR VERSION
+C 2019-06-20  S. MELCHIOR - Explicit declaration of bmiss
 C
 C USAGE:    CALL STORE(LUDAT,LUBFI)
 C   INPUT ARGUMENT LIST:

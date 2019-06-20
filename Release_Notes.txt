@@ -140,7 +140,7 @@ files:
  Special Instructions:
  ---------------------
    This is part of OBSPROC.v11.4.0.
-   This can also be implemented prior to, but no later than, the sdmedit
+   This can also be implemented prior to, but no later than, the sdmedit.v3.0.0
    upgrade to port to Dell-p3.
    This can be installed on all WCOSS systems (IBM iDataPlex, Cray-XC40, Dell-p3).
 
