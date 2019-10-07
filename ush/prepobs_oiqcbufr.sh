@@ -88,6 +88,8 @@ echo sys_tp is set to: $sys_tp
 if [ "$sys_tp" = "Cray-XC40" -o "$SITE" = "SURGE" -o "$SITE" = "LUNA" ]; then
    launcher_OIQCX=${launcher_OIQCX:-"aprun -n 16 -N 16 -j 1"}  # consistent with tide/gyre
 #  launcher_OIQCX=${launcher_OIQCX:-"aprun -n 24 -N 24 -j 1"}  # slightly faster
+elif [ "$sys_tp" = Dell-p3 -o "$SITE" = VENUS -o "$SITE" = MARS ]; then
+   launcher_OIQCX=${launcher_OIQCX:-mpirun}
 else
    launcher_OIQCX=${launcher_OIQCX:-"mpirun.lsf"}
 #########################module load ibmpe ics lsf uncomment if not in profile

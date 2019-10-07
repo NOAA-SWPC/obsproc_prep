@@ -109,7 +109,7 @@ files:
  Libraries:
  ----------
    w3nco   2.0.6 (all)
-   bufr   11.2.0 (all) (11.1.0 Cray-XC40 and IBM iDataPlex)
+   bufr   11.3.0 (all) (11.1.0 Cray-XC40 and IBM iDataPlex)
    w3emc   2.3.0 (prepobs_cqcbufr, prepobs_prepacpf, prepobs_prepacqc,
                   prepobs_prepdata, prepobs_prevents, syndat_syndata)
    bacio   2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
