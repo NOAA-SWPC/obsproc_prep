@@ -705,9 +705,12 @@
 #                   script and GETGES driver script.
 #                   Default is $HOMEobsproc_prep/ush.
 #
-#     GETGESprep    GETGES utility script. If NEMSIO_IN=.true.,  defaults to:
-#                       $USHGETGES/getges.sh (and is executed by
-#                                             $GETGESprep_driver, see below)
+#     GETGESprep    GETGES utility script. 
+#                   If NETCDF_IN=.true.,  defaults to:
+#                       $USHGETGES/getges_nc.sh
+#                   If NEMSIO_IN=.true.,  defaults to:
+#                       $USHGETGES/getges.sh 
+#                     (either option above is executed by $GETGESprep_driver, see below)
 #                   otherwise, defaults to:
 #                       $USHGETGES/getges_sig.sh
 #
