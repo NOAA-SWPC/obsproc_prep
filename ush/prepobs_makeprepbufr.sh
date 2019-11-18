@@ -357,6 +357,9 @@
 #     NEMSIO_IN     Flag that if ".true." indicates that nemsio atmospheric 
 #                   background fields will be input rather than sigio.
 #                   Default is ""
+#     NETCDF_IN     Flag that if ".true." indicates that netcdf atmospheric
+#                   background fields will be input rather than sigio or nemsio
+#                   Default is ""
 #     SENDDBN       String indicating whether or not to alert an output file to
 #                   the NWS/TOC (= "YES" - invoke alert; anything else - do not
 #                   invoke alert)
@@ -857,6 +860,7 @@
 set -aux
 
 NEMSIO_IN=${NEMSIO_IN:=""}
+NETCDF_IN=${NETCDF_IN:=""}
 jlogfile=${jlogfile:=""}
 SENDDBN=${SENDDBN:-NO}
 
@@ -976,7 +980,7 @@ envir_getges=${envir_getges:-$envir}
 if [ $NET = cfs ]; then 
    network_getges=${network_getges:-"cfs-cdas"}
 else
-  if [ $modhr -eq 0 -o "$NEMSIO_IN" = .true. ]; then
+  if [ $modhr -eq 0 -o "$NEMSIO_IN" = .true. -o "$NETCDF_IN" = .true. ]; then
      network_getges=${network_getges:-global}
   else
      network_getges=${network_getges:-gfs}
@@ -1075,6 +1079,9 @@ if [ "$GETGUESS" = 'YES' ]; then
    if [ "$NEMSIO_IN" = .true. ]; then
       GETGESprep_driver=${GETGESprep_driver:-$USHGETGES/getges_driver.sh}
       GETGESprep=${GETGESprep:-$USHGETGES/getges.sh}
+   elif [ "$NETCDF_IN" = .true. ]; then
+      GETGESprep_driver=${GETGESprep_driver:-$USHGETGES/getges_driver.sh}
+      GETGESprep=${GETGESprep:-$USHGETGES/getges_nc.sh}
    else
       GETGESprep=${GETGESprep:-$USHGETGES/getges_sig.sh}
    fi
@@ -1192,7 +1199,7 @@ if [ "$RELOCATION_HAS_RUN" != 'YES' -a "$GETGUESS" != 'NO' ]; then
 
    if [ "$RUN" = 'gfs' -o "$RUN" = 'gdas' ]; then
       for ihr in -3 +3 ;do
-         if [ "$NEMSIO_IN" = .true. ]; then 
+         if [ "$NEMSIO_IN" = .true. -o "$NETCDF_IN" = .true. ]; then 
            if [ $ihr = "-3" ] ; then
               sges=sgm3prep
               stype=natgm3
@@ -1224,7 +1231,7 @@ echo "                     PREPBUFR processing date/time"
 echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
             echo
             set -x
-            if [ "$NEMSIO_IN" = .true. ]; then
+            if [ "$NEMSIO_IN" = .true. -o "$NETCDF_IN" = .true. ]; then
                $GETGESprep_driver
                errges=$?
             else
@@ -1268,9 +1275,9 @@ elif [ "$RELOCATION_HAS_RUN" = 'YES' ]; then
    for file in sgm3prep sgesprep sgp3prep tcvitals.relocate.$tmmark; do
       case $file in
         tcvitals.relocate.$tmmark) infile=$file; qual_last="";; #  already has $tmmark at end
-        sgm3prep) if [ "$NEMSIO_IN" = .true. ];then infile=atmgm3.nemsio;else infile=$file;fi;;
-        sgesprep) if [ "$NEMSIO_IN" = .true. ];then infile=atmges.nemsio;else infile=$file;fi;;
-        sgp3prep) if [ "$NEMSIO_IN" = .true. ];then infile=atmgp3.nemsio;else infile=$file;fi;;
+        sgm3prep) if [ "$NEMSIO_IN" = .true. ];then infile=atmgm3.nemsio;elif [ "$NETCDF_IN" = .true. ];then infile=atmgm3.nc;else infile=$file;fi;;
+        sgesprep) if [ "$NEMSIO_IN" = .true. ];then infile=atmges.nemsio;elif [ "$NETCDF_IN" = .true. ];then infile=atmges.nc;else infile=$file;fi;;
+        sgp3prep) if [ "$NEMSIO_IN" = .true. ];then infile=atmgp3.nemsio;elif [ "$NETCDF_IN" = .true. ];then infile=atmgp3.nc;else infile=$file;fi;;
       esac
       if [ -s ${tstsp}${infile}${qual_last} ]; then
          cp ${tstsp}${infile}${qual_last} $file
@@ -1414,14 +1421,14 @@ if [ "$PREPDATA" = 'YES' -o "$SYNDATA" = 'YES' -o "$PREVENTS" = 'YES' ]; then
       for sfx in "" A; do
          if [ ! -s sgesprep${sfx} ]; then
             fhr=any
-            if [ "$NEMSIO_IN" = .true. ]; then 
+            if [ "$NEMSIO_IN" = .true. -o "$NETCDF_IN" = .true. ]; then 
                dhr=0
                stype=natges
             else
                dhr=`expr 0 - $modhr`
                stype=sigges
             fi
-            if [ $modhr -eq 0 -o "$NEMSIO_IN" = .true. ]; then
+            if [ $modhr -eq 0 -o "$NEMSIO_IN" = .true. -o "$NETCDF_IN" = .true. ]; then
                [ "$sfx" = 'A' ]  &&  break
                set +x
                echo
@@ -1458,7 +1465,7 @@ echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
                echo
                set -x
             fi
-            if [ "$NEMSIO_IN" = .true. ]; then
+            if [ "$NEMSIO_IN" = .true. -o "$NETCDF_IN" = .true. ]; then
                $GETGESprep_driver
                errges=$?
             else
@@ -1472,11 +1479,13 @@ echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 #   PREPBUFR processing date/time is a multiple of 3-hrs or if global guess is
 #   nemsio-based, otherwise continue running but set GETGUESS=NO meaning a
 #   first guess will NOT be encoded in PREPBUFR file
-               if [ $modhr -eq 0  -o "$NEMSIO_IN" = .true. ]; then
+               if [ $modhr -eq 0  -o "$NEMSIO_IN" = .true. -o "$NETCDF_IN" = .true. ]; then
                   if [ "$NEMSIO_IN" = .true. ]; then
                      set +x
                      echo
 echo "problem obtaining global nemsio-based guess;"
+                  elif [ "$NETCDF_IN" = .true. ]; then
+echo "problem obtaining global netCDF-based guess;"
                   else
                      set +x
                      echo
@@ -1536,6 +1545,8 @@ echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
                [ $RUN = gfs -o $RUN = gdas ]  &&  qual_last=""
                if [ "$NEMSIO_IN" = .true. ]; then 
                   gesbase="atmges.nemsio"
+                elif [ "$NETCDF_IN" = .true. ]; then
+                  gesbase="atmges.nc"
                 else
                   gesbase="sgesprep"
                fi
