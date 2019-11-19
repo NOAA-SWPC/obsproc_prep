@@ -62,19 +62,6 @@ source ./load_libs.rc  # use modules to set library related environment variable
 
 module list
 
-##TEST
-export W3EMC_PATH=/gpfs/dell2/emc/modeling/noscrub/emc.glopara/git/obsproc/netcdf/w3emc/w3emc/v2.3.0
-export W3EMC_INC=$W3EMC_PATH/include
-export W3EMC_LIB=$W3EMC_PATH
-export W3EMC_INC4=$W3EMC_INC/w3emc_v2.3.0_4
-export W3EMC_INC8=$W3EMC_INC/w3emc_v2.3.0_8
-export W3EMC_INCd=$W3EMC_INC/w3emc_v2.3.0_d
-export W3EMC_LIB4=$W3EMC_LIB/libw3emc_v2.3.0_4.a
-export W3EMC_LIB8=$W3EMC_LIB/libw3emc_v2.3.0_8.a
-export W3EMC_LIBd=$W3EMC_LIB/libw3emc_v2.3.0_d.a
-export W3EMC_VER="v2.3.0"
-##TEST
-
 if [ $# -eq 0 ]; then
   dir_list=*.fd
 else
