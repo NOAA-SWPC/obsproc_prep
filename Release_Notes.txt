@@ -75,7 +75,7 @@ files:
    obsproc_prep/sorc/build.sh
    obsproc_prep/sorc/clean.sh
    obsproc_prep/sorc/install.sh
-   obsproc_prep/sorc/load_libs.rc
+ M obsproc_prep/sorc/load_libs.rc
    obsproc_prep/sorc/README.build
    obsproc_prep/sorc/setlibs.rc
    obsproc_prep/ush/prepobs_cqcbufr.sh
@@ -84,8 +84,8 @@ files:
    obsproc_prep/ush/getges.sh
    obsproc_prep/ush/getges_sig.sh
    obsproc_prep/ush/prepobs_glerladj.sh
-   obsproc_prep/ush/prepobs_makeprepbufr.sh
-   obsproc_prep/ush/prepobs_oiqcbufr.sh
+ M obsproc_prep/ush/prepobs_makeprepbufr.sh
+ M obsproc_prep/ush/prepobs_oiqcbufr.sh
    obsproc_prep/ush/prepobs_prepacqc.sh
    obsproc_prep/ush/prepobs_prevents.sh
    obsproc_prep/ush/prepobs_profcqc.sh
@@ -93,7 +93,16 @@ files:
 ( A - added,  M - modified, D - deleted)
 
 
+ USH script changes:
+   prepobs_oiqcbufr.sh:
+    - Updated to run on Dell-p3 (as well as Cray-XC40 and IBM iDataPlex).
+   prepobs_makeprepbufr.sh:
+    - corrected tank paths in comments to reflect Dell-ph3.
+  
+
  Source code and build changes (in sorc directory):
+   load_libs.rc
+    - Moving to bufrlib.v11.3.0.
    prepobs_oiqcbufr.fd/oiqcbufr.f:
     - Added change in subroutine STORE to explicitly set bmiss=10e10 and 
       pass that value into BUFRLIB subroutine setbmiss.
@@ -139,9 +148,11 @@ files:
 
  Special Instructions:
  ---------------------
-   This is part of OBSPROC.v11.4.0.
-   This can also be implemented prior to, but no later than, the sdmedit.v3.0.0
-   upgrade to port to Dell-p3.
+   This is part of OBSPROC.v11.4.0 and OBSPROC.v12.0.0.
+   This can also be implemented prior to, but no later than, the following
+   upgrades to port to Dell-p3:
+    - sdmedit.v3.0.0
+    - obsproc_cdas.v2.5.0
    This can be installed on all WCOSS systems (IBM iDataPlex, Cray-XC40, Dell-p3).
 
    Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
