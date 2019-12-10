@@ -638,8 +638,8 @@
 #                   "$HOMEobsproc_network/fix/prepobs_oiqc.oberrs"
 #     TANK          String indicating path to directory containing daily lake
 #                   average temperature files (invoked only if GLERLBUFR=YES)
-#                   Default is "$DCOMROOT/us007003", where default for $DCOMROOT
-#                   is "/dcom"
+#                   Default is "$DCOMROOT/prod", where default for $DCOMROOT
+#                   is "/gpfs/dell1/nco/ops/dcom"
 #
 #     These do not have to be exported to this script.  If they are, they will
 #      be used by the script.  If they are not, they will be skipped
@@ -832,7 +832,7 @@
 #          PREPOBS_GLERLADJ     - executable: $GLRX
 #                                 dictionary: $GLRD
 #                                 lake temperatures:
-#                          $DCOMROOT/us007003/<yyyymmdd>/wtxtbul/glsea-temps.dat
+#                          $DCOMROOT/prod/<yyyymmdd>/wtxtbul/glsea-temps.dat
 #          PREPOBS_PREVENTS     - executable: $PREX
 #                                 obs. error table: $PRVT
 #                                 data cards: $PREC

@@ -1,6 +1,6 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-obsproc_prep release 5.2.0 --> released Aug 31, 2018
-                           --> implemented Jun 12, 2019
+obsproc_prep release 5.2.1 --> released Jun 20, 2019
+                           --> implemented Dec 03, 2019
 
 files:
    obsproc_prep/fix/glerldict.lmd
@@ -33,7 +33,7 @@ files:
    obsproc_prep/sorc/prepobs_mpcopybufr.fd/makefile
    obsproc_prep/sorc/prepobs_mpcopybufr.fd/mpcopybufr.f90
    obsproc_prep/sorc/prepobs_oiqcbufr.fd/makefile
-   obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
+ M obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
    obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
    obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
    obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
@@ -55,7 +55,7 @@ files:
    obsproc_prep/sorc/prepobs_prepanow.fd/makefile
    obsproc_prep/sorc/prepobs_prepanow.fd/prepanow.f
    obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
- M obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
    obsproc_prep/sorc/prepobs_prepdata.fd/makefile
    obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
@@ -72,7 +72,7 @@ files:
    obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
    obsproc_prep/sorc/syndat_syndata.fd/makefile
    obsproc_prep/sorc/syndat_syndata.fd/syndata.f
- M obsproc_prep/sorc/build.sh
+   obsproc_prep/sorc/build.sh
    obsproc_prep/sorc/clean.sh
    obsproc_prep/sorc/install.sh
  M obsproc_prep/sorc/load_libs.rc
@@ -80,16 +80,95 @@ files:
    obsproc_prep/sorc/setlibs.rc
    obsproc_prep/ush/prepobs_cqcbufr.sh
    obsproc_prep/ush/prepobs_cqcvad.sh
- A obsproc_prep/ush/getges_driver.sh
- M obsproc_prep/ush/getges.sh
+   obsproc_prep/ush/getges_driver.sh
+   obsproc_prep/ush/getges.sh
    obsproc_prep/ush/getges_sig.sh
    obsproc_prep/ush/prepobs_glerladj.sh
  M obsproc_prep/ush/prepobs_makeprepbufr.sh
-   obsproc_prep/ush/prepobs_oiqcbufr.sh
+ M obsproc_prep/ush/prepobs_oiqcbufr.sh
    obsproc_prep/ush/prepobs_prepacqc.sh
    obsproc_prep/ush/prepobs_prevents.sh
    obsproc_prep/ush/prepobs_profcqc.sh
    obsproc_prep/ush/prepobs_syndata.sh
+( A - added,  M - modified, D - deleted)
+
+
+ USH script changes:
+   prepobs_oiqcbufr.sh:
+    - Updated to run on Dell-p3 (as well as Cray-XC40 and IBM iDataPlex).
+   prepobs_makeprepbufr.sh:
+    - corrected tank paths in comments to reflect Dell-ph3.
+  
+
+ Source code and build changes (in sorc directory):
+   load_libs.rc
+    - Moving to bufrlib.v11.3.0.
+   prepobs_oiqcbufr.fd/oiqcbufr.f:
+    - Added change in subroutine STORE to explicitly set bmiss=10e10 and 
+      pass that value into BUFRLIB subroutine setbmiss.
+      BENEFIT: Providing this explicit setting allows sdmedit to function
+               properly on Dell-ph3.
+
+ Output changes:
+ ---------------
+  (For specific network changes see " Output changes" in Release Notes for that
+   network, if that network executes this version of obsproc_prep.)
+
+
+ Libraries:
+ ----------
+   w3nco   2.0.6 (all)
+   bufr   11.3.0 (all) (11.1.0 Cray-XC40 and IBM iDataPlex)
+   w3emc   2.3.0 (prepobs_cqcbufr, prepobs_prepacpf, prepobs_prepacqc,
+                  prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   bacio   2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   sp      2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   sigio   2.1.0 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+           2.0.1 (Cray-XC40 and IBM iDataPlex)
+   nemsio  2.2.3 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+           2.2.2 (Cray-XC40 and IBM iDataPlex)
+
+
+ Build Instructions:
+ -------------------
+   - See sorc/README.build
+
+
+ Preimplementation Testing Requirements:
+ ---------------------------------------
+   There are no jobs in obsproc_prep.  Jobs executing this version of
+   obsproc_prep will be tested.
+
+
+ Dissemination:
+ --------------
+   See information about dissemination in the release notes for
+   obsproc_<NETWORK> packages which execute this version of obsproc_prep.
+
+
+ Special Instructions:
+ ---------------------
+   This is part of OBSPROC.v11.4.0 and OBSPROC.v12.0.0.
+   This can also be implemented prior to, but no later than, the following
+   upgrades to port to Dell-p3:
+    - sdmedit.v3.0.0
+    - obsproc_cdas.v2.5.0
+   This can be installed on all WCOSS systems (IBM iDataPlex, Cray-XC40, Dell-p3).
+
+   Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
+   needed.
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+obsproc_prep release 5.2.0 --> released Aug 31, 2018
+                           --> implemented Jun 12, 2019
+
+files:
+ M obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+ M obsproc_prep/sorc/build.sh
+ M obsproc_prep/sorc/load_libs.rc
+ A obsproc_prep/ush/getges_driver.sh
+ M obsproc_prep/ush/getges.sh
+ M obsproc_prep/ush/prepobs_makeprepbufr.sh
 ( A - added,  M - modified, D - deleted)
 
 
