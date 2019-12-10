@@ -1,6 +1,6 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 obsproc_prep release 5.2.1 --> released Jun 20, 2019
-                           --> implemented ??? ??, 2019
+                           --> implemented Dec 03, 2019
 
 files:
    obsproc_prep/fix/glerldict.lmd
