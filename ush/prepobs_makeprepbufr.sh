@@ -278,6 +278,8 @@
 #        BENEFIT: Only one version of the file needs to be maintained.
 # 2018-08-16  S. Melchior -- Modified to run on Dell-p3 as well as Cray-XC40
 #        and IBM iDataPlex.
+# 2020-02-26  S. Melchior -- removed references to $NWROOTp1; no longer relevant
+#        with the decommissioning of IBM ph1/ph2.
 # 
 #
 #
@@ -450,7 +452,7 @@
 #                   Default is "${HOMEobsproc_prep}/fix"
 #     DICTPREP      String indicating directory path for PREPOBS dictionary
 #                   files
-#                   Default is "${NWROOTp1}/decoders/decod_shared/dictionaries"
+#                   Default is "${NWROOT}/decoders/decod_shared/dictionaries"
 #     EXECSYND      String indicating directory path for SYNTHETIC data
 #                   executables
 #                   Default is "${HOMEobsproc_prep}/exec"
@@ -1070,7 +1072,7 @@ USHOIQC=${USHOIQC:-${HOMEobsproc_prep}/ush}
 EXECPREP=${EXECPREP:-${HOMEobsproc_prep}/exec}
 PARMPREP=${PARMPREP:-${HOMEobsproc_network}/parm}
 FIXPREP=${FIXPREP:-${HOMEobsproc_prep}/fix}
-DICTPREP=${DICTPREP:-${NWROOTp1}/decoders/decod_shared/dictionaries}
+DICTPREP=${DICTPREP:-${NWROOT}/decoders/decod_shared/dictionaries}
 
 EXECSYND=${EXECSYND:-${HOMEobsproc_prep}/exec}
 PARMSYND=${PARMSYND:-${HOMEobsproc_network}/parm}
