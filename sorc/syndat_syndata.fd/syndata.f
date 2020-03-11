@@ -1,7 +1,7 @@
 C$$$  MAIN PROGRAM DOCUMENTATION BLOCK
 C
 C MAIN PROGRAM: SYNDAT_SYNDATA
-C   PRGMMR: KEYSER           ORG: NP22        DATE: 2017-04-03
+C   PRGMMR: DONG             ORG: NP22        DATE: 2020-01-09
 C
 C ABSTRACT: PERFORMS FOUR DISTINCT FUNCTIONS.  THE FIRST IS TO
 C   GENERATE TYPE 110/210 TROPICAL CYCLONE BOGUS REPORTS IN THE
@@ -199,6 +199,9 @@ C        BENEFIT: Prevents array overflow (and program termination when
 C                 debugging is turned on at run time). (These traps
 C                 should not be hit now since the limits for LDXDIM and
 C                 NDATMX have been now been greatly increased).
+C 2020-01-09  J. Dong -- In subroutine EDTPRP, changed the windowing
+C        decade from 20 to 40 for cases when the year is represented
+C        by 2 digits instead of 4. 
 C
 C
 C USAGE:
@@ -544,7 +547,7 @@ C                    WIND ARE CREATED)
 
 C  PRESET AND UPDATE SOME OPTIONS AND READ IN DATE/TIME
 
-      CALL W3TAGB('SYNDAT_SYNDATA',2017,0093,1200,'NP22')
+      CALL W3TAGB('SYNDAT_SYNDATA',2020,0009,1200,'NP22')
 
       MWAVEZ   = MWAVE
       PTOPAZ   = PTOPAL
@@ -579,7 +582,7 @@ C  PRESET AND UPDATE SOME OPTIONS AND READ IN DATE/TIME
      6         20X,'****   MNIBOG=',L1,' RUNID=',A,9X,  '****'/
      7         20X,'*****************************************'/
      8         20X,'*****************************************'//
-     9         ' ===> VERSION -- 03 Apr 2017'//)
+     9         ' ===> VERSION -- 09 Jan 2020'//)
 
 C  On WCOSS should always set BUFRLIB missing (BMISS) to 10E8 to avoid
 C   overflow when either an INTEGER*4 variable is set to BMISS or a
@@ -28704,6 +28707,9 @@ C        WILL BE GENERATED EVEN THOUGH TYPE 110/220 BOGUS REPORTS ARE
 C        NOT (BEFORE NEITHER WOULD BE GENERATED IF DO_BOGUS=NO); FIXED
 C        STDOUT PRINT ERROR FOR LIMITING RADIUS OVERWHICH DROPSONDE
 C        REPORTS WILL HAVE WIND QM'S FLAGGED
+C 2020-01-09  J. Dong - Changed the windowing decade from 20 to 40
+C        for cases when the years is represented by 2 digits instead
+C        of 4.
 C
 C USAGE:    CALL EDTPRP(BLATMN,BLATMX,BLONMN,BLONMX,RMW,STMLAT,STMLON,
 C    1                  IUNTPN,IUNTPO,IUNTBG,LSTORM,vmax,stmnam)
@@ -28838,7 +28844,9 @@ C            Y2K COMPLIANT (BUFRLIB DOES THE WINDOWING HERE)
          PRINT *, '##SYNDATA - 2-DIGIT YEAR IN IDATBF RETURNED FROM ',
      $    'READMG (IDATBF IS: ',IDATBF,') - USE WINDOWING TECHNIQUE ',
      $    'TO OBTAIN 4-DIGIT YEAR'
-         IF(IDATBF/1000000.GT.20)  THEN
+C IF IDATBF=41~99 THEN IDATBF=1941~1999
+C IF IDATBF=00~40 THEN IDATBF=2000~2040
+         IF(IDATBF/1000000.GT.40)  THEN
             IDATBF = 1900000000 + IDATBF
          ELSE
             IDATBF = 2000000000 + IDATBF

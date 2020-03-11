@@ -1,7 +1,7 @@
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    GBLEVENTS_CDAS  PRE/POST PROCESSING OF PREPBUFR EVENTS 
-C   PRGMMR: D. Keyser        ORG: EMC        DATE: 2017-07-12
+C   PRGMMR: J. Dong          ORG: EMC        DATE: 2020-01-09
 C
 C ABSTRACT: THIS IS A FROZEN VERSION OF THE 2006-07-14 VERSION OF W3LIB
 C   (LATER W3NCO) ROUTINE GBLEVENTS (OTHER THAN CHANGES TO RENAME
@@ -179,6 +179,9 @@ C     the rare case where TOB is missing and QOB is not missing (since
 C     REJT is referenced in the next "RULES FOR SPECIFIC HUMIDITY"
 C     section). BENEFIT: Prevents a code failure due to undefined REJT
 C     in this case (when full debugging is turned on).
+C 2020-01-06  J. Dong -- In subroutine CGBLEVN10, changed the windowing
+C     decade from 20 to 40 for cases when the year is represented by
+C     2 digits instead of 4.
 C
 C USAGE:    CALL GBLEVENTS_CDAS(IDATEP,IUNITF,IUNITE,IUNITP,IUNITS,
 C          $                    SUBSET,NEWTYP)
@@ -439,7 +442,7 @@ C -------------------------------
          IFIRST = 1
          PRINT 700
   700 FORMAT(/1X,100('#')/' =====> SUBROUTINE GBLEVENTS_CDAS INVOKED ',
-     $ 'FOR THE FIRST TIME - VERSION LAST UPDATED 2017-07-12'/)
+     $ 'FOR THE FIRST TIME - VERSION LAST UPDATED 2020-01-09'/)
 
 C  INITIALIZE NAMELIST SWITCHES TO DEFAULT VALUES
 C  ----------------------------------------------
@@ -2043,7 +2046,9 @@ C  2-DIGIT.)
      $       "IN GLOBAL SIGMA FILE ",I0,"; INITIAL DATE (YEAR IS: ",I0,
      $       ") - USE WINDOWING TECHNIQUE TO OBTAIN 4-DIGIT YEAR")',
      $       IFILE,idate(1,IFILE)
-            IF(IDATE(1,IFILE).GT.20)  THEN
+C IF IDATE=41~99 THEN IDATE=1941~1999
+C IF IDATE=00~40 THEN IDATE=2000~2040
+            IF(IDATE(1,IFILE).GT.40)  THEN
                IDATE(1,IFILE) = 1900 + IDATE(1,IFILE)
             ELSE
                IDATE(1,IFILE) = 2000 + IDATE(1,IFILE)

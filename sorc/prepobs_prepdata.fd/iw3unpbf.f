@@ -484,6 +484,9 @@ C 2018-10-22  D. A. KEYSER -- (changes are in function R06UBF)
 C     Changes to handle new GOES-16 & up satellite winds which do not
 C     contain a report id (STNID) and have high-res lat/lon (amongst
 C     other differences vs. GOES-15 & down).
+C 2020-01-06  J. Dong -- In function I02UBF, changed the windowing 
+C     decade from 20 to 40 for cases when the year is represented by 
+C     2 digits instead of 4.
 C              
 C
 C
@@ -1372,7 +1375,7 @@ C  THE JWFILE INDICATOR: =0 IF UNOPENED; =2 IF OPENED AND NCEP BUFR
 C  ----------------------------------------------------------------
  
       IF(JWFILE(LUNIT).EQ.0) THEN
-         PRINT'(" ===> IW3UNPBF - WCOSS VERSION: 10-22-2018")'
+         PRINT'(" ===> IW3UNPBF - WCOSS VERSION: 01-06-2020")'
 
 C  DETERMINE MACHINE WORD LENGTH (BYTES) FOR BOTH INTEGERS AND REALS
 C  -----------------------------------------------------------------
@@ -1712,7 +1715,9 @@ C            Y2K COMPLIANT (BUFRLIB DOES THE WINDOWING HERE)
             PRINT'(" ##IW3UNPBF/I02UBF - 2-DIGIT YEAR IN JDATE(1) ",
      $       "RETURNED FROM DUMPBF (JDATE IS: ",I0,") - USE WINDOWING ",
      $       "TECHNIQUE TO OBTAIN 4-DIGIT YEAR")', JDATE
-            IF(JDATE(1).GT.20)  THEN
+C IF JDATE=41~99 THEN JDATE=1941~1999
+C IF JDATE=00~40 THEN JDATE=2000~2040
+            IF(JDATE(1).GT.40)  THEN
                JDATE(1) = 1900 + JDATE(1)
             ELSE
                JDATE(1) = 2000 + JDATE(1)
@@ -1739,7 +1744,9 @@ C            Y2K COMPLIANT (BUFRLIB DOES THE WINDOWING HERE)
                PRINT'(" ##IW3UNPBF/I02UBF - 2-DIGIT YEAR IN JDUMP(1) ",
      $          "RETURNED FROM DUMPBF (JDUMP IS: ",I0,") - USE ",
      $          "WINDOWING TECHNIQUE TO OBTAIN 4-DIGIT YEAR")', JDUMP
-               IF(JDUMP(1).GT.20)  THEN
+C IF JDUMP=41~99 THEN JDUMP=1941~1999
+C IF JDUMP=00~40 THEN JDUMP=2000~2040
+               IF(JDUMP(1).GT.40)  THEN
                   JDUMP(1) = 1900 + JDUMP(1)
                ELSE
                   JDUMP(1) = 2000 + JDUMP(1)

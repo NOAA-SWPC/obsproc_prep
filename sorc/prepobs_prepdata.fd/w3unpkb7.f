@@ -230,6 +230,9 @@ C              0.00001 degree precision, and now that PREPBUFR encodes
 C              YOB (lat) and XOB (lon) at 0.00001 degree precision, this
 C              change will ensure that lat/lon is always accurate to
 C              0.00001 degrees in all downstream processing.
+C 2020-01-06  J. Dong -- In subroutine W3UNPKB7, changed the windowing
+C     decade from 20 to 40 for cases when the year is represented by
+C     2 digits instead of 4.
 C
 C
 C
@@ -846,7 +849,7 @@ C  THIS SUBR. WAS CALLED, PRINT NEW HEADER, SET JRET = 1
          LUNITL = LUNIT
          JRET = 1
          PRINT 101, LUNIT
-  101    FORMAT(//' ---> W3UNPKB7: WCOSS VERSION 11/30/2016: NCEP ',
+  101    FORMAT(//' ---> W3UNPKB7: WCOSS VERSION 01/06/2020: NCEP ',
      $    'BUFR DATA SET READ FROM UNIT ',I4/)
 
          BMISS = GETBMISS()
@@ -971,7 +974,9 @@ C            Y2K COMPLIANT (BUFRLIB DOES THE WINDOWING HERE)
             PRINT'(" ##W3UNPKB7 - 2-DIGIT YEAR IN ICDATE(1) RETURNED ",
      $       "FROM DUMPBF (ICDATE IS: ",I5,4I3.2,") - USE WINDOWING ",
      $       "TECHNIQUE TO OBTAIN 4-DIGIT YEAR")', ICDATE
-            IF(ICDATE(1).GT.20)  THEN
+C IF ICDATE=41~99 THEN ICDATE=1941~1999
+C IF ICDATE=00~40 THEN ICDATE=2000~2040
+            IF(ICDATE(1).GT.40)  THEN
                ICDATE(1) = 1900 + ICDATE(1)
             ELSE
                ICDATE(1) = 2000 + ICDATE(1)
@@ -996,7 +1001,9 @@ C            Y2K COMPLIANT (BUFRLIB DOES THE WINDOWING HERE)
             PRINT'(" ##W3UNPKB7 - 2-DIGIT YEAR IN IDDATE(1) RETURNED ",
      $       "FROM DUMPBF (IDDATE IS: ",I5,4I3.2,") - USE WINDOWING ",
      $       "TECHNIQUE TO OBTAIN 4-DIGIT YEAR")', IDDATE
-            IF(IDDATE(1).GT.20)  THEN
+C IF IDDATE=41~99 THEN IDDATE=1941~1999
+C IF IDDATE=00~40 THEN IDDATE=2000~2040
+            IF(IDDATE(1).GT.40)  THEN
                IDDATE(1) = 1900 + IDDATE(1)
             ELSE
                IDDATE(1) = 2000 + IDDATE(1)

@@ -19,7 +19,7 @@ else
 
   hname=$(hostname)
   if [[ $hname =~ ^[vmp][0-9] ]] ; then # Dell-p3: venus mars pluto
-    module load ips/18.0.1.163
+    module load ips/18.0.5.274
     module load prod_util/1.1.0
   else 
     ## non-phase 3 systems can simply load prod_util directly
@@ -50,7 +50,7 @@ case $sys_tp in
    module load impi/5.1.2.150
    ;;
  Dell-p3)
-   module load ips/18.0.1.163    # req'd for bufr
+   module load ips/18.0.5.274    # req'd for bufr
    module load impi/18.0.1       # req'd for w3emc
    ;;
  *) echo unexpected system.  Update for $sys_tp;;
