@@ -43,7 +43,7 @@ elif [[ "$sys_tp" =~ Dell-p3 ]]; then
    module load w3nco/$w3nco_ver
    module load bufr/$bufr_ver_Dellp3
    module load bacio/$bacio_ver
-   module load ips/18.0.1.163
+   module load ips/18.0.5.274
    module load sigio/$sigio_ver_Dellp3
    module load nemsio/$nemsio_ver_Dellp3
    module load sp/$sp_ver

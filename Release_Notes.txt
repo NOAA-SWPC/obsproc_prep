@@ -1,6 +1,6 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-obsproc_prep release 5.2.1 --> released Jun 20, 2019
-                           --> implemented Dec 03, 2019
+obsproc_prep release 5.2.2 --> released Jan 15, 2020
+                           --> implemented Mar 09, 2020
 
 files:
    obsproc_prep/fix/glerldict.lmd
@@ -10,7 +10,7 @@ files:
    obsproc_prep/fix/prepobs_prep.bufrtable
    obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
    obsproc_prep/fix/syndat_weight
-   obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
+ M obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
    obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
    obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
    obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
@@ -33,10 +33,10 @@ files:
    obsproc_prep/sorc/prepobs_mpcopybufr.fd/makefile
    obsproc_prep/sorc/prepobs_mpcopybufr.fd/mpcopybufr.f90
    obsproc_prep/sorc/prepobs_oiqcbufr.fd/makefile
- M obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
+   obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
    obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
    obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
-   obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
+ ? obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
    obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
    obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
    obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
@@ -55,24 +55,24 @@ files:
    obsproc_prep/sorc/prepobs_prepanow.fd/makefile
    obsproc_prep/sorc/prepobs_prepanow.fd/prepanow.f
    obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
-   obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
    obsproc_prep/sorc/prepobs_prepdata.fd/makefile
    obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
-   obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
-   obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
-   obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
-   obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
    obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
-   obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
+ M obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
    obsproc_prep/sorc/prepobs_prevents.fd/makefile
-   obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
+ M obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
    obsproc_prep/sorc/prepobs_profcqc.fd/makefile
-   obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
+ M obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
    obsproc_prep/sorc/syndat_syndata.fd/makefile
-   obsproc_prep/sorc/syndat_syndata.fd/syndata.f
-   obsproc_prep/sorc/build.sh
+ M obsproc_prep/sorc/syndat_syndata.fd/syndata.f
+ M obsproc_prep/sorc/build.sh
    obsproc_prep/sorc/clean.sh
    obsproc_prep/sorc/install.sh
  M obsproc_prep/sorc/load_libs.rc
@@ -84,12 +84,89 @@ files:
    obsproc_prep/ush/getges.sh
    obsproc_prep/ush/getges_sig.sh
    obsproc_prep/ush/prepobs_glerladj.sh
- M obsproc_prep/ush/prepobs_makeprepbufr.sh
- M obsproc_prep/ush/prepobs_oiqcbufr.sh
+   obsproc_prep/ush/prepobs_makeprepbufr.sh
+   obsproc_prep/ush/prepobs_oiqcbufr.sh
    obsproc_prep/ush/prepobs_prepacqc.sh
    obsproc_prep/ush/prepobs_prevents.sh
    obsproc_prep/ush/prepobs_profcqc.sh
    obsproc_prep/ush/prepobs_syndata.sh
+( A - added,  M - modified, D - deleted)
+
+
+ Source code and build changes (in sorc directory):
+   prepobs_prepdata.fd/iw3unpbf.f, w3unpkb7.f, w3atovsunp.f,
+      w3rtovsunp.f, w3xtovseds.f,
+   prepobs_prevents.fd/gblevents_cdas.f, prevents.f,
+   prepobs_profcqc.fd/profcqc.f,
+   syndat_syndata.fd/syndata.f:
+    - Modified the pivot year from 20 to 40 to handle 2-digit years that do 
+      not designate 19 or 20 for century. 
+      BENEFIT: Programs will not fail upon the year change of 2020 to 2021.
+   prepobs_cqcbufr.fd/cqcbufr.f:
+    - Modified to correct errors found when the program was compiled and 
+      run with full DEBUG options enabled.
+      BENEFIT: a more robust program.
+   build.sh, load_libs.rc:
+    - Updated to module ips version 18.0.5.274 from 18.0.1.163.
+
+
+ Output changes:
+ ---------------
+  (For specific network changes see " Output changes" in Release Notes for that
+   network, if that network executes this version of obsproc_prep.)
+
+
+ Libraries:
+ ----------
+   w3nco   2.0.6 (all)
+   bufr   11.3.0 (all) (11.1.0 Cray-XC40 and IBM iDataPlex)
+   w3emc   2.3.0 (prepobs_cqcbufr, prepobs_prepacpf, prepobs_prepacqc,
+                  prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   bacio   2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   sp      2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   sigio   2.1.0 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+           2.0.1 (Cray-XC40 and IBM iDataPlex)
+   nemsio  2.2.3 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+           2.2.2 (Cray-XC40 and IBM iDataPlex)
+
+
+ Build Instructions:
+ -------------------
+   - See sorc/README.build
+
+
+ Preimplementation Testing Requirements:
+ ---------------------------------------
+   There are no jobs in obsproc_prep.  Jobs executing this version of
+   obsproc_prep will be tested.
+
+
+ Dissemination:
+ --------------
+   See information about dissemination in the release notes for
+   obsproc_<NETWORK> packages which execute this version of obsproc_prep.
+
+
+ Special Instructions:
+ ---------------------
+   This is part of OBSPROC.v12.2.0.
+   This can be implemented prior to, but no later than, the following
+   upgrades to port to Dell-p3:
+    - obsproc_cdas.v2.5.0
+   This can be installed on the following WCOSS systems: Cray-XC40, Dell-p3.
+
+   Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
+   needed.
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+obsproc_prep release 5.2.1 --> released Jun 20, 2019
+                           --> implemented Dec 03, 2019
+
+files:
+ M obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
+ M obsproc_prep/sorc/load_libs.rc
+ M obsproc_prep/ush/prepobs_makeprepbufr.sh
+ M obsproc_prep/ush/prepobs_oiqcbufr.sh
 ( A - added,  M - modified, D - deleted)
 
 

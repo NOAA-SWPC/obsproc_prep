@@ -1,7 +1,7 @@
 C$$$  MAIN PROGRAM DOCUMENTATION BLOCK
 C
 C MAIN PROGRAM: PREPOBS_PROFCQC
-C   PRGMMR: KEYSER           ORG: NP22        DATE: 2016-12-20
+C   PRGMMR: DONG             ORG: NP22        DATE: 2020-01-09
 C
 C ABSTRACT: PERFORMS COMPLEX QUALITY CONTROL OF PROFILER DOPPLER
 C   WINDS.  THE INPUT AND OUTPUT ARE IN PREPBUFR FORMAT.  THE
@@ -69,6 +69,9 @@ C     characters.
 C 2016-12-20  Stokes/Keyser  Increase the max allowable number of times
 C     per station.  Skip reports and print warning if that limit is 
 C     exceeded.
+C 2020-01-09  J. Dong  In subroutine READPROF, changed the windowing
+C     decade from 20 to 40 for cases when the years is represented by
+C     2 digits instead of 4.
 C
 C USAGE:
 C   INPUT FILES:
@@ -262,7 +265,7 @@ C$$$
       NAMELIST/RDATA/IPRINT,TIMWIN_E,TIMWIN_L,STATS,MEAN,STDDEV,SKEW,
      $ KURT
 
-      CALL W3TAGB('PREPOBS_PROFCQC',2016,0355,1200,'NP22')
+      CALL W3TAGB('PREPOBS_PROFCQC',2020,0009,1200,'NP22')
 
       WRITE(6,100)
 
@@ -322,7 +325,7 @@ ccccc CALL SETBMISS(10E10_8)
 
       STOP
 
-  100 FORMAT(' WELCOME TO PREPOBS_PROFCQC -- VERSION 12/20/2016'//)
+  100 FORMAT(' WELCOME TO PREPOBS_PROFCQC -- VERSION 01/09/2020'//)
   101 FORMAT(1X,128('*'))
   102 FORMAT(/'xxxxxxxxxxxxxxxxxxxxxxxxxxx'/'Process Stn. ',A8)
 
@@ -2900,6 +2903,8 @@ C 2004-09-09  D. Keyser  -- Namelist switches added to specify output
 C     time window.
 C 2016-12-20  D. Stokes   Increase the max allowable number of times 
 C     per station.
+C 2020-01-09  J. Dong   Changed the windowing decade from 20 to 40
+C     for cases when the year is represented by 2 digits instead of 4.
 C
 C USAGE:    CALL READPROF
 C   OUTPUT FILES:
@@ -2960,7 +2965,9 @@ C            Y2K COMPLIANT (BUFRLIB DOES THE WINDOWING HERE)
             PRINT'("##2-DIGIT YEAR IN IDATEP RETURNED FROM ",
      $       "READMG (IDATEP IS: ",I0,") - USE WINDOWING TECHNIQUE",
      $       " TO OBTAIN 4-DIGIT YEAR")', IDATEP
-            IF(IDATEP/1000000.GT.20) THEN
+C IF IDATEP=41~99 THEN IDATEP=1941~1999
+C IF IDATEP=00~40 THEN IDATEP=2000~2040
+            IF(IDATEP/1000000.GT.40) THEN
                IDATEP = 1900000000 + IDATEP
             ELSE
                IDATEP = 2000000000 + IDATEP
