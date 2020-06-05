@@ -69,7 +69,7 @@ elif [[ "$sys_tp" == Cray-CS400 || "$SITE" =~ (theia|THEIA) ]]; then
    module load nemsio/v$nemsio_ver
    module load sigio/v$sigio_ver
    module load sp/v$sp_ver
-   module laod netcdf/$netcdf_ver
+   module load netcdf/$netcdf_ver
 elif [[ -n "$sys_tp" || -n "$SITE" ]]; then
   echo " **** UNEXEPECTED PLATFORM: sys_tp: ${sys_tp:-not set}  SITE: ${SITE:-not set} ***** "
   return 9
