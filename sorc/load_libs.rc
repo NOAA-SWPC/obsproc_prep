@@ -47,7 +47,7 @@ elif [[ "$sys_tp" =~ Dell-p3 ]]; then
    module load sigio/$sigio_ver_Dellp3
    module load nemsio/$nemsio_ver_Dellp3
    module load sp/$sp_ver
-   #module load NetCDF/$netcdf_ver
+#  module load NetCDF/$netcdf_ver
    module use -a /usrx/local/nceplibs/dev/NCEPLIBS/modulefiles
    module load w3emc_para/$w3emc_ver
    module load hdf5_parallel/1.10.6
