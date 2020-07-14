@@ -97,6 +97,8 @@
 #
 # Script history log:
 # 2018-03-05  Dennis A. Keyser -- Original version for implementation
+# 2020-07-12  S. Melchior -- Modified to handle atmos suffix in $COMINgfs
+#                            and $COMINgdas, introduced in GFSv16.
 #
 #
 # Usage:  getges_driver.sh
@@ -166,7 +168,7 @@ bn_COMINgfs=`basename $COMINgfs`
 
 #######################################################################################################
 #######################################################################################################
-if [[ `echo $bn_COMINgdas | cut -c1` = [a-zA-Z] && `echo $bn_COMINgfs | cut -c1` = [a-zA-Z] ]];then
+if [[ `echo $bn_COMINgdas | cut -c1` = g && `echo $bn_COMINgfs | cut -c1` = g ]];then
 
 # This runs the legacy NEMSIO version with no cycle time directory in the suffix of $COMINgdas and $COMINgfs
 
@@ -182,9 +184,12 @@ fi
 
 #######################################################################################################
 #######################################################################################################
-elif [[ `echo $bn_COMINgdas | cut -c1` != [a-zA-Z] && `echo $bn_COMINgfs | cut -c1` != [a-zA-Z] ]];then
+elif [[ `echo $bn_COMINgdas | cut -c1` != g && `echo $bn_COMINgfs | cut -c1` != g ]];then
 
-# This runs the new FV3GFS version with cycle time directory in the suffix of $COMINgdas and $COMINgfs
+# This runs the GFSv15 version with cycle time directory in the suffix of $COMINgdas and $COMINgfs
+# -or-
+# This runs the GFSv16+ version with cycle time and atmos directory in the suffix of 
+# $COMINGgdas and $COMINgfs
 
 
 # First try using closest directory cycle time (00, 06, 12 or 18) preceding cycle hour
@@ -196,6 +201,11 @@ COMINgdas_root=`dirname $COMINgdas`
 COMINgdas_root=`dirname $COMINgdas_root`
 COMINgfs_root=`dirname $COMINgfs`
 COMINgfs_root=`dirname $COMINgfs_root`
+if [[ `echo $bn_COMINgdas | cut -c1` = a && `echo $bn_COMINgfs | cut -c1` = a ]];then
+   # if atmos suffix, run dirname additional time
+   COMINgdas_root=`dirname $COMINgdas_root`
+   COMINgfs_root=`dirname $COMINgfs_root`
+fi
 
 PDY_this_try=$PDY
 cyc_this_try=$cyc
@@ -206,8 +216,14 @@ modhr=`expr $cyc_this_try % 6`
 PDY_this_try=`$NDATE -$modhr ${PDY_this_try}${cyc_this_try} | cut -c1-8`
 cyc_this_try=`$NDATE -$modhr ${PDY_this_try}${cyc_this_try} | cut -c9-10`
 
-export COMINgdas=$COMINgdas_root/gdas.${PDY_this_try}/${cyc_this_try}
-export COMINgfs=$COMINgfs_root/gfs.${PDY_this_try}/${cyc_this_try}
+if [[ `echo $bn_COMINgdas | cut -c1` = a && `echo $bn_COMINgfs | cut -c1` = a ]];then
+   # if atmos suffix, define $COMINgdas and $COMINgfs accordingly 
+   export COMINgdas=$COMINgdas_root/gdas.${PDY_this_try}/${cyc_this_try}/atmos
+   export COMINgfs=$COMINgfs_root/gfs.${PDY_this_try}/${cyc_this_try}/atmos
+else
+   export COMINgdas=$COMINgdas_root/gdas.${PDY_this_try}/${cyc_this_try}
+   export COMINgfs=$COMINgfs_root/gfs.${PDY_this_try}/${cyc_this_try}
+fi
 fhend=12
 
 if [ $fhr = "-3" -o $fhr = "+3" ]; then
@@ -220,13 +236,13 @@ fi
 
 if test $errges -ne 0
 then
-#  problem obtaining global nemsio first guess so go back 6 hours in cycle directory
+#  problem obtaining global nemsio (or netcdf history) first guess so go back 6 hours in cycle directory
    set +x
    echo
    if [ $fhr = "-3" -o $fhr = "+3" ]; then
-      echo "problem obtaining global nemsio-based guess valid $fhr hrs relative to center PREPBUFR date/time;"
+      echo "problem obtaining global nemsio-based (or netcdf history) guess valid $fhr hrs relative to center PREPBUFR date/time;"
    else
-      echo "problem obtaining global nemsio-based guess;"
+      echo "problem obtaining global nemsio-based (or netcdf history) guess;"
    fi
    echo "go back 6 hours in cycle directory and try again"
    echo
@@ -239,8 +255,14 @@ fi
 PDY_this_try=`$NDATE -6 ${PDY_this_try}${cyc_this_try} | cut -c1-8`
 cyc_this_try=`$NDATE -6 ${PDY_this_try}${cyc_this_try} | cut -c9-10`
 
-export COMINgdas=$COMINgdas_root/gdas.${PDY_this_try}/${cyc_this_try}
-export COMINgfs=$COMINgfs_root/gfs.${PDY_this_try}/${cyc_this_try}
+if [[ `echo $bn_COMINgdas | cut -c1` = a && `echo $bn_COMINgfs | cut -c1` = a ]];then
+   # if atmos suffix, define $COMINgdas and $COMINgfs accordingly 
+   export COMINgdas=$COMINgdas_root/gdas.${PDY_this_try}/${cyc_this_try}/atmos
+   export COMINgfs=$COMINgfs_root/gfs.${PDY_this_try}/${cyc_this_try}/atmos
+else
+   export COMINgdas=$COMINgdas_root/gdas.${PDY_this_try}/${cyc_this_try}
+   export COMINgfs=$COMINgfs_root/gfs.${PDY_this_try}/${cyc_this_try}
+fi
 fhend=12
 
 if [ $fhr = "-3" -o $fhr = "+3" ]; then
@@ -253,13 +275,13 @@ fi
 
 if test $errges -ne 0
 then
-#  problem obtaining global nemsio first guess so go back 6 hours in cycle directory
+#  problem obtaining global nemsio (or netcdf history) first guess so go back 6 hours in cycle directory
    set +x
    echo
    if [ $fhr = "-3" -o $fhr = "+3" ]; then
-      echo "problem obtaining global nemsio-based guess valid $fhr hrs relative to center PREPBUFR date/time;"
+      echo "problem obtaining global nemsio-based (or netcdf history) guess valid $fhr hrs relative to center PREPBUFR date/time;"
    else
-      echo "problem obtaining global nemsio-based guess;"
+      echo "problem obtaining global nemsio-based (or netcdf history) guess;"
    fi
    echo "go back another 6 hours in cycle directory and try again"
    echo
@@ -272,8 +294,14 @@ fi
 PDY_this_try=`$NDATE -6 ${PDY_this_try}${cyc_this_try} | cut -c1-8`
 cyc_this_try=`$NDATE -6 ${PDY_this_try}${cyc_this_try} | cut -c9-10`
 
-export COMINgdas=$COMINgdas_root/gdas.${PDY_this_try}/${cyc_this_try}
-export COMINgfs=$COMINgfs_root/gfs.${PDY_this_try}/${cyc_this_try}
+if [[ `echo $bn_COMINgdas | cut -c1` = a && `echo $bn_COMINgfs | cut -c1` = a ]];then
+   # if atmos suffix, define $COMINgdas and $COMINgfs accordingly 
+   export COMINgdas=$COMINgdas_root/gdas.${PDY_this_try}/${cyc_this_try}/atmos
+   export COMINgfs=$COMINgfs_root/gfs.${PDY_this_try}/${cyc_this_try}/atmos
+else
+   export COMINgdas=$COMINgdas_root/gdas.${PDY_this_try}/${cyc_this_try}
+   export COMINgfs=$COMINgfs_root/gfs.${PDY_this_try}/${cyc_this_try}
+fi
 fhend=18
 
 if [ $fhr = "-3" -o $fhr = "+3" ]; then
@@ -286,13 +314,13 @@ fi
 
 if test $errges -ne 0
 then
-#  problem obtaining global nemsio first guess so go back 6 hours in cycle directory
+#  problem obtaining global nemsio (or netcdf history) first guess so go back 6 hours in cycle directory
    set +x
    echo
    if [ $fhr = "-3" -o $fhr = "+3" ]; then
-      echo "problem obtaining global nemsio-based guess valid $fhr hrs relative to center PREPBUFR date/time;"
+      echo "problem obtaining global nemsio-based (or netcdf history) guess valid $fhr hrs relative to center PREPBUFR date/time;"
    else
-      echo "problem obtaining global nemsio-based guess;"
+      echo "problem obtaining global nemsio-based (or netcdf history) guess;"
    fi
    echo "go back another 6 hours in cycle directory and try again"
    echo
@@ -305,8 +333,14 @@ fi
 PDY_this_try=`$NDATE -6 ${PDY_this_try}${cyc_this_try} | cut -c1-8`
 cyc_this_try=`$NDATE -6 ${PDY_this_try}${cyc_this_try} | cut -c9-10`
 
-export COMINgdas=$COMINgdas_root/gdas.${PDY_this_try}/${cyc_this_try}
-export COMINgfs=$COMINgfs_root/gfs.${PDY_this_try}/${cyc_this_try}
+if [[ `echo $bn_COMINgdas | cut -c1` = a && `echo $bn_COMINgfs | cut -c1` = a ]];then
+   # if atmos suffix, define $COMINgdas and $COMINgfs accordingly 
+   export COMINgdas=$COMINgdas_root/gdas.${PDY_this_try}/${cyc_this_try}/atmos
+   export COMINgfs=$COMINgfs_root/gfs.${PDY_this_try}/${cyc_this_try}/atmos
+else
+   export COMINgdas=$COMINgdas_root/gdas.${PDY_this_try}/${cyc_this_try}
+   export COMINgfs=$COMINgfs_root/gfs.${PDY_this_try}/${cyc_this_try}
+fi
 fhend=384
 
 if [ $fhr = "-3" -o $fhr = "+3" ]; then
@@ -322,7 +356,7 @@ fi
 
 if test $errges -ne 0
 then
-#  problem obtaining global nemsio first guess so exit
+#  problem obtaining global nemsio (or netcdf history) first guess so exit
    exit 9
 fi
 exit 0
