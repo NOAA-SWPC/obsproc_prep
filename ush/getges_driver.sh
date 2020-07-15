@@ -98,7 +98,8 @@
 # Script history log:
 # 2018-03-05  Dennis A. Keyser -- Original version for implementation
 # 2020-07-12  S. Melchior -- Modified to handle atmos suffix in $COMINgfs
-#                            and $COMINgdas, introduced in GFSv16.
+#                            and $COMINgdas, introduced in GFSv16, via
+#                            $COMPONENT variable.
 #
 #
 # Usage:  getges_driver.sh
@@ -114,6 +115,8 @@
 #     COMINgfs      String indicating full path to starting location for
 #                   searching for first guess (and other) files from GFS in
 #                   child script getges.sh
+#     COMPONENT     String indicting coupled modeling component (e.g., atmos,
+#                   wave, ocean, etc ...)
 #     GETGESprep    String indicating full path to GETGES utility script
 #     envir_getges  String indicating environment under which GETGES utility
 #                   ush runs (see getges.sh docblock for more information)
@@ -218,8 +221,8 @@ cyc_this_try=`$NDATE -$modhr ${PDY_this_try}${cyc_this_try} | cut -c9-10`
 
 if [[ `echo $bn_COMINgdas | cut -c1` = a && `echo $bn_COMINgfs | cut -c1` = a ]];then
    # if atmos suffix, define $COMINgdas and $COMINgfs accordingly 
-   export COMINgdas=$COMINgdas_root/gdas.${PDY_this_try}/${cyc_this_try}/atmos
-   export COMINgfs=$COMINgfs_root/gfs.${PDY_this_try}/${cyc_this_try}/atmos
+   export COMINgdas=$COMINgdas_root/gdas.${PDY_this_try}/${cyc_this_try}/${COMPONENT}
+   export COMINgfs=$COMINgfs_root/gfs.${PDY_this_try}/${cyc_this_try}/${COMPONENT}
 else
    export COMINgdas=$COMINgdas_root/gdas.${PDY_this_try}/${cyc_this_try}
    export COMINgfs=$COMINgfs_root/gfs.${PDY_this_try}/${cyc_this_try}
@@ -257,8 +260,8 @@ cyc_this_try=`$NDATE -6 ${PDY_this_try}${cyc_this_try} | cut -c9-10`
 
 if [[ `echo $bn_COMINgdas | cut -c1` = a && `echo $bn_COMINgfs | cut -c1` = a ]];then
    # if atmos suffix, define $COMINgdas and $COMINgfs accordingly 
-   export COMINgdas=$COMINgdas_root/gdas.${PDY_this_try}/${cyc_this_try}/atmos
-   export COMINgfs=$COMINgfs_root/gfs.${PDY_this_try}/${cyc_this_try}/atmos
+   export COMINgdas=$COMINgdas_root/gdas.${PDY_this_try}/${cyc_this_try}/${COMPONENT}
+   export COMINgfs=$COMINgfs_root/gfs.${PDY_this_try}/${cyc_this_try}/${COMPONENT}
 else
    export COMINgdas=$COMINgdas_root/gdas.${PDY_this_try}/${cyc_this_try}
    export COMINgfs=$COMINgfs_root/gfs.${PDY_this_try}/${cyc_this_try}
@@ -296,8 +299,8 @@ cyc_this_try=`$NDATE -6 ${PDY_this_try}${cyc_this_try} | cut -c9-10`
 
 if [[ `echo $bn_COMINgdas | cut -c1` = a && `echo $bn_COMINgfs | cut -c1` = a ]];then
    # if atmos suffix, define $COMINgdas and $COMINgfs accordingly 
-   export COMINgdas=$COMINgdas_root/gdas.${PDY_this_try}/${cyc_this_try}/atmos
-   export COMINgfs=$COMINgfs_root/gfs.${PDY_this_try}/${cyc_this_try}/atmos
+   export COMINgdas=$COMINgdas_root/gdas.${PDY_this_try}/${cyc_this_try}/${COMPONENT}
+   export COMINgfs=$COMINgfs_root/gfs.${PDY_this_try}/${cyc_this_try}/${COMPONENT}
 else
    export COMINgdas=$COMINgdas_root/gdas.${PDY_this_try}/${cyc_this_try}
    export COMINgfs=$COMINgfs_root/gfs.${PDY_this_try}/${cyc_this_try}
@@ -335,8 +338,8 @@ cyc_this_try=`$NDATE -6 ${PDY_this_try}${cyc_this_try} | cut -c9-10`
 
 if [[ `echo $bn_COMINgdas | cut -c1` = a && `echo $bn_COMINgfs | cut -c1` = a ]];then
    # if atmos suffix, define $COMINgdas and $COMINgfs accordingly 
-   export COMINgdas=$COMINgdas_root/gdas.${PDY_this_try}/${cyc_this_try}/atmos
-   export COMINgfs=$COMINgfs_root/gfs.${PDY_this_try}/${cyc_this_try}/atmos
+   export COMINgdas=$COMINgdas_root/gdas.${PDY_this_try}/${cyc_this_try}/${COMPONENT}
+   export COMINgfs=$COMINgfs_root/gfs.${PDY_this_try}/${cyc_this_try}/${COMPONENT}
 else
    export COMINgdas=$COMINgdas_root/gdas.${PDY_this_try}/${cyc_this_try}
    export COMINgfs=$COMINgfs_root/gfs.${PDY_this_try}/${cyc_this_try}
