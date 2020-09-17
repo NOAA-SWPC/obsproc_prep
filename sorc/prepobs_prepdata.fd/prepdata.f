@@ -1324,6 +1324,17 @@ C                 RTMA_RU where minutes here can be 15, 30 or 45.
 C 2018-07-02  S.Melchior-- In function W3FIZZ, added call to UFBINT
 C     routine to pull in HOVI (horizontal visibility) value for mesonet
 C     message types (NC255).
+C 2020-08-20  J. Dong --
+C     - Added changes to handle new VAD wind data reported from other
+C       countries (e.g. Europe, New Zealand) (NC002018) and Hong Kong
+C       wind profiler data (NC002014). Future feature. 
+C     - Added logic to differentiate between these and existing Radar
+C       Coded Message (RCM) VAD wind reports via use of report subtype
+C       (TSB=1 for RCM, =2 for Level 2 and =3 for other vadwnd). Future
+C       feature.
+C 2020-09-14  S. Melchior -- In subroutine PREP, added ability to
+C       process new WMO BUFR sequence Meteosat AMV data from subsets:
+C       005067, 005068, 005069. 
 C
 C
 C USAGE:
@@ -1947,17 +1958,18 @@ C           BE 9999 OR BE THE SAME AS JSMASS(X,Y,Z) !!!}
 C                                        (DEF- JSMASS(6,8,10)/480*9999/)
 C
 CC
-C  N O T E -- THE FOLLOWING 4-WORD ARRAYS REFER TO THE 4 WIND PROFILER
+C  N O T E -- THE FOLLOWING 5-WORD ARRAYS REFER TO THE 5 WIND PROFILER
 C              REPORT TYPES POSSIBLE
 C                     1 - NOAA PROFILER NETWORK (NPN)
 C                     2 - PROFILERS ORIGINATING FROM PILOT (PIBAL)
 C                         FORMAT BULLETINS
 C                     3 - COOPERATIVE AGENCY PROFILERS (INCL. NOAA BLP)
 C                     4 - JAPANESE METEOR. AGENCY (JMA) PROFILERS
+C                     5 - OTHER PROFILER WINDS (E.G., FROM HONG KONG)
 CC
 C    PWINDO - TIME WINDOW (+/-) FOR WIND PROFILER REPORTS (IN
-C              HUNDREDTHS OF AN HR) - (MAX IS +/- 12 HRS)   (DEF=4*300.)
-C    PRFLER - PROCESS WIND PROFILER REPORTS?          (DEFAULT=4*.TRUE.)
+C              HUNDREDTHS OF AN HR) - (MAX IS +/- 12 HRS)   (DEF=5*300.)
+C    PRFLER - PROCESS WIND PROFILER REPORTS?          (DEFAULT=5*.TRUE.)
 CC
 C    VWINDO - TIME WINDOW (+/-) FOR VAD WIND REPORTS (IN HUNDREDTHS OF
 C              AN HR) - (MAX IS +/- 12 HRS)               (DEFAULT=300.)
@@ -2938,7 +2950,7 @@ C  IN INTERFACE WITH SUBROUTINE IW3UNPBF
       COMMON/PREVSW/PREVEN
       COMMON/APDNSW/APPEND
       COMMON/SKPSUB/SUBSKP(0:255,0:200)
-      COMMON/PFSWCH/PRFLER(4),PWINDO(4),PROFILERinADPUPA
+      COMMON/PFSWCH/PRFLER(5),PWINDO(5),PROFILERinADPUPA
       COMMON/RASSSW/RASS,TWINDO
       common/pstnflg/ipstnflg
       COMMON /BUFRLIB_MISSING/BMISS
@@ -3094,7 +3106,7 @@ C  IN INTERFACE WITH SUBROUTINE IW3UNPBF
      $ FLACMS,IACFTH,SUBSKP,JPGPSD,GWINDO,RASS,TWINDO,JPWDSD,IWWNDO,
      $ FLDMFR,WRMISS,SKGP45,JPASCD,IAWNDO,npkrpt,SKGNSS
       NAMELIST/PARM/IUNIT
-      CALL W3TAGB('PREPOBS_PREPDATA',2017,0293,0500,'NP22')
+      CALL W3TAGB('PREPOBS_PREPDATA',2020,0233,0050,'EMC')
 C DETERMINE MACHINE WORD LENGTH (BYTES) FOR BOTH INTEGERS AND REALS
       CALL WORDLENGTH(LWI,LWR)
       PRINT 2213, LWI,LWR
@@ -3137,7 +3149,7 @@ C    CARDS FILE, JUST AFTER NAMELIST TASK, BY THE MAKE_PREPBUFR SCRIPT)
          PRINT 321, NET(1)
       END IF
   321 FORMAT(/37X,'WELCOME TO THE UNIVERSAL ',A14,' DATA PREPROCESSOR'/
-     $ 48X,'WCOSS VERSION CREATED 20 Oct 2017')
+     $ 48X,'WCOSS VERSION CREATED 20 Aug 2020')
       call bvers(cvstr)
       print 3211, cvstr
  3211 FORMAT(48X,'--BUFRLIB VERSION USED = v',a,/)
@@ -3807,6 +3819,18 @@ C              45 (since the RTMA_RU runs 4 times per hour). This change
 C              allows the print statements to reflect this new center
 C              dump time format.  It also ensures that the dump vs.
 C              PREPBUFR center dates are correctly tested.
+C 2020-08-20 J. Dong -- 
+C     - Changes added to handle new VAD wind data reported from other
+C       countries (e.g. Europe, New Zealand) (NC002018) and Hong Kong
+C       wind profiler data (NC002014). Future feature.
+C     - Logic added to differentiate between these and existing Radar
+C       Coded Message (RCM) VAD wind reports via use of report subtype
+C       (TSB=1 for RCM, =2 for Level 2 and =3 for other vadwnd). Future
+C       feature.
+C     - Changed subset to subset_t.  Defined subset_t and IDSDAT to 
+C       eliminate Boundary Run-Time Check Failures.
+C 2020-09-14 S. Melchior -- Added subsets 005067, 005068, and 005069
+C       to the processing to read in Meteosat AMV data.
 C
 C USAGE:    CALL PREP
 C   INPUT FILES:
@@ -3842,7 +3866,7 @@ C  ARRAY
 C PARAMETER NAME "MXBLVL"  THROUGHOUT PGM SETS MAXIMUM NO. OF REPORT
 C  LEVELS THAT CAN BE PROCESSED AND ENCODED INTO BUFR MESSAGES
       PARAMETER (MXBLVL = 255)
-      CHARACTER*8   STNPRT,STNID,FILNAM(7),DSNAME,SUBSET_d
+      CHARACTER*8   STNPRT,STNID,FILNAM(7),DSNAME,SUBSET_d,subset_t
       CHARACTER*25  DNAME(3)
       CHARACTER*47  NAME1
       CHARACTER*56  NAME2
@@ -3850,7 +3874,7 @@ C  LEVELS THAT CAN BE PROCESSED AND ENCODED INTO BUFR MESSAGES
      $ SPCIAL,FILLW,FILLT,FILLM,TOVBFR,MARLND,GOESPW,GOESCT,VADWIN,
      $ GOESRD,FLRECO,DROPSN,SUBSKP,PROFILERinADPUPA,RASS
       INTEGER  IDATA(MAXOBS),MDATE(4)
-      INTEGER(8) IDSDMP_8
+      INTEGER(8) IDSDAT,IDSDMP_8
       REAL(8)  BMISS,obs8_8,alon_8,alat_8
       COMMON/STRCTY/ICAT(MXLVL)
       COMMON/STRMOB/MOBS(MXTYPV,MXWRDL,MXLVL)
@@ -3895,7 +3919,7 @@ C  LEVELS THAT CAN BE PROCESSED AND ENCODED INTO BUFR MESSAGES
      $ JPASCD(6),IAWNDO(2)
       COMMON/SKPSUB/SUBSKP(0:255,0:200)
       COMMON/PWSWCH/PWT(5),IQMPW
-      COMMON/PFSWCH/PRFLER(4),PWINDO(4),PROFILERinADPUPA
+      COMMON/PFSWCH/PRFLER(5),PWINDO(5),PROFILERinADPUPA
       COMMON/RASSSW/RASS,TWINDO
       COMMON/DIRECT/OBS3(5,MXBLVL,7),OBS2(NUMOBS2),NOBS3(7),RDATA2(25),
      $ obs8_8(2)
@@ -3912,8 +3936,8 @@ C  LEVELS THAT CAN BE PROCESSED AND ENCODED INTO BUFR MESSAGES
 C INITIALIZE IPMSL ARRAY (WILL REMAIN MISSING UNTIL SURFACE REPORTS)
       IPMSL  = IMISS
       OBS2   = BMISS  ! initialize obs2   array before reading any rpts
-      OBS3   = BMISS  ! initialize obs3   array before reading any rpts
-      NOBS3  = 0      ! initialize nobs3  array before reading any rpts
+      OBS3   = BMISS  ! initialize OBS3   array before reading any rpts
+      NOBS3  = 0      ! initialize NOBS3  array before reading any rpts
       obs8_8 = bmiss  ! initialize obs8_8 array before reading any rpts
       RDATA2 = BMISS  ! initialize rdata2 array before reading any rpts
 C***********************************************************************
@@ -3931,6 +3955,7 @@ C***********************************************************************
       IDSDAT    = 0
       IDSDMP_8  = 0
       SUBSET_d  = 'XXXXXXXX'
+      subset_t  = 'XXXXXXXX'
 C KNTALL COUNTS NO. OF REPORTS UNPACKED FROM FILE (ALL REPORTS)
       KNTALL = 0
 C KOUNT COUNTS NO. OF REPORTS UNPACKED (& NOT SKIPPED) FROM FILE
@@ -3995,7 +4020,7 @@ C CHECK TO SEE IF AIRCFT DATA SHOULD BE PROCESSED
      $      SUBSKP(004,013).AND.SUBSKP(004,103))
      $    GO TO 7001
       ELSE IF(NN.EQ.4)  THEN
-         SUBSKP(005,001:090) = .TRUE.
+         SUBSKP(005,001:091) = .TRUE.
 C CHECK TO SEE IF ANY BUFR MESSAGES CAN BE SKIPPED IN INPUT SATWND DUMP
          LOOP1: DO II=1,6
             LOOP1n1: DO JJ=1,2
@@ -4097,7 +4122,8 @@ C CHECK TO SEE IF ANY BUFR MESSAGES CAN BE SKIPPED IN INPUT SATWND DUMP
             LOOP8n1: DO JJ=5,6
                IF(MIN(JSWIND(II,JJ,1),JSMASS(II,JJ,1)).LT.9999)  THEN
               ! ** METEOSAT-ODD AND METEOSAT-EVEN Infrared (long-wave)**
-                  SUBSKP(005,064) = .FALSE. ! current
+                  SUBSKP(005,067) = .FALSE. ! current
+                  SUBSKP(005,064) = .FALSE. ! historical
                   SUBSKP(005,061) = .FALSE. ! historical
                   EXIT LOOP8
                END IF
@@ -4107,7 +4133,8 @@ C CHECK TO SEE IF ANY BUFR MESSAGES CAN BE SKIPPED IN INPUT SATWND DUMP
             LOOP9n1: DO JJ=5,6
                IF(MIN(JSWIND(II,JJ,3),JSMASS(II,JJ,3)).LT.9999)  THEN
                    ! ** METEOSAT-ODD AND METEOSAT-EVEN Visible **
-                  SUBSKP(005,065) = .FALSE. ! current
+                  SUBSKP(005,068) = .FALSE. ! current
+                  SUBSKP(005,065) = .FALSE. ! historical
                   SUBSKP(005,062) = .FALSE. ! historical
                   EXIT LOOP9
                END IF
@@ -4117,7 +4144,8 @@ C CHECK TO SEE IF ANY BUFR MESSAGES CAN BE SKIPPED IN INPUT SATWND DUMP
             LOOP10n1: DO JJ=5,6
                IF(MIN(JSWIND(II,JJ,2),JSMASS(II,JJ,2)).LT.9999)  THEN
                    ! ** METEOSAT-ODD AND METEOSAT-EVEN Water Vpr Imgr **
-                  SUBSKP(005,066) = .FALSE. ! current
+                  SUBSKP(005,069) = .FALSE. ! current
+                  SUBSKP(005,066) = .FALSE. ! historical
                   SUBSKP(005,063) = .FALSE. ! historical
                   EXIT LOOP10
                END IF
@@ -4155,9 +4183,10 @@ C CHECK TO SEE IF ANY BUFR MESSAGES CAN BE SKIPPED IN INPUT PROFLR DUMP
          IF(.NOT.PRFLER(2))  SUBSKP(002,009) = .TRUE.
          IF(.NOT.PRFLER(3))  SUBSKP(002,011) = .TRUE.
          IF(.NOT.PRFLER(4))  SUBSKP(002,013) = .TRUE.
+         IF(.NOT.PRFLER(5))  SUBSKP(002,014) = .TRUE.
 C CHECK TO SEE IF WIND PROFILER DATA SHOULD BE PROCESSED
          IF(SUBSKP(002,007).AND.SUBSKP(002,009).AND.SUBSKP(002,011).AND.
-     $      SUBSKP(002,013))  GO TO 7001
+     $      SUBSKP(002,013).AND.SUBSKP(002,014))  GO TO 7001
       ELSE IF(NN.EQ.6)  THEN
 C CHECK TO SEE IF VAD WIND DATA SHOULD BE PROCESSED
          IF(.NOT.VADWIN)  GO TO 7001
@@ -4279,7 +4308,8 @@ C IFLAG = 1 RETURNS DATA SET INFO (ONLY) AFTER FIRST CALL
                   PRINT 8872, NAME1,(SWINDO_e(I,4,2),I=1,6),
      $             (SWINDO_l(I,4,2),I=1,6)
                END IF
-               IF(.NOT.SUBSKP(005,061).OR..NOT.SUBSKP(005,064))  THEN
+               IF(.NOT.SUBSKP(005,061).OR..NOT.SUBSKP(005,064).OR.
+     $            .NOT.SUBSKP(006,067))  THEN
                NAME1 = 'ESA: METEOSAT-ODD CL DRIFT -IR-LW (6 LAT BANDS)'
                   PRINT 8872, NAME1,(SWINDO_e(I,5,1),I=1,6),
      $             (SWINDO_l(I,5,1),I=1,6)
@@ -4287,7 +4317,8 @@ C IFLAG = 1 RETURNS DATA SET INFO (ONLY) AFTER FIRST CALL
                   PRINT 8872, NAME1,(SWINDO_e(I,6,1),I=1,6),
      $             (SWINDO_l(I,6,1),I=1,6)
                END IF
-               IF(.NOT.SUBSKP(005,062).OR..NOT.SUBSKP(005,065))  THEN
+               IF(.NOT.SUBSKP(005,062).OR..NOT.SUBSKP(005,065).OR.
+     $            .NOT.SUBSKP(005,068))  THEN
                NAME1 = 'ESA: METEOSAT-ODD CLOUD DRIFT-VIS (6 LAT BANDS)'
                   PRINT 8872, NAME1,(SWINDO_e(I,5,3),I=1,6),
      $             (SWINDO_l(I,5,3),I=1,6)
@@ -4295,7 +4326,8 @@ C IFLAG = 1 RETURNS DATA SET INFO (ONLY) AFTER FIRST CALL
                   PRINT 8872, NAME1,(SWINDO_e(I,6,3),I=1,6),
      $             (SWINDO_l(I,6,3),I=1,6)
                END IF
-               IF(.NOT.SUBSKP(005,063).OR..NOT.SUBSKP(005,066))  THEN
+               IF(.NOT.SUBSKP(005,063).OR..NOT.SUBSKP(005,066).OR.
+     $            .NOT.SUBSKP(005,069))  THEN
                NAME1 = 'ESA: METEOSAT-ODD CLOUD DRFT-WVPR (6 LAT BANDS)'
                   PRINT 8872, NAME1,(SWINDO_e(I,5,2),I=1,6),
      $             (SWINDO_l(I,5,2),I=1,6)
@@ -4420,8 +4452,8 @@ C  HOURS SO W3UNPKB7 WILL NOT HAVE TO DO ANY TIME CHECKS - -3 TO +2
 C  HOURS WOULD ALSO AVOID TIME CHECKS BUT NEED EXPANDED WINDOW
 C  BECAUSE GFS DUMPS ATE +/-5 HOURS TO IMPROVE PROFCQC PERFORMANCE}
          OBS2   = BMISS  ! init obs2   array before reading any rpts
-         OBS3   = BMISS  ! init obs3   array before reading any rpts
-         NOBS3  = 0      ! init nobs3  array before reading any rpts
+         OBS3   = BMISS  ! init OBS3   array before reading any rpts
+         NOBS3  = 0      ! init NOBS3  array before reading any rpts
          obs8_8 = BMISS  ! init obs8_8 array before reading any rpts
          RDATA2 = BMISS  ! init rdata2 array before reading any rpts
          CALL W3UNPKB7(IDATE,-5,+5,NFILE,RDATA,STNID,DSNAME,RDATA2,
@@ -4439,7 +4471,7 @@ C SPLIT CENTER DATE INTO COMPONENTS (MDATE)
             MDATE(4) = MOD(IDSDAT,100)
 c-----------------------------------------------------------------------
 c  Read 1st dummy message in file so can then call iupvs01 to get iminu
-            call readmg(nfile,subset,ibdate,kret)
+            call readmg(nfile,subset_t,ibdate,kret)
             iminu = iupvs01(nfile,'MINU')
 c  Close file and reopen so W3UNPKB7 will handle things as though this
 c   block of code never exited
@@ -4472,6 +4504,10 @@ C  IS CENTERED ON (CYCLE TIME, to fraction of an hr if IDATMM non-zero)
                IF(.NOT.SUBSKP(002,013))  THEN
       NAME2 = 'JAPANESE METEOR. AGENCY WIND PROFILER DATA. MINUS & PLUS'
                   PRINT 873, NAME2,PWINDO(4)
+               END IF
+               IF(.NOT.SUBSKP(002,014))  THEN
+      NAME2 = 'HONG KONG WIND PROFILER DATA .............. MINUS & PLUS'
+                  PRINT 873, NAME2,PWINDO(5)
                END IF
             ELSE  IF(NN.EQ.6)  THEN
       NAME2 = 'VAD WIND DATA ............................. MINUS & PLUS'
@@ -4612,6 +4648,7 @@ C SET UP FOR LATER CHECK IF PROFILER RPT IS W/I TIME WINDOW {PWINDO(3)}
       ELSE  IF(IDATA(9).EQ.76)  THEN
 C+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 C        CHECKS ON JMA (JAPANESE) WIND PROFILER REPORTS (R. TYPE 76)
+C                  HONG KONG WIND PROFILER REPORTS (R. TYPE 76)
 C+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
          INSTR = 8
 C SET UP FOR LATER CHECK IF PROFILER RPT IS W/I TIME WINDOW {PWINDO(4)}
@@ -4620,6 +4657,7 @@ C SET UP FOR LATER CHECK IF PROFILER RPT IS W/I TIME WINDOW {PWINDO(4)}
       ELSE  IF(IDATA(9).EQ.72)  THEN
 C+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 C           CHECKS ON VAD (NEXRAD) WIND REPORTS (R. TYPE 72)
+C           OTHER VAD WIND REPORTS FROM EUROPE ETC (R. TYPE 72)
 C+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
          INSTR = 4
 C SET UP FOR LATER CHECK IF VAD WIND REPORT IS W/I TIME WINDOW (VWINDO)
@@ -4683,11 +4721,14 @@ C-----------------------------------------------------------------------
 C STORE WORD 8 OF REPORT HEADER (REPORT "SUBTYPE") AS 2 FOR DROPS
 C  (STORED AS 1 FOR RECCOS IN SUBR. GETC06)
       IF(IDATA(9).EQ.31)  HDR(8) = 2.
-C STORE WORD 8 OF REPORT HEADER (REPORT "SUBTYPE") AS 2 FOR VAD WIND
+C  STORE WORD 8 OF REPORT HEADER (REPORT "SUBTYPE") AS 3 FOR OTHER
+C  VAD WIND REPORTS FROM EUROPE AND NEW ZEALAND, AS 2 FOR VAD WIND
 C  REPORTS FROM LEVEL 2 DECODER AND AS 1 FOR VAD WIND REPORTS FROM
 C  RADAR CODED MESSAGE
       IF(IDATA(9).EQ.72) THEN
-         IF(SUBSET_d.EQ.'NC002017')  THEN
+         IF(SUBSET_d.EQ.'NC002018')  THEN
+            HDR(8) = 3.
+         ELSE IF(SUBSET_d.EQ.'NC002017')  THEN
             HDR(8) = 2.
          ELSE
             HDR(8) = 1.
@@ -4992,6 +5033,8 @@ C              45 (since the RTMA_RU runs 4 times per hour). This change
 C              allows the print statements to reflect this new center
 C              dump time format.  It also ensures that the dump vs.
 C              PREPBUFR center dates are correctly tested.
+C 2020-08-20 J. DONG -- Defined IDSDAT to eliminate Boundary Run-Time
+C              Check Failures.
 C
 C USAGE:    CALL UNPREPBF(IFLAG,CYCLET,IOPENED,DSNAME,IDSDAT,IDSDMP_8,*)
 C   INPUT  ARGUMENT LIST:
@@ -5045,7 +5088,7 @@ C$$$
       CHARACTER*8   STNID,CRES1,CRES2,DSNAME,SUBSET_d
       CHARACTER*11  CBULL
       INTEGER  IDATA(MAXOBS),MDATE(4)
-      INTEGER(8) IDSDMP_8
+      INTEGER(8) IDSDAT,IDSDMP_8
       REAL(8)  BMISS,obs8_8,alon_8,alat_8
       COMMON/ADP/ISATOB,PMAND(23),RDATA(MAXOBS),IPRINT
       COMMON/UNITNO/NFILE,IUNIT(28)
@@ -5076,8 +5119,8 @@ C  CRES1, CRES2, CBULL, OBS2, OBS3, NOBS3 and obs8_8 HOLD RETURNED
 C  REPORT IN SPECIFIED UNPACKED FORMAT {UNLESS FIRST CALL WHICH SHOULD
 C  RETURN JUST THE DATA SET INFO (DSNAME, IDSDAT AND IDSDMP_8)}
       OBS2   = BMISS  ! initialize obs2   array before reading any rpts
-      OBS3   = BMISS  ! initialize obs3   array before reading any rpts
-      NOBS3  = 0      ! initialize nobs3  array before reading any rpts
+      OBS3   = BMISS  ! initialize OBS3   array before reading any rpts
+      NOBS3  = 0      ! initialize NOBS3  array before reading any rpts
       obs8_8 = bmiss  ! initialize obs8_8 array before reading any rpts
       RDATA2 = BMISS  ! initialize rdata2 array before reading any rpts
       IF(IW3UNPBF(NFILE,RDATA,STNID,CRES1,CRES2,CBULL,OBS2,OBS3,NOBS3,
@@ -5359,7 +5402,7 @@ C$$$
       SUBROUTINE RPTLBL(CYCLET)
       PARAMETER (MXWRDH = 15)
       PARAMETER (MAXOBS = 3500)
-      parameter (mxblvl = 255)
+      parameter (MXBLVL = 255)
       parameter (numobs2 = 43)
       CHARACTER*8  STNID,SUBSET_d,CRES1,CRES2
       CHARACTER*11 CBULL
@@ -5371,9 +5414,9 @@ C$$$
       COMMON/RPTHDR/SUBSET_d,STNID,HDR(2:MXWRDH),alon_8,alat_8
       COMMON/UNITNO/NFILE,IUNIT(28)
       COMMON/LAUNCH/ALNCH
-      COMMON/PFSWCH/PRFLER(4),PWINDO(4),PROFILERinADPUPA
+      COMMON/PFSWCH/PRFLER(5),PWINDO(5),PROFILERinADPUPA
       COMMON/XTRHD2/CRES1,CRES2,CBULL
-      common/direct/obs3(5,mxblvl,7),obs2(numobs2),nobs3(7),rdata2(25),
+      common/direct/OBS3(5,MXBLVL,7),OBS2(numobs2),NOBS3(7),rdata2(25),
      $ obs8_8(2)
       common /bufrlib_missing/bmiss
       DATA  XMISS/99999./, YMISS/99998.8/,IMISS/99999/
@@ -9620,7 +9663,7 @@ C$$$
       COMMON/PARM6/MODPRT,IFLUA,STNPRT(3)
       COMMON/LFMSFC/LFMAXI,LFMAXJ,FMESHL,FLONVT,FPOLEI,FPOLEJ,MARLND,
      $ JSURFM(12),JSURFW(12),FWINDO(12),PFRALT,npkrpt(12)
-      COMMON/PFSWCH/PRFLER(4),PWINDO(4),PROFILERinADPUPA
+      COMMON/PFSWCH/PRFLER(5),PWINDO(5),PROFILERinADPUPA
       COMMON/DIRECT/OBS3(5,MXBLVL,7),OBS2(NUMOBS2),NOBS3(7),RDATA2(25),
      $ obs8_8(2)
       COMMON /BUFRLIB_MISSING/BMISS
@@ -12582,6 +12625,10 @@ C     WORD 6 (SO IT CAN LATER BE ENCODED INTO PREPBUFR FILE)
 C 2014-11-25  D. A. Keyser -- Removed input argument "IDATE" (central
 C     date) from call to subr. W3CNVXTOVS since year {IDATE(1)} is no
 C     longer needed to obtain BUFR satellite ID.
+C 2020-08-20 J. Dong -- 
+C     - Defined IDSDAT to eliminate Boundary Run-Time Check Failures.
+C     - Modified the code to handle invalid float errors during the
+C       run when the code was compiled with debug options enabled.
 C
 C USAGE:    CALL SATEDS
 C   INPUT FILES:
@@ -12626,7 +12673,7 @@ CCC
       LOGICAL  SATMST,TR80KM,TOVEDS
       INTEGER  IBUF(140),JRTRV(3),NUMOB(5,4,2,4,4),KEPOB(5,4,2,4),
      $ MSTOB(5,4,2,4),IDATA(MAXOBS),KSATOB(3),IDSAT(4),ISAMPLE(2)
-      INTEGER(8) IDSDMP_8
+      INTEGER(8) IDSDAT,IDSDMP_8
       REAL(8)  BMISS,obs8_8,alon_8,alat_8
       COMMON/ADP/ISATOB,PMAND(23),RDATA(MAXOBS),IPRINT
       COMMON/DATA/KOUNT,IDATE(4),IDAT10,MP_PROCESS,WRMISS,IDATMM
@@ -12689,8 +12736,8 @@ C KSKPTV WILL COUNT NO. OF DECODED REPORTS SKIPPED (VARIOUS REASONS)
  1400 CONTINUE
 C ATTEMPT TO DECODE THE NEXT RTOVS OR ATOVS REPORT
       OBS2   = BMISS  ! initialize obs2   array before reading any rpts
-      OBS3   = BMISS  ! initialize obs3   array before reading any rpts
-      NOBS3  = 0      ! initialize nobs3  array before reading any rpts
+      OBS3   = BMISS  ! initialize OBS3   array before reading any rpts
+      NOBS3  = 0      ! initialize NOBS3  array before reading any rpts
       obs8_8 = bmiss  ! initialize obs8_8 array before reading any rpts
       RDATA2 = BMISS  ! initialize rdata2 array before reading any rpts
       CALL W3XTOVSEDS(NFILE,IDATEM,IBUF,KSATOB,PBOT,DSNAME,IDSDAT,
@@ -13414,6 +13461,8 @@ C     SUBR. UPON FIRST CALL FOR ATOVS DATA (SIGNALS INPUT BUFR FILE
 C     IS A DATA DUMP)
 C 2001-10-10  D. A. KEYSER -- STORES BUFR SATELLITE ID IN UNPACKED
 C     IW3UNPBF WORD 6 SO IT CAN LATER BE ENCODED INTO PREPBUFR FILE
+C 2020-08-20 J. Dong -- Defined IDSDAT to eliminate Boundary Run-Time
+C     Check Failures.
 C
 C USAGE:    CALL SATBFR
 C   INPUT FILES:
@@ -13461,7 +13510,7 @@ CCC
      $ IPRT(2),IQ(MXLVL,NUMQMS),JQ(MXLVL,NUMQMS),IDATA(MAXOBS),
      $ IR(MXLVL,NUMQMS),JR(MXLVL,NUMQMS),KSATOB(11),IRTCHN(35),IDSAT(4),
      $ ISAMPLE(2)
-      INTEGER(8) IDSDMP_8
+      INTEGER(8) IDSDAT,IDSDMP_8
       REAL  PP(MXLVL),ZP(MXLVL),TP(MXLVL),QP(MXLVL),TMP(MXLVL,NUMDAT),
      $ CLAL(MXLVL),CLAM(MXLVL),RSATOB(17)
       REAL(8)  BMISS,obs8_8,alon_8,alat_8
@@ -13544,8 +13593,8 @@ C INITIALIZE ALL REASON CODES AS 100 (ORIGINAL DATA) PRIOR TO EACH CALL
       IR = 100
       JR = 100
       OBS2   = BMISS  ! initialize obs2   array before reading any rpts
-      OBS3   = BMISS  ! initialize obs3   array before reading any rpts
-      NOBS3  = 0      ! initialize nobs3  array before reading any rpts
+      OBS3   = BMISS  ! initialize OBS3   array before reading any rpts
+      NOBS3  = 0      ! initialize NOBS3  array before reading any rpts
       obs8_8 = bmiss  ! initialize obs8_8 array before reading any rpts
       RDATA2 = BMISS  ! initialize rdata2 array before reading any rpts
       IF(NN.EQ.1)  THEN
@@ -14005,6 +14054,8 @@ C        PREPBUFR file.
 C        BENEFIT: Accounts for possibility of center (cycle) date in
 C                 PREPBUFR file not being zero with addition of new
 C                 RTMA_RU where minutes here can be 15, 30 or 45.
+C 2020-08-20 J. Dong -- Changed subset to subset_t. Defined subset_t
+C        and IDSDAT to eliminate Boundary Run-Time Check Failures.
 C
 C USAGE:    CALL GOESDG
 C   INPUT FILES:
@@ -14055,12 +14106,12 @@ CCC
       PARAMETER (MAXOBS = 3500)
       PARAMETER (NUMOBS2 = 43)
       CHARACTER*1  CIDGST(4,4)
-      CHARACTER*8  STNID,STNPRT,DSNAME,SUBSET_d
+      CHARACTER*8  STNID,STNPRT,DSNAME,SUBSET_d,subset_t
       LOGICAL  SATMST,GOESND,GOESPW,GOESCT,GOESRD
       INTEGER  NUMOB(5,4,2,4,4),KEPOB(5,4,2,4),MSTOB(5,4,2,4),
      $ IDATA(MAXOBS),JRTRV(4),IQ(MXLVL,NUMQMS),IPRT(2),IRTYP(3),
      $ JCAT8(4),JNDEX(4),ITYPP(2,3),IR(MXLVL,NUMQMS),IDSAT(4)
-      INTEGER(8) IDSDMP_8
+      INTEGER(8) IDSDAT,IDSDMP_8
       REAL  PP(MXLVL),ZP(MXLVL),TP(MXLVL),DP(MXLVL)
       REAL(8)  BMISS,obs8_8,alon_8,alat_8
       COMMON/LNDSEA/GDSH(145,37),GDUS(362,91),GDNH(362,91)
@@ -14162,8 +14213,8 @@ C INIT. CLOUD TOP DATA
 C ATTEMPT TO DECODE THE NEXT REPORT
       IRET = 0
       OBS2   = BMISS  ! initialize obs2   array before reading any rpts
-      OBS3   = BMISS  ! initialize obs3   array before reading any rpts
-      NOBS3  = 0      ! initialize nobs3  array before reading any rpts
+      OBS3   = BMISS  ! initialize OBS3   array before reading any rpts
+      NOBS3  = 0      ! initialize NOBS3  array before reading any rpts
       obs8_8 = bmiss  ! initialize obs8_8 array before reading any rpts
       RDATA2 = BMISS  ! initialize rdata2 array before reading any rpts
       CALL W3UNPKB7(IDATE,IETIME,ILTIME,IUNIT(8),RDATA,STNID,DSNAME,
@@ -14174,7 +14225,7 @@ C.......................................................................
 C IRET = 1 RETURNS DATA SET INFO (ONLY) AFTER FIRST CALL
 c-----------------------------------------------------------------------
 c  Read 1st dummy message in file so can then call iupvs01 to get iminu
-         call readmg(IUNIT(8),subset,ibdate,kret)
+         call readmg(IUNIT(8),subset_t,ibdate,kret)
          iminu = iupvs01(IUNIT(8),'MINU')
 c  Close file and reopen so W3UNPKB7 will handle things as though this
 c   block of code never exited
@@ -15213,6 +15264,8 @@ C     quality mark read from the ADPSFC dump file).
 C 2015-04-16  D. A. Keyser -- Call to subr. LNDCHK now uses new 16
 C     point check for determining if marine reports in the N.H. are
 C     over land or sea.
+C 2020-08-20 J. Dong -- Defined IDSDAT to eliminate Boundary Run-time
+C     Check Failures.
 C
 C USAGE:    CALL SFCDTA
 C   INPUT FILES:
@@ -15249,7 +15302,7 @@ C$$$
       LOGICAL  LFM,MARLND,MSLBOG,ATLAS,PFRALT,SFLAND,SUBSKP,PFRALT_save,
      $ npkrpt
       INTEGER  IDATA(MAXOBS),NC(5),ISQNUM(3),NOBS3_SAVE(7)
-      INTEGER(8)  IDSDMP_8
+      INTEGER(8)  IDSDAT,IDSDMP_8
       REAL OBS2_SAVE(4:NUMOBS2),OBS3_SAVE(5,MXBLVL,7)
       REAL(8)  BMISS,obs8_8,alon_8,alat_8
       COMMON/RUNSW/IRNMRK
@@ -16326,7 +16379,7 @@ cfix?    TEMP = YMISS + 0.5
       END IF
 C IF MOISTURE MISSING OR GROSSLY BAD, OR TEMPERATURE GROSSLY BAD, SKIP
 C  PROCESSING OF MOISTURE
-      IF(TEMP.LE.-1000..OR.DPDP.LT.0.0.OR.DPDP.GT.9999..OR.IMQ.GE.
+      IF(TEMP.LE.-1000..OR.DPDP.LT.0.0.OR.DPDP.GT.999..OR.IMQ.GE.
      $ IQMLIM)  GO TO 15
       DP = ((TEMP - DPDP) * 0.1) + 273.16
 C STORE DEWPOINT TEMP OBS (*100 DEG. C) IN WORD 6 OF MOBS MASS LEVEL 1
@@ -16452,6 +16505,7 @@ C    gauge data (read from SFCSHP dump, dump report type 534).
 C 2014-04-25  D. A. Keyser -- Invalid "other" (default) output "type"
 C    changed from 13 TO 30.  Invalid RECCO/DROPWINSONDE with no splash-
 C    level mass output type changed from 12 to 20.
+c 2019-12-05 JWhiting - added 563-4 (BUFR feed fixed/drift buoys)
 C
 C USAGE:    XX = ISSEL(ITYPDMP)
 C   INPUT ARGUMENT LIST:
@@ -16486,7 +16540,7 @@ C$$$
       FUNCTION ISSEL(ITYPDMP)
       PARAMETER (MXWRDH = 15)
       PARAMETER (MAXOBS = 3500)
-      INTEGER  JTYPE(31:562),IDATA(MAXOBS)
+      INTEGER  JTYPE(31:564),IDATA(MAXOBS)
       real(8)  alon_8,alat_8
       CHARACTER*8  STNID,SUBSET_d
       COMMON/ADP/ISATOB,PMAND(23),RDATA(MAXOBS),IPRINT
@@ -16500,15 +16554,15 @@ C      31         511 512     514       522 523       531 532  --> RTYPE
 C      --         --- ---     ---       --- ---       --- ---
      $  5, 479*30,  1,  8, 30, 11, 7*30,  2,  2, 7*30,  6,  9,
 
-C          534        540        551         561 562  --> RTYPE
-C          ---        ---        ---         --- ---
-     $ 30,  12, 5*30,  10, 10*30,  3, 9*30,    4,  4 /
+C          534        540        551         561 562 563 564  --> RTYPE
+C          ---        ---        ---         --- --- --- ---
+     $ 30,  12, 5*30,  10, 10*30,  3, 9*30,    4,  4,  4,  4 /
 
       DATA  YMISS/99998.8/
 
       ISSEL0 = 30
 
-      IF(ITYPDMP.GT.30.AND.ITYPDMP.LT.563)  ISSEL0 = JTYPE(ITYPDMP)
+      IF(ITYPDMP.GT.30.AND.ITYPDMP.LT.565)  ISSEL0 = JTYPE(ITYPDMP)
 
       IF(ISSEL0.EQ.3)  THEN
 C AUSTRALIAN PAOBS RESET ISSEL0=7 (OPC/NOS POINT BOGUS RETAIN ISSEL0=3)
@@ -16595,6 +16649,8 @@ C     "TIMWIN" (+/- TIME WINDOW) ("-" PRIOR TO CYCLE TIME, "+" AFTER
 C     CYCLE TIME), ALLOWS THE 2 TO BE DIFFERENT
 C 2001-06-19  D. A. KEYSER -- NEW SUBR. "TIMCHK" DOES TIME WINDOW CHECK
 C     SEPARATE FROM "RPTLBL"
+C 2020-08-20 J. Dong -- Defined IDSDAT to eliminate Boundary Run-Time
+C     Check Failure.
 C
 C USAGE:    CALL GETSMI
 C   INPUT FILES:
@@ -16625,7 +16681,7 @@ C$$$
       CHARACTER*8  STNID,DSNAME,SUBSET_d
       CHARACTER*46 CTEXT(4)
       INTEGER  KOUNT_MI(6,4),IDATA(MAXOBS),ITYP(189:198)
-      INTEGER(8)  IDSDMP_8
+      INTEGER(8)  IDSDAT,IDSDMP_8
       REAL  PHISMI(7)
       real(8)  alon_8,alat_8
       COMMON/STRMOB/MOBS(MXTYPV,MXWRDL,MXLVL)
@@ -16948,6 +17004,9 @@ C              45 (since the RTMA_RU runs 4 times per hour). This change
 C              allows the print statements to reflect this new center
 C              dump time format.  It also ensures that the dump vs.
 C              PREPBUFR center dates are correctly tested.
+C 2020-08-20 J. Dong -- Changed subset to subset_t. Defined subset_t
+C              and IDSDAT to eliminate Boundary Run-Time Check
+C              Failures.
 C
 C USAGE:    CALL GETSCATT(ISCTP)
 C   INPUT ARGUMENT LIST:
@@ -16988,9 +17047,9 @@ C$$$
       PARAMETER (MAXOBS = 3500)
       PARAMETER (NUMOBS2 = 43)
       CHARACTER*6  NAME(4)
-      CHARACTER*8  STNID,STNPRT,DSNAME,DNAME(4),SUBSET_d
+      CHARACTER*8  STNID,STNPRT,DSNAME,DNAME(4),SUBSET_d,subset_t
       INTEGER  KOUNW(6),IDATA(MAXOBS),IBWNDO(2,4),MDATE(4),IRPTY(4)
-      INTEGER(8) IDSDMP_8
+      INTEGER(8) IDSDAT,IDSDMP_8
       REAL  PHISCT(7)
       REAL(8)  BMISS,obs8_8,alon_8,alat_8
       COMMON/STRMOB/MOBS(MXTYPV,MXWRDL,MXLVL)
@@ -17020,6 +17079,8 @@ C$$$
       IBWNDO(2,3) = IWWNDO(2)
       IBWNDO(1,4) = IAWNDO(1)
       IBWNDO(2,4) = IAWNDO(2)
+      SUBSET_d  = 'XXXXXXXX'
+      subset_t  = 'XXXXXXXX'
 C KNTALL COUNTS NO. OF REPORTS UNPACKED FROM FILE (ALL REPORTS)
       KNTALL = 0
 C KOUNT COUNTS TOTAL NO. OF RPTS UNPACKED (& NOT SKIPPED) FROM FILE
@@ -17043,9 +17104,11 @@ C INITIALIZE REQV AS MISSING
       IRET = 0
 C CALL W3UNPKB7 TO READ/DECODE NEXT ERS, QUIKSCAT, WINDSAT OR ASCAT
 C  WIND REPORT
+      IDSDAT    = 0
+      IDSDMP_8  = 0
       OBS2   = BMISS  ! initialize obs2   array before reading any rpts
-      OBS3   = BMISS  ! initialize obs3   array before reading any rpts
-      NOBS3  = 0      ! initialize nobs3  array before reading any rpts
+      OBS3   = BMISS  ! initialize OBS3   array before reading any rpts
+      NOBS3  = 0      ! initialize NOBS3  array before reading any rpts
       obs8_8 = bmiss  ! initialize obs8_8 array before reading any rpts
       RDATA2 = BMISS  ! initialize rdata2 array before reading any rpts
       CALL W3UNPKB7(IDATE,IBWNDO(1,ISCTP),IBWNDO(2,ISCTP),NFILE,RDATA,
@@ -17063,7 +17126,7 @@ C SPLIT CENTER DATE INTO COMPONENTS (MDATE)
          MDATE(4) = MOD(IDSDAT,100)
 c-----------------------------------------------------------------------
 c  Read 1st dummy message in file so can then call iupvs01 to get iminu
-         call readmg(nfile,subset,ibdate,kret)
+         call readmg(nfile,subset_t,ibdate,kret)
          iminu = iupvs01(nfile,'MINU')
 c  Close file and reopen so W3UNPKB7 will handle things as though this
 c   block of code never exited
@@ -17329,6 +17392,9 @@ C              45 (since the RTMA_RU runs 4 times per hour). This change
 C              allows the print statements to reflect this new center
 C              dump time format.  It also ensures that the dump vs.
 C              PREPBUFR center dates are correctly tested.
+C 2020-08-20 J. Dong -- Changed subset to subset_ti. Defined subset_t
+C              and IDSDAT to eliminate Boundary Run-Time Check
+C              Failures.
 C
 C USAGE:    CALL GETGPSIPW
 C   INPUT FILES:
@@ -17351,11 +17417,11 @@ C$$$
       PARAMETER (MXBLVL = 255)
       PARAMETER (MAXOBS = 3500)
       PARAMETER (NUMOBS2 = 43)
-      CHARACTER*8  STNID,DSNAME,SUBSET_d
+      CHARACTER*8  STNID,DSNAME,SUBSET_d,subset_t
       LOGICAL  SKGP45
       LOGICAL  SKGNSS
       INTEGER  IDATA(MAXOBS),KOUNG(6),MDATE(4)
-      INTEGER(8) IDSDMP_8
+      INTEGER(8) IDSDAT,IDSDMP_8
       REAL  PHIIPW(7)
       REAL(8)  BMISS,obs8_8,alon_8,alat_8
       COMMON/UNITNO/NFILE,IUNIT(28)
@@ -17401,8 +17467,8 @@ C INITIALIZE PRECIPITABLE WATER AS MISSING
       IRET = 0
 C CALL W3UNPKB7 TO READ/DECODE THE NEXT GPS-IPW/ZTD REPORT
       OBS2   = BMISS  ! initialize obs2   array before reading any rpts
-      OBS3   = BMISS  ! initialize obs3   array before reading any rpts
-      NOBS3  = 0      ! initialize nobs3  array before reading any rpts
+      OBS3   = BMISS  ! initialize OBS3   array before reading any rpts
+      NOBS3  = 0      ! initialize NOBS3  array before reading any rpts
       obs8_8 = bmiss  ! initialize obs8_8 array before reading any rpts
       RDATA2 = BMISS  ! initialize rdata2 array before reading any rpts
       CALL W3UNPKB7(IDATE,IETIME,ILTIME,NFILE,RDATA,STNID,DSNAME,RDATA2,
@@ -17420,7 +17486,7 @@ C SPLIT CENTER DATE INTO COMPONENTS (MDATE)
          MDATE(4) = MOD(IDSDAT,100)
 c-----------------------------------------------------------------------
 c  Read 1st dummy message in file so can then call iupvs01 to get iminu
-         call readmg(nfile,subset,ibdate,kret)
+         call readmg(nfile,subset_t,ibdate,kret)
          iminu = iupvs01(nfile,'MINU')
 c  Close file and reopen so W3UNPKB7 will handle things as though this
 c   block of code never exited
@@ -18518,7 +18584,7 @@ c    fill CEILING w/ arbitrarily high value (currently 20000m).
 c-----------
 
 c  check for at least 1 cloud layer (nobs(3)>0) in METAR reports (TYP=512)
-      if(nobs3(3).gt.0 .and. int(hdr_8(7)).eq.512) then
+      if(NOBS3(3).gt.0 .and. int(hdr_8(7)).eq.512) then
 
 c-- debug of ceiling: available cloud amount & cloud base values
 c---  DATA HEADR1/'SID  XOB YOB DHR NUL TYP T29 TSB ITP ELV SQN SIRC '/
@@ -18528,22 +18594,22 @@ c---  OBS3_8(5,MXBLVL,7)
         write(*,'(a,1x,a8,$)') 'db: ',stnid
         write(*,'(3(1x,f6.2),$)') (hdr_8(i),i=2,4)
         write(*,'(2(1x,i5),$)') (int(hdr_8(i)),i=6,7)
-        write(*,'(2x,a,i2)') "n= ",nobs3(3)
+        write(*,'(2x,a,i2)') "n= ",NOBS3(3)
 
-        do i=1,nobs3(3)
+        do i=1,NOBS3(3)
           write(*,'(a,4x,i2,1x,":",3(2x,i3),2(3x,i5))') 'db: ',i,
-     $      (idint(obs3_8(j,i,3)),j=1,3),
-     $      (idint(obs3_8(j,i,3)),j=4,5)
-        enddo ! i=1,nobs3(3)
+     $      (idint(OBS3_8(j,i,3)),j=1,3),
+     $      (idint(OBS3_8(j,i,3)),j=4,5)
+        enddo ! i=1,NOBS3(3)
        endif ! db_ceiling
 c--
 
 c - loop thru available cloud layers, low to high
         ndx_amt=0
         ndx_bas=0
-        do i=1,nobs3(3)
-          cldamt_8=obs3_8(2,i,3)
-          cldbas_8=obs3_8(4,i,3)
+        do i=1,NOBS3(3)
+          cldamt_8=OBS3_8(2,i,3)
+          cldbas_8=OBS3_8(4,i,3)
 
 c - if cld amount missing or indiscernable, skip this level/layer
           if ( ibfms(cldamt_8).eq.1 ) cycle                ! CLAM missing
@@ -18561,7 +18627,7 @@ c - check for sufficient cloud amount in this layer, break out of loop if found
             exit
           endif ! if broken or betw 6-10 tenths cover
 
-        enddo ! i=1,nobs3(3)
+        enddo ! i=1,NOBS3(3)
 
 c - specify infinite or missing ceiling values
         if ( ndx_amt.ne.0 ) then                  ! some clouds found
@@ -18577,7 +18643,7 @@ c - write out ceiling value
      &      write(*,'(a,1x,i5)') 'db: ceil= ', idint(cldbas_8)
           call UFBINT(iunitp,cldbas_8,1,1,iret,'CEILING')
 
-      endif ! nobs3(3)>0 & hdr_8(7)=512 (metar)
+      endif ! NOBS3(3)>0 & hdr_8(7)=512 (metar)
 c - end of CEILING processing
 
 
@@ -18636,7 +18702,7 @@ c - end of CEILING processing
             CALL UFBINT(IUNITP,RDATA2_8(3) ,1,1,IRET,'CTCN')
             CALL UFBINT(IUNITP,RDATA2_8(22),3,1,IRET,'WVCQ BSCD LKCS')
          ELSE IF(SUBSET(ITYP).EQ.'SATWND  ') THEN
-            CALL UFBINT(IUNITP,OBS2_8(NUMOBS2), 1,1,IRET,'SAZA')
+            CALL UFBINT(IUNITP,OBS2_8(43), 1,1,IRET,'SAZA')
          END IF
 
          IF(NLV.GT.0)  THEN
@@ -19737,6 +19803,8 @@ C 2017-01-11  C. Hill -- The default value for IACFTH(9) is changed from
 C             3050 to 16500 meters to provide capability to process the
 C             full vertical profile of TAMDARB reports (made available
 C             by ARINC 01/17/2017). 
+C 2020-08-20 J. Dong -- Modified to handle Hong Kong wind profiler data
+C            (NC002014). Future feature.
 C
 C REMARKS: THIS IS UPDATED AS NEEDED TO ACCOUNT FOR CHANGES IN COMMON
 C   BLOCKS AND FOR NEW COMMON BLOCKS AS THEY ARE ADDED.  NO PROGRAM
@@ -19803,7 +19871,7 @@ C$$$
       COMMON/APDNSW/APPEND
       COMMON/SKPSUB/SUBSKP(0:255,0:200)
       COMMON/LAUNCH/ALNCH
-      COMMON/PFSWCH/PRFLER(4),PWINDO(4),PROFILERinADPUPA
+      COMMON/PFSWCH/PRFLER(5),PWINDO(5),PROFILERinADPUPA
       COMMON/RASSSW/RASS,TWINDO
       COMMON/DRIFT/DFTLON(MXLVL),DFTLAT(MXLVL),DFTTIM(MXLVL)
       COMMON/SBDRIFT/ZDRIFT(MXLVL),TDRIFT(MXLVL),TDRIFTLL(MXLVL),
@@ -19820,7 +19888,7 @@ C$$$
      $ SATMST/80*.FALSE./,MARLND/.FALSE./,RECCON/.TRUE./,
      $ SWNLND/480*.TRUE./,AIRLND/54*.TRUE./,PG4243/.TRUE./,
      $ SPCIAL/.FALSE./,KTEMP/.FALSE./,TR80KM/.FALSE./,FILLZ/.FALSE./,
-     $ FILLT/.FALSE./,FILLW/.FALSE./,FILLM/.FALSE./,PRFLER/4*.TRUE./,
+     $ FILLT/.FALSE./,FILLW/.FALSE./,FILLM/.FALSE./,PRFLER/5*.TRUE./,
      $ GOESPW/2*.FALSE./,GOESCT/2*.FALSE./,STNPRT/3*'        '/,
      $ RECSLM/.TRUE./,VADWIN/.FALSE./,TOVRAD/.FALSE./,PFRALT/.FALSE./,
      $ TOVRTV/.FALSE./,AIFNOW/9*.TRUE./,FLDMGS/.TRUE./,
@@ -19843,7 +19911,7 @@ C$$$
      $ SWINDO_l/12*+300.,6*+700.,6*+300.,12*+300.,12*+300.,12*+300.,
      $ 6*+700.,6*+300.,12*+300.,12*+300.,12*+300.,6*+700.,6*+300.,
      $ 12*+300.,12*+300.,336*+300./,XWINDO/24*300./,JPSSMI/24*9999/,
-     $ IEWNDO/-3,3/,JPERSD/6*9999/,PWINDO/4*300./,JPQKSD/6*9999/,JPWDSD/
+     $ IEWNDO/-3,3/,JPERSD/6*9999/,PWINDO/5*300./,JPQKSD/6*9999/,JPWDSD/
      $ 6*9999/,IQWNDO/-3,3/,IWWNDO/-3,3/,CWINDO/300./,VWINDO/300./,
      $ DWINDO/300./,JPGPSD/6*9999/,GWINDO/300./,TWINDO/300./,JPASCD/
      $ 6*9999/,IAWNDO/-3,3/

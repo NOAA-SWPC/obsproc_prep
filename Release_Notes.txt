@@ -1,6 +1,6 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-obsproc_prep release 5.2.2 --> released Jan 15, 2020
-                           --> implemented Mar 09, 2020
+obsproc_prep release 5.3.0 --> released Aug 28, 2020
+                           --> implemented ??? ??, 2020
 
 files:
    obsproc_prep/fix/glerldict.lmd
@@ -10,7 +10,7 @@ files:
    obsproc_prep/fix/prepobs_prep.bufrtable
    obsproc_prep/fix/syndat_syndata.slmask.t126.gaussian
    obsproc_prep/fix/syndat_weight
- M obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
+   obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
    obsproc_prep/sorc/prepobs_cqcbufr.fd/makefile
    obsproc_prep/sorc/prepobs_cqcbufr.fd/radcor.f
    obsproc_prep/sorc/prepobs_cqcvad.fd/cqcvad.f
@@ -36,7 +36,7 @@ files:
    obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
    obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
    obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
- ? obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
    obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
    obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
    obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
@@ -57,23 +57,24 @@ files:
    obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
  M obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
    obsproc_prep/sorc/prepobs_prepdata.fd/makefile
-   obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
- M obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
- M obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
  M obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
- M obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
    obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
- M obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
+   obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
    obsproc_prep/sorc/prepobs_prevents.fd/makefile
- M obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
+   obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
    obsproc_prep/sorc/prepobs_profcqc.fd/makefile
  M obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
    obsproc_prep/sorc/syndat_syndata.fd/makefile
- M obsproc_prep/sorc/syndat_syndata.fd/syndata.f
+   obsproc_prep/sorc/syndat_syndata.fd/syndata.f
  M obsproc_prep/sorc/build.sh
    obsproc_prep/sorc/clean.sh
+ A obsproc_prep/sorc/clobber.sh
    obsproc_prep/sorc/install.sh
  M obsproc_prep/sorc/load_libs.rc
    obsproc_prep/sorc/README.build
@@ -83,13 +84,189 @@ files:
    obsproc_prep/ush/getges_driver.sh
    obsproc_prep/ush/getges.sh
    obsproc_prep/ush/getges_sig.sh
-   obsproc_prep/ush/prepobs_glerladj.sh
+ M obsproc_prep/ush/prepobs_glerladj.sh
    obsproc_prep/ush/prepobs_makeprepbufr.sh
    obsproc_prep/ush/prepobs_oiqcbufr.sh
    obsproc_prep/ush/prepobs_prepacqc.sh
    obsproc_prep/ush/prepobs_prevents.sh
    obsproc_prep/ush/prepobs_profcqc.sh
    obsproc_prep/ush/prepobs_syndata.sh
+( A - added,  M - modified, D - deleted)
+
+
+ Source code and build changes (in sorc directory):
+   prepobs_prepacqc.fd/acftobs_qc.f:
+    - Modified subroutine invalid_qc to correct a run-time error revealed
+      when all debug options are enabled.  When t_prcn has a missing 
+      value, 1.0000000E+09, multiplying by 100 exceeds the 32-bit signed
+      integer maximum, 2,147,483,647.
+   prepobs_prepdata.fd/iw3unpbf.f:
+    - For BUFR-feed marine data streams (msg types nc00110*), if the SST1
+      field is missing, then the sea surface temperature is obtained from
+      the SST0 field instead.
+    - Report type values for fixed and drifting BUFR-feed buoy data were
+      set to 563 & 564, respectively; BUFR-feed C-MAN data report type
+      was set to 531.
+    - In function I02UBF, changed the windowing decade from 20 to 40 for
+      cases when the year is represented by 2 digits instead of 4.
+    - In function R04UBF:
+      - Change to encode elevation, HSMSL, in BUFR format from the ADPSFC
+        dump file.
+      - Change to encode cloud height in BUFR format from the ADPSFC dump
+        file.  Change to encode HOCB and HOCT with different attributes.
+      - Change to encode precipitation reports in BUFR format from the
+        ADPSFC dump file.  Convert the precipitation (TOPC) to the established
+        TAC formatting, including TP01, TP03, TP06, TP12, TP24, and DTHTOPC.
+      - Change to encode max/min temperature in BUFR format from the ADPSFC
+        dump file.  Convert the attribute, TPHR, into the estalished TAC
+        formatting, .DTHMXTM/.DTHMITM.
+      - Change to encode maximum gust wind speed, MXGS, and TPMI in BUFR format
+        from the ADPSFC dump file.  Convert TPMI to the established TAC format,
+        .DTMMXGS.
+      - Change to encode HOVI reports in BUFR format from the ADPSFC dump file.
+        Convert the attribute, AOFV, of HOVI to the established TAC format, .REHOVI,
+        in the VISBSEQN sequence.
+      - Change to encode past weather in BUFR format from the ADPSFC dump file.
+        Change to read the time period or displacement, TPHR, from the past
+        weather measurements.
+    - In function R06UBF:
+      - Change to process new WMO BUFR sequence Meteosat AMV data from subsets:
+        005067, 005068, 005069.
+   prepobs_prepdata.fd/prepdata.f
+    - In function ISSEL(), expanded JTYPE array & logic to include values
+      for new report types 563-4 for BUFR-feed fixed & drifting buoys.
+    - Declared variable IDSDAT throughout various routines to eliminate
+      Boundary Run-Time Check Failures.
+    - In subprogram GETGPSIPW: Changed subset to subset_t.  Defined subset_t
+      to eliminate Boundary Run-Time Check Failures.
+    - In subprogram PREP and BLOCK DATA:
+      - Changes made to handle new VAD wind data reported from other countries
+        (e.g. Europe, New Zealand) (NC002018) and Hong Kong wind profiler data
+        (NC002014).
+      - Logic added to differentiate between these and existing Radar Coded
+        Message (RCM) VAD wind reports via use of report subtype 
+        (TSB=1 for RCM, =2 for Level 2 and =3 for other vadwnd).
+        BENEFIT: Code is in place to handle future data streams.
+      - Code added to process new WMO BUFR sequence Meteosat AMV data from
+        subsets: 005067, 005068, 005069.
+   prepobs_prepdata.fd/w3unpkb7.f
+    - Declared variable IDSDAT as 8-byte integer.
+    - Added processing to encode newly available VAD winds from Europe
+      and New Zealand (NC002018) and profiler winds from Hong Kong
+      (NC002014) into prepbufr files.
+   prepobs_profcqc.fd/profcqc.f
+    - Increased number of levels parameter, NL, from 150 to 300 throughout
+      various routines to support future profiler data streams.
+      BENEFIT: allows for future processing for BUFR format proflr and
+               vadwnd data.
+   build.sh:
+    - added importable environment variable, debug, to enable
+      additional compiler options.
+      BENEFIT: allows for easier invocation of extended compiler
+               options that should be applied during development
+               but not for production implementation.
+    - added ability to build on Hera super computer.
+      BENEFIT: downstream users can compile and run on the R&D 
+               platform.
+   load_libs.rc:
+    - Updated to trim obsolete IBM and Dell specific settings.
+    - Updated to add Hera (R&D) specific settings.
+
+
+ USH script changes:
+   prepobs_glerladj.sh:
+    - Updated to replace hard-coded alert email address with a variable, email_GLERL,
+      that is defined in, and exported from, job script: JURMA_PREP.
+
+
+ Output changes:
+ ---------------
+  (For specific network changes see " Output changes" in Release Notes for that
+   network, if that network executes this version of obsproc_prep.)
+  - Even though there are no code changes to obsproc_cdas, obsproc_nam,
+    obsproc_rap, obsproc_rtma, and obsproc_urma, there are output changes for
+    these networks.
+    - The prepbufr file will be slightly larger than production:
+      - *.tCCz.prepbufr.tm0*
+    - The J*_PREP job processes will run slightly longer than production (< ~10s inc).
+
+
+ Libraries:
+ ----------
+   w3nco   2.0.6 (all)
+   bufr   11.3.0 (all)
+   w3emc   2.3.0 (prepobs_cqcbufr, prepobs_prepacpf, prepobs_prepacqc,
+                  prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   bacio   2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   sp      2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   sigio   2.1.0 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   nemsio  2.2.3 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+
+
+ Build Instructions:
+ -------------------
+   - See sorc/README.build
+
+
+ Preimplementation Testing Requirements:
+ ---------------------------------------
+   There are no jobs in obsproc_prep.  Jobs executing this version of
+   obsproc_prep will be tested.
+
+
+ Dissemination:
+ --------------
+   See information about dissemination in the release notes for
+   obsproc_<NETWORK> packages which execute this version of obsproc_prep.
+
+
+ Special Instructions:
+ ---------------------
+   This is part of OBSPROC.v14.0.0.
+   This can be implemented as soon as possible.
+   This must be implemented on Dell-p3 & Cray.
+
+   This must be implemented simultaneously with the implementations of:
+      v4.2.0 of decod_dcelrw,
+      v2.5.2 of obsproc_cdas,
+      v3.3.0 of obsproc_global,
+      v3.1.2 of obsproc_rap,
+      v3.3.1 of obsproc_rtma,
+      v3.2.1 of obsproc_urma,
+      v2.4.0 of obsproc_dump_monitor,
+      v5.1.0 of obsproc_dump,
+      v3.4.0 of obsproc_dump_post,
+      v3.1.1 of obsproc_prep_post,
+      v2.2.0 of obsproc_shared_bufr_dumplist - previously released to support RTOFS,
+      v2.1.1 of obsproc_shared_bufr_remorest.
+
+   Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
+   needed. But note, please update:
+     obsproc_cdas.ver,
+     obsproc_global.ver,
+     obsproc_nam.ver,
+     obsproc_rap.ver,
+     obsproc_rtma.ver,
+     obsproc_urma.ver,
+   to set obsproc_prep_ver to v5.3.0.
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+obsproc_prep release 5.2.2 --> released Jan 15, 2020
+                           --> implemented Mar 09, 2020
+
+files:
+ M obsproc_prep/sorc/prepobs_cqcbufr.fd/cqcbufr.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
+ M obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
+ M obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
+ M obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
+ M obsproc_prep/sorc/syndat_syndata.fd/syndata.f
+ M obsproc_prep/sorc/build.sh
+ M obsproc_prep/sorc/load_libs.rc
 ( A - added,  M - modified, D - deleted)
 
 

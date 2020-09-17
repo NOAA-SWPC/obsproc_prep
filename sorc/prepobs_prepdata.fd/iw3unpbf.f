@@ -1,7 +1,7 @@
 C$$$  SUBPROGRAM DOCUMENTATION BLOCK
 C
 C SUBPROGRAM:    IW3UNPBF
-C   PRGMMR: KEYSER           ORG: NP22       DATE: 2018-10-22
+C   PRGMMR: DONG/WHITING     ORG: NP22       DATE: 2020-08-20
 C
 C ABSTRACT: READS AND UNPACKS ONE REPORT FROM INPUT NCEP BUFR DUMP
 C   FILE INTO SPECIFIED FORMAT.  FUNCTION RETURNS THE UNPACKED REPORT
@@ -484,10 +484,41 @@ C 2018-10-22  D. A. KEYSER -- (changes are in function R06UBF)
 C     Changes to handle new GOES-16 & up satellite winds which do not
 C     contain a report id (STNID) and have high-res lat/lon (amongst
 C     other differences vs. GOES-15 & down).
-C 2020-01-06  J. Dong -- In function I02UBF, changed the windowing 
-C     decade from 20 to 40 for cases when the year is represented by 
-C     2 digits instead of 4.
-C              
+C 2020-08-20 J. Whiting --
+C     - Assigned input report type values of 563-4 to fixed and drifting
+C       BUFR-feed buoy data, respectively.
+C     - Set SST values for BUFR-feed fixed & drifting buoy data streams
+C       to be taken from SST0 field.
+C 2020-08-20  J. DONG --
+C   - In function I02UBF:
+C     - Changed the windowing decade from 20 to 40 for cases when the
+C       year is represented by 2 digits instead of 4.
+C   - IN FUNCTION R04UBF:
+C     - ADDED ABILITY TO ENCODE ELEVATION (HSMSL) IN BUFR FORMAT FROM
+C       ADPSFC DUMP FILE IN HEADER.
+C     - ADDED ABILITY TO ENCODE THE CLOUD HEIGHT IN BUFR FORMAT FROM
+C       THE ADPSFC DUMP FILE AND HANDLED HOCB AND HOCT WITH DIFFERENT
+C       ATTRIBUTES.
+C     - ADDED ABILITY TO ENCODE PRECIPTATION REPORTS IN BUFR FORMAT
+C       FROM THE ADPSFC DUMP FILE. CONVERTED THE PRECIPITATION (TOPC)
+C       INTO THE TAC FORMAT INCLUDING TP01, TP03, TP06, TP12, TP24
+C       AND DTHTOPC.
+C     - ADDED ABILITY TO ENCODE MAX/MIN TEMPERATURE IN BUFR FORMAT
+C       REPORTS FROM THE ADPSFC DUMP FILE. CONVERTED THE ATTRIBUTE
+C       (TPHR) INTO .DTHMXTM/.DTHMITM IN TAC FORMAT.
+C     - ADDED ABILITY TO ENCODE MAXIMUM GUST WIND SPD (MXGS) AND TPMI
+C       IN BUFR FORMAT FROM THE ADPSFC DUMP FILE, AND CONVERTED TPMI
+C       TO .DTMMXGS IN TAC FORMAT.
+C     - ADDED ABILITY TO ENCODE HOVI REPORTS IN BUFR FORMAT FROM THE
+C       ADPSFC DUMP FILE. CONVERT THE ATTRIBUTE (AOFV) OF HOVI TO THE
+C       RELATIONSHIP (.REHOVI) IN VISBSEQN SEQUENCE.
+C     - ADDED ABILITY TO ENCODE PAST WEATHER IN BUFR FORMAT FROM THE
+C       ADPSFC DUMP FILE. ADDED TO READ THE TIME PERIOD OR DISPLACEMENT
+C       (TPHR) FOR THE PAST WEATHER MEASUREMENTS.
+C 2020-09-14  S. Melchior -- In function R06UBF, added code to process
+C       new WMO BUFR format Meteosat AMV data from subsets: 005067,
+C       005068, 005069. 
+C       
 C
 C
 C USAGE:    II = IW3UNPBF(NUNIT, OBS, STNID, CRES1, CRES2, CBULL, OBS2,
@@ -536,7 +567,7 @@ C                RESERVE WORD 1, CHARACTER RESERVE WORD 2 AND CBULL)
 C     STNID    - CHARACTER*8 SINGLE REPORT STATION IDENTIFICATION (UP
 C                TO 8 CHARACTERS, LEFT-JUSTIFIED)
 C                (Note: For GOES-16 & up satellite winds, there is no
-C                       report id; this is hardwirted as 8 dashes:
+C                       report id; this is hardwired as 8 dashes:
 C                       "--------".
 C     CRES1    - CHARACTER*8 SINGLE REPORT CHARACTER RESERVE WORD 1
 C                (SEE DOCUMENTATION/COMMENTS IN THIS PROGRAM (VARIES BY
@@ -774,13 +805,15 @@ C          512 - Fixed land surface by call letters (METAR)
 C          514 - Mobile land surface (synoptic)
 C          522 - Ship with name
 C          523 - Ship without name (report id set to "SHIP")
-C          531 - C-MAN platform
+C          531 - C-MAN platform (both TAC & BUFR data streams)
 C          532 - Tide gauge
 C          534 - Coast Guard Tide gauge
 C          540 - Mesonet surface
 C          551 - Sea-level pressure bogus
-C          561 - Buoys arriving in WMO FM13 format (fixed)
-C          562 - Buoys arriving in WMO FM18 format (fixed or drifting)
+C          561 - Buoy data arriving in WMO FM13 format (fixed);
+C          562 - Buoy data arriving in WMO FM18 format (fixed or drifting);
+C          563 - Buoy data arriving in WMO FM94 format (fixed);
+C          564 - Buoy data arriving in WMO FM94 format (fixed? or drifting);
 C          571 - SSM/I wind speed (ocean)
 C          573 - SSM/I soil moisture
 C          574 - SSM/I snow depth
@@ -2659,7 +2692,19 @@ C  BUOYS ARRIVING IN WMO FM13 FORMAT (FIXED)
 C  -----------------------------------------
 
                ERTUBF = 561
-            ELSE  IF(SUBSET(6:8).EQ.'004') THEN
+            ELSE  IF(SUBSET(6:8).EQ.'102') THEN
+    
+C  BUOYS ARRIVING IN WMO FM94/BUFR FORMAT (FIXED OR DRIFTING)
+C  ----------------------------------------------------------
+               ERTUBF = 564
+            ELSE  IF(SUBSET(6:8).EQ.'103') THEN
+    
+C  BUOYS ARRIVING IN WMO FM94/BUFR FORMAT (FIXED)
+C  ----------------------------------------------
+    
+               ERTUBF = 563
+            ELSE  IF(SUBSET(6:8).EQ.'004' 
+     +          .OR. SUBSET(6:8).EQ.'104') THEN
 
 C  C-MAN PLATFORM
 C  --------------
@@ -3606,6 +3651,7 @@ C     ---> PROCESSES SURFACE AND MESONET DATA (000/*, 001/*, 255/*)
       CHARACTER*8  SUBSET,SID,RSV1,RSV2,PRVSTG,SPRVSTG,QCD
       INTEGER ITIWM(0:15)
       REAL(8) RID_8,UFBINT_8,OBS2_8(43),OBS3_8(5,255,7),RRVSTG_8(255),
+     $        UFBINT2_8(12,255), RTMP(5,255),RRTMP,
      $ RPRVSTG_8(255),HDR_8(20),RCT_8(5,255),SOLR_8(3,255),
      $ TOPC_8(5,255),RMSO_8(2),RQCD_8,BMISS,AMINIMUM_8,obs8_8(2)
       DIMENSION  OBS(*),OBS2(43),OBS3(5,255,7),NOBS3(7),HDR(20),
@@ -3633,12 +3679,31 @@ C  ---------------------------------------------------------------------
       OBS3_8 = BMISS
       NOBS3  = 0
       obs8_8 = bmiss
+      RTMP = bmiss
+      UFBINT2_8 = bmiss
       CALL UFBINT(LUNIT,OBS2_8(1),2,1,IRET,'RSRD EXPRSRD')
       CALL UFBINT(LUNIT,OBS2_8(4),1,1,IRET,'SST1')
       IF(IBFMS(OBS2_8(4)).EQ.0)  OBS2_8(41) = 2.0
       IF(SUBSET(1:5).EQ.'NC000')  THEN               ! All surface land
-         CALL UFBINT(LUNIT,OBS2_8( 8),2,1,IRET,'HOVI VTVI')
-         CALL UFBINT(LUNIT,OBS2_8(14),2,1,IRET,'.DTMMXGS MXGS')
+         IF(SUBSET(6:7).EQ.'10') THEN
+            CALL UFBSEQ(LUNIT,UFBINT2_8(1,1),4,255,IRET, 'VISBSEQN')
+            IF(UFBINT2_8(3,1).EQ.0) OBS2_8(7)=2
+            IF(UFBINT2_8(3,1).EQ.1) OBS2_8(7)=0
+            IF(UFBINT2_8(3,1).EQ.2) OBS2_8(7)=4
+            IF(UFBINT2_8(3,1).EQ.3) OBS2_8(7)=7
+            OBS2_8(8)=UFBINT2_8(4,1)
+         ELSE
+            CALL UFBINT(LUNIT,OBS2_8( 8),2,1,IRET,'HOVI VTVI')
+         ENDIF
+         IF(SUBSET(6:7).EQ.'10') THEN
+            CALL UFBSEQ(LUNIT,UFBINT2_8(1,1),3,255,IRET, 'BSYWND2')
+            RRTMP = UFBINT2_8(1,1)
+            IF(RRTMP.LT.0.0) RRTMP=-RRTMP
+            OBS2_8(14) = RRTMP
+            OBS2_8(15) = UFBINT2_8(3,1)
+         ELSE
+            CALL UFBINT(LUNIT,OBS2_8(14),2,1,IRET,'.DTMMXGS MXGS')
+         ENDIF
          CALL UFBINT(LUNIT,OBS2_8(17),3,1,IRET,'TP01 TP03 TP06')
          CALL UFBINT(LUNIT,OBS2_8(21),1,1,IRET,'TP24')
          CALL UFBINT(LUNIT,OBS2_8(30),2,1,IRET,'DOFS TOSD')
@@ -3648,8 +3713,26 @@ C  ---------------------------------------------------------------------
             IF(IBFMS(OBS3_8(1,1,2)).NE.0)  IRET = 0
          END IF
          NOBS3(2) = IRET
-         CALL UFBINT(LUNIT,OBS3_8(1,1,3),5,255,IRET,
+         IF(SUBSET(6:7).EQ.'10') THEN
+            CALL UFBSEQ(LUNIT,OBS3_8(1,1,3),5,255,JRET, 'BSYBCLD')
+            DO I=1,JRET
+               DO J=1,5
+                  RTMP(J,I)=OBS3_8(J,I,3)
+               ENDDO
+            ENDDO
+            CALL UFBSEQ(LUNIT,OBS3_8(1,1,3),5,255,IRET, 'BSYSCLD')
+            DO I=1,IRET
+               OBS3_8(4,I,3)=OBS3_8(5,I,3)
+               OBS3_8(5,I,3)=BMISS
+            ENDDO
+CDONG -- BELOW NEED TO CHANGE IN THE FUTURE
+            DO I=1,JRET
+               OBS3_8(5,I,3)=RTMP(4,I)
+            ENDDO
+         ELSE
+            CALL UFBINT(LUNIT,OBS3_8(1,1,3),5,255,IRET,
      $                                       'VSSO CLAM CLTP HOCB HOCT')
+         ENDIF
          IF(IRET.EQ.1) THEN ! reset iret from 1 to 0 if all obs missing
                             !  (iret can be 1 even if all obs missing)
             AMINIMUM_8 = MIN(OBS3_8(1,1,3),OBS3_8(2,1,3),OBS3_8(3,1,3),
@@ -3657,8 +3740,20 @@ C  ---------------------------------------------------------------------
             IF(IBFMS(AMINIMUM_8).NE.0)  IRET = 0
          END IF
          NOBS3(3) = IRET
-         CALL UFBINT(LUNIT,OBS3_8(1,1,4),5,255,IRET,
+         IF(SUBSET(6:7).EQ.'10') THEN   ! SYNOPs (NC000100, NC000101, NC000102)
+            CALL UFBSEQ(LUNIT,UFBINT2_8(1,1),12,255,IRET,'BSYEXTM')
+            DO I=1,IRET
+               IF(UFBINT2_8(3,I).LT.BMISS.AND.UFBINT2_8(4,I).LT.BMISS)
+     $            OBS3_8(1,I,4)=UFBINT2_8(4,I)-UFBINT2_8(3,I)
+               IF(UFBINT2_8(5,I).LT.BMISS) OBS3_8(2,I,4)=UFBINT2_8(5,I)
+               IF(UFBINT2_8(6,I).LT.BMISS.AND.UFBINT2_8(7,I).LT.BMISS)
+     $            OBS3_8(3,I,4)=UFBINT2_8(7,I)-UFBINT2_8(6,I)
+               IF(UFBINT2_8(8,I).LT.BMISS) OBS3_8(4,I,4)=UFBINT2_8(8,I)
+            ENDDO
+         ELSE
+            CALL UFBINT(LUNIT,OBS3_8(1,1,4),5,255,IRET,
      $                                    '.DTHMXTM MXTM .DTHMITM MITM')
+         ENDIF
          IF(IRET.EQ.1) THEN ! reset iret from 1 to 0 if all obs missing
                             !  (iret can be 1 even if all obs missing)
             AMINIMUM_8 = MIN(OBS3_8(1,1,4),OBS3_8(2,1,4),OBS3_8(3,1,4),
@@ -3671,7 +3766,56 @@ C  ---------------------------------------------------------------------
             CALL UFBINT(LUNIT,OBS2_8(12),2,1,IRET,'PKWDSP PKWDDR')
             CALL UFBINT(LUNIT,OBS2_8(22),1,1,IRET,'TOSS')
             CALL UFBINT(LUNIT,OBS2_8( 3),1,1,IRET,'ALSE')
-         ELSE                                                  ! SYNOPs
+         ELSE IF(SUBSET(6:7).EQ.'10') THEN   ! SYNOPs (NC000100, NC000101, NC000102)
+            CALL UFBSEQ(LUNIT,UFBINT2_8(1,1),4,255,IRET, 'PWEATHER')
+            OBS2_8(10)=UFBINT2_8(3,1)
+            OBS2_8(11)=UFBINT2_8(4,1)
+            CALL UFBINT(LUNIT,OBS2_8(23),2,1,IRET,'TOCC HBLCS')
+            CALL UFBINT(LUNIT,OBS2_8(29),1,1,IRET,'.DTHDOFS')
+            CALL UFBINT(LUNIT,OBS2_8(32),4,1,IRET,'HOWV POWV HOWW POWW')
+            CALL UFBINT(LUNIT,OBS2_8(38),3,1,IRET,'CHPT 3HPC 24PC')
+            CALL UFBSEQ(LUNIT,OBS3_8(1,1,1),5,255,IRET,'BSYPCP2')
+            DO I=1,IRET
+               RRTMP=OBS3_8(1,I,1)
+               IF(RRTMP.LT.0.0) RRTMP=-RRTMP
+               IF(RRTMP.EQ. 1.0) OBS2_8(17)=OBS3_8(2,I,1)
+               IF(RRTMP.EQ. 3.0) OBS2_8(18)=OBS3_8(2,I,1)
+               IF(RRTMP.EQ. 6.0) OBS2_8(19)=OBS3_8(2,I,1)
+               IF(RRTMP.EQ.12.0) OBS2_8(20)=OBS3_8(2,I,1)
+               IF(RRTMP.EQ.24.0) OBS2_8(21)=OBS3_8(2,I,1)
+            ENDDO
+            JRET=0
+            DO I=1,IRET
+               RRTMP=OBS3_8(1,I,1)
+               IF(RRTMP.LT.0.0) RRTMP=-RRTMP
+
+               IF(RRTMP.NE.1.0.AND.RRTMP.NE.3.0.AND.RRTMP.NE.6.0
+     $           .AND.RRTMP.NE.12.AND.RRTMP.NE.24.0) THEN
+                  DO J=2,23
+                     IF(RRTMP.EQ.J) THEN
+                        JRET=1
+                        OBS3_8(1,JRET,1)=RRTMP
+                        OBS3_8(2,JRET,1)=OBS3_8(2,I,1)
+                     ENDIF
+                  ENDDO
+               ENDIF
+            ENDDO
+            IRET=JRET
+            IF(IRET.EQ.1) THEN ! reset iret from 1 to 0 if all obs msng
+                               !  (iret can be 1 even if all obs msng)
+               AMINIMUM_8 = MIN(OBS3_8(1,1,1),OBS3_8(2,1,1))
+               IF(IBFMS(AMINIMUM_8).NE.0)  IRET = 0
+            END IF
+            NOBS3(1) = IRET
+            CALL UFBINT(LUNIT,OBS3_8(1,1,5),5,255,IRET,'DOSW HOSW POSW')
+            IF(IRET.EQ.1) THEN ! reset iret from 1 to 0 if all obs msng
+                               !  (iret can be 1 even if all obs msng)
+               AMINIMUM_8 = MIN(OBS3_8(1,1,5),OBS3_8(2,1,5),
+     $          OBS3_8(3,1,5))
+               IF(IBFMS(AMINIMUM_8).NE.0)  IRET = 0
+            END IF
+            NOBS3(5) = IRET
+         ELSE                                ! SYNOPs (NC000000, NC000001, NC000002)
             CALL UFBINT(LUNIT,OBS2_8(10),2,1,IRET,'PSW1 PSW2')
             CALL UFBINT(LUNIT,OBS2_8(20),1,1,IRET,'TP12')
             CALL UFBINT(LUNIT,OBS2_8(23),2,1,IRET,'TOCC HBLCS')
@@ -3695,13 +3839,18 @@ C  ---------------------------------------------------------------------
             NOBS3(5) = IRET
          END IF
       ELSE IF(SUBSET(1:5).EQ.'NC001')  THEN        ! All surface marine
-         IF(IBFMS(OBS2_8(4)).NE.0) THEN
+         IF(IBFMS(OBS2_8(4)).NE.0) THEN                  ! SST1 missing
+            IF(SUBSET(6:7).EQ.'10') THEN
+C         Retrieve field SST0 from buoy reports originating in BUFR form 
+              CALL UFBINT(LUNIT,OBS2_8(4),1,1,IRET,'SST0')
+            ELSE
 C DBUOYs store sub-sfc temp, use 1st lvl if SST1 msg (unless > 10m down)
-            CALL UFBINT(LUNIT,OBS2_8(4),2,1,IRET,'STMP DBSS')
-            IF(OBS2_8(5).GT.10.)  THEN
-               OBS2_8(4:5) = BMISS
-            END IF
-         END IF
+              CALL UFBINT(LUNIT,OBS2_8(4),2,1,IRET,'STMP DBSS')
+              IF(OBS2_8(5).GT.10.)  THEN
+                 OBS2_8(4:5) = BMISS
+              END IF
+            END IF ! subset(6:7) = 10  ! BUFR-feed types
+         END IF ! obs2_8(4) ne 0 (SST1 missing)
          IF(IBFMS(OBS2_8(4)).EQ.0)  OBS2_8(41) = 2.0
          CALL UFBINT(LUNIT,OBS2_8( 6),1,1,IRET,'MSST')
          CALL UFBINT(LUNIT,OBS2_8( 8),8,1,IRET,
@@ -3755,6 +3904,8 @@ C  -----------------------------------------------
       CALL UFBINT(LUNIT,HDR_8,20,  1,IRET,HDSTR);HDR(2:)=HDR_8(2:)
 
 C  IN EARLY 2004, MESONETS WILL CONVERT TO HIGH-RESOLUTION LAT/LON
+C
+C  EXPLOITING HIGH-RESOLUTION LAT/LON DATA FROM MARINE STATIONS AS OF 10/2019
 C  ---------------------------------------------------------------
 
       IF(HDR_8(2).GE.BMISS)  THEN
@@ -3764,6 +3915,11 @@ C  ---------------------------------------------------------------
       IF(HDR_8(3).GE.BMISS)  THEN
          CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'CLATH')
          HDR_8(3)=UFBINT_8
+      END IF
+      IF(HDR_8(6).GE.BMISS)  THEN
+         CALL UFBINT(LUNIT,UFBINT_8,1,1,IRET,'HSMSL')
+         HDR_8(6)=UFBINT_8
+         HDR(6)=HDR_8(6)
       END IF
       obs8_8(1) = hdr_8(3)
       obs8_8(2) = hdr_8(2)
@@ -5271,7 +5427,7 @@ C     ---> PROCESSES SATWIND DATA (005/*)
      $ KNTavhrr(3:224),KNTviirs(224:225),IFLSAT,knts16(270:274)
       COMMON/IUBFLL/Q81(255),Q82(255)
  
-      CHARACTER*80 HDSTR,LVSTR,QMSTR,RCSTR
+      CHARACTER*80 HDSTR,HDSTR2,LVSTR,QMSTR,RCSTR
       CHARACTER*8  SUBSET,SID,RSV1,RSV2
       CHARACTER*1  CSAT(499),CPROD(0:4),CPRDF(0:2),CPRDFN(51),C8(10)
       INTEGER      IPRDF(0:2),ISWCM(5,9:10,2),ITP_C8(10),ISWDL(7)
@@ -5285,6 +5441,7 @@ C     ---> PROCESSES SATWIND DATA (005/*)
       SAVE
 
       DATA HDSTR/'RPID CLON CLAT HOUR MINU SAID               '/
+      DATA HDSTR2/'RPID CLONH CLATH HOUR MINU SAID            '/
       DATA LVSTR/'TMDP TMDB CCST                              '/
       DATA RCSTR/'RCHR RCMI RCTS                              '/
       DATA IMISS/99999/,XMISS/99999./
@@ -5421,6 +5578,9 @@ C   they have high-res lat/lon
 C  -------------------------------------------------------------------
          call ufbint(lunit,hdr_8,20,1,iret,
      $              'NUL CLONH CLATH HOUR MINU SAID');hdr(2:)=hdr_8(2:)
+      else if(subset(7:8).eq.'67'.or.subset(7:8).eq.'68'.or.
+     $        subset(7:8).eq.'69') then
+         CALL UFBINT(LUNIT,HDR_8,20,1,IRET,HDSTR2);HDR(2:)=HDR_8(2:)
       else
          CALL UFBINT(LUNIT,HDR_8,20,1,IRET,HDSTR);HDR(2:)=HDR_8(2:)
       end if
@@ -5935,12 +6095,12 @@ CVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
      $   SUBSET(7:8).EQ.'14'                           .OR.
      $   (SUBSET(7:8).GE.'15'.AND.SUBSET(7:8).LE.'19') .OR.
      $   (SUBSET(7:8).GE.'44'.AND.SUBSET(7:8).LE.'46') .OR.
-     $   (SUBSET(7:8).GE.'64'.AND.SUBSET(7:8).LE.'66') .OR.
+     $   (SUBSET(7:8).GE.'64'.AND.SUBSET(7:8).LE.'69') .OR.
      $   (SUBSET(7:8).GE.'70'.AND.SUBSET(7:8).LE.'71') .OR.
      $   (SUBSET(7:8).EQ.'80') .OR.
      $   (SUBSET(7:8).EQ.'90')) THEN
 
-         IF(SUBSET(7:8).GE.'64'.AND.SUBSET(7:8).LE.'66') THEN !EUMETSAT
+         IF(SUBSET(7:8).GE.'64'.AND.SUBSET(7:8).LE.'69') THEN !EUMETSAT
             INDX  =   1
             IOFF  =   0
             IVARS =   4 ! number of variables w/ quality info

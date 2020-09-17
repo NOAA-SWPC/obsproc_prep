@@ -49,7 +49,7 @@ else
     unset FORT00 `env | grep "^FORT[0-9]\{1,\}=" | awk -F= '{print $1}'`
 fi
     #confirm existance of Lake temperature file
-    #file size should be 18202 byptes
+    #file size should be 18202 bytes
     #if file not available for current date, look back up to 3 days
          #per advice from John Kelley, job should not run if lake temps are
          # more than 3 days old.
@@ -60,21 +60,21 @@ elif [ -s ${TANK}/${PDYm1}/wtxtbul/glsea-temps.dat ] ; then
     msg="WARNING: Lake temperatures for GLERL adjustment ${PDY} ${cyc}Z are \
 dated by 1 day.  Missing lake temperature file is: \
 ${TANK}/${PDY}/wtxtbul/glsea-temps.dat."
-#   echo "$msg" | mail.py -c Steven.Levine@noaa.gov
+#   echo "$msg" | mail.py -c ${email_GLERL}
     [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
 elif [ -s ${TANK}/${PDYm2}/wtxtbul/glsea-temps.dat ] ; then
     export FORT11=${TANK}/${PDYm2}/wtxtbul/glsea-temps.dat
     msg="WARNING: Lake temperatures for RTMA GLERL adjustment ${PDY} ${cyc}Z \
 are dated by 2 days.  Missing lake temperature file is: \
 ${TANK}/${PDY}/wtxtbul/glsea-temps.dat."
-    echo "$msg" | mail.py -c Steven.Levine@noaa.gov
+    echo "$msg" | mail.py -c ${email_GLERL}
     [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
 elif [ -s ${TANK}/${PDYm3}/wtxtbul/glsea-temps.dat ] ; then
     export FORT11=${TANK}/${PDYm3}/wtxtbul/glsea-temps.dat
     msg="WARNING: Lake temperatures for RTMA GLERL adjustment ${PDY} ${cyc}Z \
 are dated by 3 days.  Missing lake temperature file is: \
 ${TANK}/${PDY}/wtxtbul/glsea-temps.dat."
-    echo "$msg" | mail.py -c Steven.Levine@noaa.gov
+    echo "$msg" | mail.py -c ${email_GLERL}
     [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
 
 #elif [ -s ${TANK}/${PDYm4}/wtxtbul/glsea-temps.dat ] ; then
@@ -110,7 +110,7 @@ GLERL-adjusted obs."
     msg="prepobs_glerladj.sh ERROR: Lake temperature file glsea-temps.dat \
 valid for ${PDY} is more than 3 days old, missing lake temperature file is: \
 ${TANK}/${PDY}/wtxtbul/glsea-temps.dat --> non-fatal"
-    echo $msg | mail.py -c Steven.Levine@noaa.gov
+    echo $msg | mail.py -c ${email_GLERL}
     [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
     exit 0
 fi

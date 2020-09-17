@@ -72,6 +72,7 @@ C     exceeded.
 C 2020-01-09  J. Dong  In subroutine READPROF, changed the windowing
 C     decade from 20 to 40 for cases when the years is represented by
 C     2 digits instead of 4.
+C 2020-01-18 J. DONG -- Increase levels NL to 300 throughout the codes. 
 C
 C USAGE:
 C   INPUT FILES:
@@ -242,7 +243,7 @@ C
 C$$$
       PROGRAM PREPOBS_PROFCQC
 
-      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=300,NT=100,NS=120)    ! (levels,times,stations)
 
       LOGICAL  DONE,STATS,MEAN,STDDEV,SKEW,KURT
       CHARACTER*8  STN
@@ -354,7 +355,7 @@ C$$$
 
       BLOCK DATA
 
-      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=300,NT=100,NS=120)    ! (levels,times,stations)
 
       COMMON/PST/IOFFSET(3:8),LVLINCR(3:8),ILEVELS(3:8),STATS,MEAN,
      $ STDDEV,SKEW,KURT
@@ -478,7 +479,7 @@ C$$$
 
       SUBROUTINE WRITBUFR
 
-      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=300,NT=100,NS=120)    ! (levels,times,stations)
 
       LOGICAL  FIRST
       CHARACTER*8  STN,LAST,SUBSET,CID
@@ -778,6 +779,9 @@ C     for all rpts. DO-LOOP logic more concise (esp. in temporal &
 C     vert. chks.)
 C 2016-12-20  D. Stokes   Increase the max allowable number of times 
 C     per station.
+C 2020-05-08 J. DONG  INITIALIZE VPMX, AND CONTROL THE VARIABLE NZZM2
+C     NOT LESS THAN 1 SO THAT THE ARGUMENT FOR AN ARRAY IS NOT LESS THAN
+C     1. 
 C
 C USAGE:   SUBROUTINE CHECKS(IS)
 C   INPUT ARGUMENT LIST:
@@ -805,7 +809,7 @@ C
 C$$$
       SUBROUTINE CHECKS(IS)
 
-      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=300,NT=100,NS=120)    ! (levels,times,stations)
 
       CHARACTER*8     STN
       REAL(8)   BMISS
@@ -837,6 +841,9 @@ C     AND VERTICAL RESIDUAL.
 
       NZZM1 = NZZ(IS) - 1
       NZZM2 = NZZ(IS) - 2
+c JDONG: ADD BELOW
+      IF(NZZM2.LT.1) NZZM2 = 1
+      VPMX=BMISS
 
 C  CALCULATE THE VECTOR INCREMENT
 C  ------------------------------
@@ -1149,7 +1156,7 @@ C
 C$$$
       SUBROUTINE CSTATS(IS)
 
-      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=300,NT=100,NS=120)    ! (levels,times,stations)
 
       CHARACTER*8  STN
       REAL(8)   BMISS
@@ -1478,7 +1485,7 @@ C
 C$$$
       SUBROUTINE DIFS(IS,IPRINT)
 
-      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=300,NT=100,NS=120)    ! (levels,times,stations)
 
       CHARACTER*8  STN
       REAL(8)   BMISS
@@ -1615,7 +1622,7 @@ C
 C$$$
       SUBROUTINE DMA(IS)
 
-      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=300,NT=100,NS=120)    ! (levels,times,stations)
 
       CHARACTER*8  STN,CID
       REAL(8)   BMISS
@@ -1945,7 +1952,7 @@ C
 C$$$
       SUBROUTINE INCR
 
-      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=300,NT=100,NS=120)    ! (levels,times,stations)
 
       CHARACTER*8  STN
       REAL(8)  BMISS
@@ -2036,7 +2043,7 @@ C
 C$$$
       SUBROUTINE INDICATE(IS)
 
-      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=300,NT=100,NS=120)    ! (levels,times,stations)
 
       CHARACTER*8  STN
       REAL(8)  BMISS
@@ -2143,7 +2150,7 @@ C$$$
 
       SUBROUTINE INIT
 
-      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=300,NT=100,NS=120)    ! (levels,times,stations)
 
       CHARACTER*8 STN
       REAL(8)  BMISS
@@ -2369,7 +2376,7 @@ C
 C$$$
       SUBROUTINE MODQUAL(IS)
 
-      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=300,NT=100,NS=120)    ! (levels,times,stations)
 
       CHARACTER*8  STN
 
@@ -2561,7 +2568,7 @@ C
 C$$$
       SUBROUTINE PRNTDATA(IS)
 
-      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=300,NT=100,NS=120)    ! (levels,times,stations)
 
       CHARACTER*8  STN
       CHARACTER*1  CEVN
@@ -2748,7 +2755,7 @@ C$$$
 
       SUBROUTINE PUTDATA
 
-      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=300,NT=100,NS=120)    ! (levels,times,stations)
 
       CHARACTER*8  STN,CID,cNT
       REAL  RINC(5)
@@ -2918,7 +2925,7 @@ C$$$
 
       SUBROUTINE READPROF
 
-      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=300,NT=100,NS=120)    ! (levels,times,stations)
 
       LOGICAL  FIRST
       CHARACTER*8  SUBSET,CID
@@ -3127,7 +3134,7 @@ C$$$
 
       SUBROUTINE RESIDUAL(IS)
 
-      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=300,NT=100,NS=120)    ! (levels,times,stations)
 
       COMMON/PROFZ/ZZ(NL,NT,NS),UZ(NL,NT,NS),VZ(NL,NT,NS),QZ(NL,NT,NS),
      $ PZ(NL,NT,NS),UFZ(NL,NT,NS),VFZ(NL,NT,NS),SZ(NL,NT,NS),
@@ -3187,7 +3194,7 @@ C$$$
 
       SUBROUTINE RESTRUCT
 
-      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=300,NT=100,NS=120)    ! (levels,times,stations)
 
       CHARACTER*8     STN
       REAL(8)  BMISS
@@ -3488,7 +3495,7 @@ C
 C$$$
       SUBROUTINE TWODIM(IS)
 
-      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=300,NT=100,NS=120)    ! (levels,times,stations)
 
       CHARACTER*8  STN
       REAL  U(NL,NT),V(NL,NT),TIN(3,3),TUT(NL,NT)
@@ -3613,7 +3620,7 @@ C
 C$$$
       SUBROUTINE PSTAT
 
-      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=300,NT=100,NS=120)    ! (levels,times,stations)
 
       LOGICAL  STATS,MEAN,STDDEV,SKEW,KURT
       CHARACTER*8  STN
@@ -3736,7 +3743,7 @@ C
 C$$$
       SUBROUTINE MSTATS(FIELD,ITYPE,TITLE,IFLD)
 
-      PARAMETER  (NL=150,NT=100,NS=120)    ! (levels,times,stations)
+      PARAMETER  (NL=300,NT=100,NS=120)    ! (levels,times,stations)
 
       LOGICAL  STATS,LPRNT
       CHARACTER*8   STATISTIC(4)

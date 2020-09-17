@@ -64,6 +64,12 @@ c                           changed to print to 5 decimal places.
 c                         - Intrinsic function "ifix" replaced with "int" for cases where the
 c                           argument is now a real*8 lat or lon (else compiler error if "ifix"
 c                           operates on a real*8 argument).
+c 2020-08-20  J. Dong --
+c                    - Modified subroutine invalid_qc to correct a
+c                      run-time error revealed when all debug options
+c                      are enabled.  When t_prcn has a missing value,
+c                      1.0000000E+09, multiplying by 100 exceeds the
+c                      32-bit signed integer maximum, 2,147,483,647. 
 c
 c   BEST VIEWED WITH 94-CHARACTER WIDTH WINDOW
 ccccc
@@ -11394,7 +11400,7 @@ c            write(io8,*) '  itype  = ',c_insty_ob(itype(ii))
 c            write(io8,*) '  ht_ft  = ',ht_ft(ii)
 c            write(io8,*) '  ids = ',c_acftreg(ii),c_acftid(ii)
 c
-            if(ifix(t_prcn(ii)*100).eq.100.and.
+            if(t_prcn(ii).eq.1.and.
      $         itype(ii).eq.i_mdcrs) then
 c
               if(iob.eq.1) then
