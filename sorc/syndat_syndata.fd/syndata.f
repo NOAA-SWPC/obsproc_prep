@@ -29122,7 +29122,8 @@ cc   $       'limit for flagging is ',MAX(111.,3*RMW(J))
 cc          print *, 'RLON(J),STMLAT(J),XOB,YOB: ',
 cc   $                RLON(J),STMLAT(J),XOB,YOB
 cppppppppppppppp
-               IF(RDIST.LE.(MAX(111.,3*RMW(J))))  GO TO 1600
+C              IF(RDIST.LE.(MAX(111.,3*RMW(J))))  GO TO 1600
+               IF((vmax(j) .GE. 32.) .AND. (RDIST .LE. 55.)) GO TO 1600
             ENDDO
             GO TO 15
  1600       CONTINUE
