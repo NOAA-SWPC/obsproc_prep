@@ -57,7 +57,7 @@ files:
    obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
    obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
  M obsproc_prep/sorc/prepobs_prepdata.fd/makefile
-   obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
@@ -67,7 +67,7 @@ files:
    obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
    obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
  M obsproc_prep/sorc/prepobs_prevents.fd/makefile
-   obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
+ M obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
    obsproc_prep/sorc/prepobs_profcqc.fd/makefile
    obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
  M obsproc_prep/sorc/syndat_syndata.fd/makefile
@@ -102,6 +102,9 @@ files:
    syndat_syndata.fd/makefile:
     - Modified to link in the NetCDF library
       BENEFIT: Required in order to support GFSv16 upgrade.
+   prepobs_prepdata.fd/prepdat.f,
+   prepobs_prevents.fd/prevents.f:
+    - Updated W3TAGB arguments.
    syndat_syndata.fd/syndata.f:
     - The distance threshold for inner core drosponde data reduced to 55km
       (from 111km or 3*RMW). A 32/m/s wind threshold was added. 
