@@ -202,6 +202,10 @@ C                 NDATMX have been now been greatly increased).
 C 2020-01-09  J. Dong -- In subroutine EDTPRP, changed the windowing
 C        decade from 20 to 40 for cases when the year is represented
 C        by 2 digits instead of 4. 
+C 2020-10-09  X. Wu -- In subroutine EDTPRP, the distance threshold for
+C        inner core dropsonde data reduced to 55km. A 32 m/s wind 
+C        threshold was added.  This allows for more inner core data to
+C        be assimilated in GFSv16.     
 C
 C
 C USAGE:

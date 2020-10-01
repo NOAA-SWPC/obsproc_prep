@@ -92,10 +92,94 @@ files:
    obsproc_prep/ush/prepobs_prevents.sh
    obsproc_prep/ush/prepobs_profcqc.sh
    obsproc_prep/ush/prepobs_syndata.sh
+
 ( A - added,  M - modified, D - deleted)
 
-syndata.f change:
-Reduce the distance threshold for inner core drosponde data to 55km (from 111km or 3*RMW) and add a wind threshold of 32 m/s, so more inner core data will be used and assimilated (in GFSv16)
+
+ Source code and build changes (in sorc directory):
+   prepobs_prepdata.fd/makefile,
+   prepobs_prevents.fd/makefile,
+   syndat_syndata.fd/makefile:
+    - Modified to link in the NetCDF library
+      BENEFIT: Required in order to support GFSv16 upgrade.
+   syndat_syndata.fd/syndata.f:
+    - The distance threshold for inner core drosponde data reduced to 55km
+      (from 111km or 3*RMW). A 32/m/s wind threshold was added. 
+      BENEFIT: more inner core data will be used and assimilated in GFSv16.
+   build.sh:
+    - added intel-haswell for Cray-XC40.
+   load_libs.rc:
+?   -
+
+
+ USH script changes:
+   getges_driver.sh:
+?   - 
+   getgest_nc.sh:
+?   - New.
+   prepobs_makeprepbufr.sh:
+?   -
+
+
+ Output changes:
+ ---------------
+  (For specific network changes see " Output changes" in Release Notes for that
+   network, if that network executes this version of obsproc_prep.)
+
+
+ Libraries:
+ ----------
+   w3nco   2.0.6 (all)
+   bufr   11.3.0 (all)
+   w3emc   2.4.0 (prepobs_cqcbufr, prepobs_prepacpf, prepobs_prepacqc,
+                  prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   bacio   2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   sp      2.0.2 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   sigio   2.1.0 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   nemsio  2.2.3 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   netcdf  4.7.4 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+
+
+ Build Instructions:
+ -------------------
+   - See sorc/README.build
+
+
+ Preimplementation Testing Requirements:
+ ---------------------------------------
+   There are no jobs in obsproc_prep.  Jobs executing this version of
+   obsproc_prep will be tested.
+
+
+ Dissemination:
+ --------------
+   See information about dissemination in the release notes for
+   obsproc_<NETWORK> packages which execute this version of obsproc_prep.
+
+
+ Special Instructions:
+ ---------------------
+?  This is part of OBSPROC.v1?.0.0.
+   This must be implemented on Dell-p3 & Cray.
+
+   This must be implemented simultaneously with the implementations of:
+     v16.0.0 of GFS,
+      v3.4.0 of obsproc_global,
+      v3.4.1 of obsproc_nam,
+      v3.2.1 of obsproc_rap,
+      v3.3.2 of obsproc_rtma,
+      v3.2.2 of obsproc_urma,
+      v3.2.0 of obsproc_prep_post.
+
+   Since there are no jobs in obsproc_prep, an obsproc_prep.ver file is not
+   needed. But note, please update:
+     obsproc_global.ver,
+     obsproc_nam.ver,
+     obsproc_rap.ver,
+     obsproc_rtma.ver,
+     obsproc_urma.ver,
+   to set obsproc_prep_ver to v5.4.0.
+
 
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 obsproc_prep release 5.3.0 --> released Aug 28, 2020
@@ -111,6 +195,7 @@ files:
  A obsproc_prep/sorc/clobber.sh
  M obsproc_prep/sorc/load_libs.rc
  M obsproc_prep/ush/prepobs_glerladj.sh
+
 ( A - added,  M - modified, D - deleted)
 
 
