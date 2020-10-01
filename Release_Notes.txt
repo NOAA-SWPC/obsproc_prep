@@ -1,6 +1,6 @@
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-obsproc_prep release 5.3.0 --> released Aug 28, 2020
-                           --> implemented ??? ??, 2020
+obsproc_prep release 5.4.0 --> released Oct 09, 2020
+                           --> implemented ??? ??, 2021
 
 files:
    obsproc_prep/fix/glerldict.lmd
@@ -36,7 +36,7 @@ files:
    obsproc_prep/sorc/prepobs_oiqcbufr.fd/oiqcbufr.f
    obsproc_prep/sorc/prepobs_prepacpf.fd/makefile
    obsproc_prep/sorc/prepobs_prepacpf.fd/prepacpf.f
- M obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
+   obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
    obsproc_prep/sorc/prepobs_prepacqc.fd/indexc40.f
    obsproc_prep/sorc/prepobs_prepacqc.fd/input_acqc.f
    obsproc_prep/sorc/prepobs_prepacqc.fd/makefile
@@ -55,42 +55,62 @@ files:
    obsproc_prep/sorc/prepobs_prepanow.fd/makefile
    obsproc_prep/sorc/prepobs_prepanow.fd/prepanow.f
    obsproc_prep/sorc/prepobs_prepdata.fd/inc_w3unpkb7.inc
- M obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
-   obsproc_prep/sorc/prepobs_prepdata.fd/makefile
- M obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/makefile
+   obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3atovsunp.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3cnvxtovs.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3rtovsunp.f
- M obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
+   obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovseds.f
    obsproc_prep/sorc/prepobs_prepdata.fd/w3xtovsmnd.f
    obsproc_prep/sorc/prepobs_prepdata.fd/wordlength.f
    obsproc_prep/sorc/prepobs_prevents.fd/gblevents_cdas.f
-   obsproc_prep/sorc/prepobs_prevents.fd/makefile
+ M obsproc_prep/sorc/prepobs_prevents.fd/makefile
    obsproc_prep/sorc/prepobs_prevents.fd/prevents.f
    obsproc_prep/sorc/prepobs_profcqc.fd/makefile
- M obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
-   obsproc_prep/sorc/syndat_syndata.fd/makefile
-   obsproc_prep/sorc/syndat_syndata.fd/syndata.f
+   obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
+ M obsproc_prep/sorc/syndat_syndata.fd/makefile
+ M obsproc_prep/sorc/syndat_syndata.fd/syndata.f
  M obsproc_prep/sorc/build.sh
    obsproc_prep/sorc/clean.sh
- A obsproc_prep/sorc/clobber.sh
+   obsproc_prep/sorc/clobber.sh
    obsproc_prep/sorc/install.sh
  M obsproc_prep/sorc/load_libs.rc
    obsproc_prep/sorc/README.build
    obsproc_prep/sorc/setlibs.rc
    obsproc_prep/ush/prepobs_cqcbufr.sh
    obsproc_prep/ush/prepobs_cqcvad.sh
-   obsproc_prep/ush/getges_driver.sh
+ M obsproc_prep/ush/getges_driver.sh
    obsproc_prep/ush/getges.sh
+ A obsproc_prep/ush/getges_nc.sh
    obsproc_prep/ush/getges_sig.sh
- M obsproc_prep/ush/prepobs_glerladj.sh
-   obsproc_prep/ush/prepobs_makeprepbufr.sh
+   obsproc_prep/ush/prepobs_glerladj.sh
+ M obsproc_prep/ush/prepobs_makeprepbufr.sh
    obsproc_prep/ush/prepobs_oiqcbufr.sh
    obsproc_prep/ush/prepobs_prepacqc.sh
    obsproc_prep/ush/prepobs_prevents.sh
    obsproc_prep/ush/prepobs_profcqc.sh
    obsproc_prep/ush/prepobs_syndata.sh
+( A - added,  M - modified, D - deleted)
+
+syndata.f change:
+Reduce the distance threshold for inner core drosponde data to 55km (from 111km or 3*RMW) and add a wind threshold of 32 m/s, so more inner core data will be used and assimilated (in GFSv16)
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+obsproc_prep release 5.3.0 --> released Aug 28, 2020
+                           --> implemented ??? ??, 2020
+
+files:
+ M obsproc_prep/sorc/prepobs_prepacqc.fd/acftobs_qc.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/iw3unpbf.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/prepdata.f
+ M obsproc_prep/sorc/prepobs_prepdata.fd/w3unpkb7.f
+ M obsproc_prep/sorc/prepobs_profcqc.fd/profcqc.f
+ M obsproc_prep/sorc/build.sh
+ A obsproc_prep/sorc/clobber.sh
+ M obsproc_prep/sorc/load_libs.rc
+ M obsproc_prep/ush/prepobs_glerladj.sh
 ( A - added,  M - modified, D - deleted)
 
 
