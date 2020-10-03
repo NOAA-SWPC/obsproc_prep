@@ -162,11 +162,12 @@ files:
 
  Special Instructions:
  ---------------------
-?  This is part of OBSPROC.v1?.0.0.
+   This is part of OBSPROC.v15.0.0.
    This must be implemented on Dell-p3 & Cray.
 
    This must be implemented simultaneously with the implementations of:
      v16.0.0 of GFS,
+      v2.1.1 of obsproc_dump_alert,
       v3.4.0 of obsproc_global,
       v3.4.1 of obsproc_nam,
       v3.2.1 of obsproc_rap,
