@@ -111,17 +111,27 @@ files:
       BENEFIT: more inner core data will be used and assimilated in GFSv16.
    build.sh:
     - added intel-haswell for Cray-XC40.
+    - updated intel to 18.1.163 from 16.3.210 for Cray-XC40.
+?   - iobuf for cray ???
    load_libs.rc:
-?   -
+    - Removed IBM p1/p2 settings.
+    - updated w3emc version to 2.4.0 from 2.3.0.
+    - Added netcdf and hdf5 library settings for Dell-p3 and Cray-XC40.
 
 
  USH script changes:
    getges_driver.sh:
-?   - 
-   getgest_nc.sh:
-?   - New.
+    - Modified to use the new $COMPONENT subdirectory structure.
+      BENEFIT: Needed to work correctly with the GFS v16 upgrade.
+   getges_nc.sh:
+    - New. A copy of the older getges.sh, designed to pick up gfs/gdas
+      atmospheric files in nemsio format using the naming convention prior
+      to the GFSv16 upgrade, to instead pick up the gfs/gdas atmospheric files
+      in netcdf format and file name convention.
    prepobs_makeprepbufr.sh:
-?   -
+    - Modified to accommodate new variable NETCDF_IN.  If .true., processing
+      will obtain the NetCDF format first guess fields.
+      BENEFIT: Needed to work correctly with the GFS v16 upgrade.
 
 
  Output changes:
@@ -141,6 +151,7 @@ files:
    sigio   2.1.0 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
    nemsio  2.2.3 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
    netcdf  4.7.4 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
+   hdf5   1.10.6 (prepobs_prepdata, prepobs_prevents, syndat_syndata)
 
 
  Build Instructions:
@@ -162,11 +173,12 @@ files:
 
  Special Instructions:
  ---------------------
-?  This is part of OBSPROC.v1?.0.0.
+   This is part of OBSPROC.v15.0.0.
    This must be implemented on Dell-p3 & Cray.
 
    This must be implemented simultaneously with the implementations of:
      v16.0.0 of GFS,
+      v2.1.1 of obsproc_dump_alert,
       v3.4.0 of obsproc_global,
       v3.4.1 of obsproc_nam,
       v3.2.1 of obsproc_rap,
