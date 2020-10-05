@@ -280,6 +280,8 @@
 #        and IBM iDataPlex.
 # 2020-02-26  S. Melchior -- removed references to $NWROOTp1; no longer relevant
 #        with the decommissioning of IBM ph1/ph2.
+# 2020-10-09  S. Melchior -- Modified to accommodate new variable NETCDF_IN.
+#        If .true., processing will obtain the NetCDF format first guess fields.
 # 
 #
 #

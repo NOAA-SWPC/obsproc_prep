@@ -9,7 +9,7 @@ nemsio_ver=2.2.2; nemsio_ver_CrayXC40=2.2.2; nemsio_ver_Dellp3=2.2.3; nemsio_ver
 sigio_ver=2.0.1; sigio_ver_CrayXC40=2.0.1; sigio_ver_Dellp3=2.1.0; sigio_ver_hera=2.1.0
 sp_ver=2.0.2
 netcdf_ver=4.7.4; netcdf_ver_CrayXC40=4.7.4; netcdf_ver_RD=4.5.0
-hdf5_ver=10.1.6
+hdf5_ver=1.10.6
 
 if [[ "$sys_tp" == Cray-CS400 || "$SITE" =~ (theia|THEIA) ]]; then
    module use -a /scratch3/NCEPDEV/nwprod/lib/modulefiles
