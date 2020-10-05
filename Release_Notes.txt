@@ -107,7 +107,7 @@ files:
     - Updated W3TAGB arguments.
    syndat_syndata.fd/syndata.f:
     - The distance threshold for inner core drosponde data reduced to 55km
-      (from 111km or 3*RMW). A 32/m/s wind threshold was added. 
+      (from 111km or 3*RMW). A 32 m/s wind threshold was added. 
       BENEFIT: more inner core data will be used and assimilated in GFSv16.
    build.sh:
     - added intel-haswell for Cray-XC40.
