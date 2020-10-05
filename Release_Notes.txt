@@ -114,7 +114,6 @@ files:
     - updated intel to 18.1.163 from 16.3.210 for Cray-XC40.
 ?   - iobuf for cray ???
    load_libs.rc:
-    - Removed IBM p1/p2 settings.
     - updated w3emc version to 2.4.0 from 2.3.0.
     - Added netcdf and hdf5 library settings for Dell-p3 and Cray-XC40.
 
