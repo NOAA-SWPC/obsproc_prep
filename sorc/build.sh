@@ -70,8 +70,8 @@ case $sys_tp in
    module load PrgEnv-intel
    module load craype-haswell
    module load cray-mpich/7.2.0
-   module swap intel/16.3.210
-   module load iobuf/2.0.7
+   module switch intel/18.1.163
+#  module load iobuf/2.0.7
    lib_build="intel"
    lib_build_haswell="intel-haswell"
    export FC=ftn
