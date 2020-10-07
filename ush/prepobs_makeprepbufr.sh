@@ -742,12 +742,13 @@
 #                   date for the PREPBUFR processing <mm> (if set in script)
 #     SGES          Either ...
 #                    1) String indicating the full path name for global
-#                       sigio-based or nemsio-based guess file valid at the
-#                       center PREPBUFR processing date/time (in which case the
-#                       center PREPBUFR processing date/time is a multiple of
-#                       3-hrs, or for any PREPBUFR center hour if global guess
-#                       is nemsio-based)  - This guess file will be encoded
-#                       into the PREPBUFR file for use by the q.c. programs.
+#                       sigio-based, nemsio-based, or NetCDF-based guess file
+#                       valid at the center PREPBUFR processing date/time (in
+#                       which case the center PREPBUFR processing date/time is
+#                       a multiple of 3-hrs, or for any PREPBUFR center hour if
+#                       global guess is nemsio-based or NetCDF-based)  - This
+#                       guess file will be encoded into the PREPBUFR file for
+#                       use by the q.c. programs.
 #                             -- or --
 #                    2) String indicating the full path name for the global
 #                       atmosperic guess file valid at the nearest cycle time
@@ -767,7 +768,7 @@
 #                             expects that sigio-based guess files will only
 #                             have valid hours which are a multiple of 3
 #                     NOTE 3: Only case 1 above is valid when global guess is
-#                             nemsio-based.
+#                             nemsio-based or NetCDF-based.
 #     SGESA         Either ...
 #                    1) String set to "/dev/null" for case 1 of SGES above
 #                       (default)
@@ -791,7 +792,7 @@
 #                             expects that sigio-based guess files will only
 #                             have valid hours which are a multiple of 3
 #                     NOTE 3: Only case 1 above is valid when global guess is
-#                             nemsio-based.
+#                             nemsio-based or NetCDF-based.
 #   
 #
 #   Modules and files referenced:
@@ -1361,14 +1362,14 @@ if [ "$PREPDATA" = 'YES' -o "$SYNDATA" = 'YES' -o "$PREVENTS" = 'YES' ]; then
    if [ "$GETGUESS" != 'NO' ]; then
 
 #  Either ...
-#    If the global background guess will be nemsio-based -OR- if the global
-#    background guess will be sigio-based and the center PREPBUFR processing
-#    date/time is a multiple of 3-hrs, then get a global atmospheric guess valid
-#    at the center PREPBUFR processing date/time - this will be interpolated to
-#    observation locations by PREPDATA and encoded into the PREPBUFR file for
-#    use by the q.c. programs; if a non-zero length file sgesprep exists in the
-#    working directory, then this guess is used - otherwise: the GETGES utility
-#    is executed to obtain the global atmospheric guess file here
+#    If the global background guess will be nemsio-based or NetCDF-based -OR- if
+#    the global background guess will be sigio-based and the center PREPBUFR
+#    processing date/time is a multiple of 3-hrs, then get a global atmospheric
+#    buess valid at the center PREPBUFR processing date/time - this will be
+#    interpolated to observation locations by PREPDATA and encoded into the
+#    PREPBUFR file for use by the q.c. programs; if a non-zero length file sgesprep
+#    exists in the working directory, then this guess is used - otherwise: the
+#    GETGES utility is executed to obtain the global atmospheric guess file here
 #
 #    (NOTE 1: a pre-existing sgesprep file in the working directory at this
 #             point was either:
@@ -1442,9 +1443,9 @@ if [ "$PREPDATA" = 'YES' -o "$SYNDATA" = 'YES' -o "$PREVENTS" = 'YES' ]; then
 echo "VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV"
 echo "  Either center PREPBUFR processing date/time is a multiple of 3-hrs"
 echo "                                -OR-"
-echo "                     global guess is nemsio-based"
-echo "   Use GETGES to get global sigio-based or nemsio-based GUESS valid for"
-echo "             0 hrs relative to center PREPBUFR processing date/time"
+echo "            global guess is nemsio-based or NetCDF-based"
+echo "   Use GETGES to get global sigio-based, nemsio-based, or NetCDF-based"
+echo "  GUESS valid for 0 hrs relative to center PREPBUFR processing date/time"
 echo "     Will be encoded into PREPBUFR file and used by q.c. programs"
 echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
                echo
@@ -1482,15 +1483,15 @@ echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
             fi
             if test $errges -ne 0
             then
-#  problem obtaining global sigio-based or nemsio-based guess - exit if center
+#  problem obtaining global sigio-based, nemsio-based, or NetCDF-based guess - exit if center
 #   PREPBUFR processing date/time is a multiple of 3-hrs or if global guess is
-#   nemsio-based, otherwise continue running but set GETGUESS=NO meaning a
+#   nemsio-based or NetCDF-based, otherwise continue running but set GETGUESS=NO meaning a
 #   first guess will NOT be encoded in PREPBUFR file
                if [ $modhr -eq 0  -o "$NEMSIO_IN" = .true. -o "$NETCDF_IN" = .true. ]; then
                   if [ "$NEMSIO_IN" = .true. ]; then
                      set +x
                      echo
-echo "problem obtaining global nemsio-based guess;"
+echo "problem obtaining global nemsio-based or NetCDF-based guess;"
                   elif [ "$NETCDF_IN" = .true. ]; then
 echo "problem obtaining global netCDF-based guess;"
                   else
@@ -1682,8 +1683,8 @@ echo
 #   and span the center PREPBUFR processing date/time which is NOT a multiple of
 #   3-hrs are available and valid at this point
 #                                 -- or --
-#   a global nemsio-based guess file valid at the center PREPBUFR processing
-#   date/time for any hour is valid at this point
+#   a global nemsio-based or NetCDF-based guess file valid at the center PREPBUFR
+#   processing date/time for any hour is valid at this point
 
 #  In any case, namelist "GBLEVN" with PREVEN=T is cat'ed to the beginning
 #  of the PREPOBS_PREPDATA program data cards file - this means
@@ -1782,10 +1783,10 @@ cat <<\EOFmpp > MP_PREPDATA
 #   MPCOPYX  - path to PREPOBS_MPCOPYBUFR program executable
 #   PRPT     - path to PREPOBS_PREPDATA bufrtable file
 #   LANDC    - path to land/sea mask file
-#   SGES     - path to COPY OF global sigio-based or nemsio-based first guess
-#               file valid at either center PREPBUFR processing date/time or,
-#               for global sigio-based guess only, nearest 3-hrly cycle time
-#               prior to center PREPBUFR processing date/time
+#   SGES     - path to COPY OF global sigio-based, nemsio-based, or NetCDF-based
+#               first guess file valid at either center PREPBUFR processing
+#               date/time or, for global sigio-based guess only, nearest 3-hrly
+#               cycle time prior to center PREPBUFR processing date/time
 #   SGESA    - path to COPY OF global sigio-based guess file valid at nearest
 #               3-hrly cycle AFTER center PREPBUFR processing date/time (if
 #               needed, otherwise /dev/null). Only used if SGES is valid at
@@ -1924,9 +1925,9 @@ export FORT15=$LANDC
 
 # The PREPOBS_PREPDATA code opens GFS spectral coefficient guess files using 
 # sigio routines or GFS gaussian grid guess files using nemsio routines (via
-# W3EMC routine GBLEVENTS) in a manner that may not recognize the FORTxx
-# variables above.  So, the above statements setting FORTxx vars for $SGES and
-# $SGESA are replaced by the soft links below.
+# W3EMC routine GBLEVENTS) or NetCDF routines in a manner that may not recognize
+# the FORTxx variables above.  So, the above statements setting FORTxx vars for
+# $SGES and $SGESA are replaced by the soft links below.
 
 ln -sf $SGES              fort.18
 ln -sf $SGESA             fort.19
