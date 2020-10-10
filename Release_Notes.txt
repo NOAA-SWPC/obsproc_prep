@@ -116,6 +116,7 @@ files:
    load_libs.rc:
     - updated w3emc version to 2.4.0 from 2.3.0.
     - Added netcdf and hdf5 library settings for Dell-p3 and Cray-XC40.
+    - added local definition for module variable $NETCDF_LDFLAGS.
 
 
  USH script changes:
