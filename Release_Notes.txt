@@ -112,7 +112,7 @@ files:
    build.sh:
     - added intel-haswell for Cray-XC40.
     - updated intel to 18.1.163 from 16.3.210 for Cray-XC40.
-?   - iobuf for cray ???
+    - loading of iobuf module for Cray-XC40 disabled
    load_libs.rc:
     - updated w3emc version to 2.4.0 from 2.3.0.
     - Added netcdf and hdf5 library settings for Dell-p3 and Cray-XC40.
@@ -177,7 +177,6 @@ files:
 
    This must be implemented simultaneously with the implementations of:
      v16.0.0 of GFS,
-      v2.1.1 of obsproc_dump_alert,
       v3.4.0 of obsproc_global,
       v3.4.1 of obsproc_nam,
       v3.2.1 of obsproc_rap,
