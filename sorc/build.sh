@@ -86,7 +86,7 @@ case $sys_tp in
    ;;
  HERA)
    module load intel/18.0.5.274
-   module load impi/2019.0.4
+   module load impi/2018.4.274
    ;;
  *) echo "$lab: unexpected system.  Update for $sys_tp";
     echo "$lab: exiting" ; exit ;;

@@ -383,6 +383,171 @@ if [[ "$netwk" = "gdas" ]];then
    ;;
  esac
 
+# WDAS
+elif [[ "$netwk" = "wdas" ]];then
+ if [ -z "$COMINwdas" ]; then
+   echo "getges.sh ERROR: The \$COMINwdas variable must be defined." >&2
+   exit 1
+ fi
+ fhend=9
+ case $typef in
+  biascr) geslist='
+   $COMINwdas/wdas.t${cyc}z.abias'
+   ;;
+  biascr_pc) geslist='
+   $COMINwdas/wdas.t${cyc}z.abias_pc'
+   ;;
+  biascr_air) geslist='
+   $COMINwdas/wdas.t${cyc}z.abias_air'
+   ;;
+  radstat) geslist='
+   $COMINwdas/wdas.t${cyc}z.radstat'
+   ;;
+  pgbges) geslist='
+   $COMINwdas/wdas.t${cyc}z.pgrbh$fh 
+   $COMINwdas/wdas.t${cyc}z.pgrbf$fh'
+   ;;
+  pg2ges) geslist='
+   $COMINwdas/wdas.t${cyc}z.pgrb2.0p25.f$gh'
+   ;;
+  pgbgm6) geslist='
+   $COMINwdas/wdas.t${cyc}z.pgrbh$fhm6 
+   $COMINwdas/wdas.t${cyc}z.pgrbf$fhm6'
+   ;;
+  pgbgm3) geslist='
+   $COMINwdas/wdas.t${cyc}z.pgrbh$fhm3 
+   $COMINwdas/wdas.t${cyc}z.pgrbf$fhm3'
+   ;;
+  pgbgp3) geslist='
+   $COMINwdas/wdas.t${cyc}z.pgrbh$fhp3 
+   $COMINwdas/wdas.t${cyc}z.pgrbf$fhp3'
+   ;;
+  pgbcur) geslist='
+   $COMINwdas/wdas.t${cyc}z.pgrbh$fh 
+   $COMINwdas/wdas.t${cyc}z.pgrbf$fh'
+   fhbeg=00
+   ;;
+  pg2cur) geslist='
+   $COMINwdas/wdas.t${cyc}z.pgrb2.0p25.f$gh'
+   fhbeg=00
+   ;;
+  prepqc) geslist='
+   $COMINwdas/wdas.t${cyc}z.prepbufr'
+   fhbeg=00
+   fhend=00
+   ;;
+  tcvg12) geslist='
+   $COMINwdas/wdas.t${cyc}z.syndata.tcvitals.tm00'
+   fhbeg=12
+   fhend=12
+   ;;
+  tcvges) geslist='
+   $COMINwdas/wdas.t${cyc}z.syndata.tcvitals.tm00'
+   fhbeg=06
+   fhend=06
+   ;;
+  tcvitl) geslist='
+   $COMINwdas/wdas.t${cyc}z.syndata.tcvitals.tm00'
+   fhbeg=00
+   fhend=00
+   ;;
+  icegrb) geslist='
+   $COMINwdas/wdas.t${cyc}z.engicegrb'
+   fhbeg=00
+   fhinc=06
+   ;;
+  snogrb) geslist='
+   $COMINwdas/wdas.t${cyc}z.snogrb'
+   fhbeg=00
+   fhinc=06
+   ;;
+  snogrb_574) geslist='
+   $COMINwdas/wdas.t${cyc}z.snogrb_t574.1152.576'
+   fhbeg=00
+   fhinc=06
+   ;;
+  snogrb_1534) geslist='
+   $COMINwdas/wdas.t${cyc}z.snogrb_t1534.3072.1536'
+   fhbeg=00
+   fhinc=06
+   ;;
+  sstgrb) geslist='
+   $COMINwdas/wdas.t${cyc}z.sstgrb'
+   fhbeg=00
+   fhinc=06
+   ;;
+  natges) geslist='
+   $COMINwdas/wdas.t${cyc}z.atmf$gh'
+   ;;
+  natgm3) geslist='
+   $COMINwdas/wdas.t${cyc}z.atmf$ghm3'
+   ;;
+  natgm2) geslist='
+   $COMINwdas/wdas.t${cyc}z.atmf$ghm2'
+   ;;
+  natgm1) geslist='
+   $COMINwdas/wdas.t${cyc}z.atmf$ghm1'
+   ;;
+  natgp1) geslist='
+   $COMINwdas/wdas.t${cyc}z.atmf$ghp1'
+   ;;
+  natgp2) geslist='
+   $COMINwdas/wdas.t${cyc}z.atmf$ghp2'
+   ;;
+  natgp3) geslist='
+   $COMINwdas/wdas.t${cyc}z.atmf$ghp3'
+   ;;
+  natcur) geslist='
+   $COMINwdas/wdas.t${cyc}z.atmf$gh'
+   getlist00='
+   $COMINwdas/wdas.t${cyc}z.atmanl'
+   fhbeg=00
+   ;;
+  nsfges) geslist='
+   $COMINwdas/wdas.t${cyc}z.sfcf$gh'
+   ;;
+  nsfgm3) geslist='
+   $COMINwdas/wdas.t${cyc}z.sfcf$ghm3'
+   ;;
+  nsfgm2) geslist='
+   $COMINwdas/wdas.t${cyc}z.sfcf$ghm2'
+   ;;
+  nsfgm1) geslist='
+   $COMINwdas/wdas.t${cyc}z.sfcf$ghm1'
+   ;;
+  nsfgp1) geslist='
+   $COMINwdas/wdas.t${cyc}z.sfcf$ghp1'
+   ;;
+  nsfgp2) geslist='
+   $COMINwdas/wdas.t${cyc}z.sfcf$ghp2'
+   ;;
+  nsfgp3) geslist='
+   $COMINwdas/wdas.t${cyc}z.sfcf$ghp3'
+   ;;
+  nsfcur) geslist='
+   $COMINwdas/wdas.t${cyc}z.sfcf$gh'
+   getlist00='
+   $COMINwdas/wdas.t${cyc}z.sfcanl'
+   fhbeg=00
+   ;;
+  nstcur) geslist='
+   $COMINwdas/wdas.t${cyc}z.nstf$gh'
+   getlist00='
+   $COMINwdas/wdas.t${cyc}z.nstanl'
+   fhbeg=00
+   ;;
+  nflges) geslist='
+   $COMINwdas/wdas.t${cyc}z.flxf$gh'
+   ;;
+  nflgp3)  geslist='
+   $COMINwdas/wdas.t${cyc}z.flxf$ghp3'
+   ;;
+  nflcur) geslist='
+   $COMINwdas/wdas.t${cyc}z.flxf$gh'
+   fhbeg=00
+   ;;
+ esac
+
 # CFS-CDAS
 elif [[ "$netwk" = "cfs-cdas" ]];then
  if [ -z "$COMINcfs_cdas" ]; then
@@ -651,6 +816,83 @@ elif [[ "$netwk" = "gfs" ]];then
    ;;
   nflcur) geslist='
    $COMINgfs/gfs.t${cyc}z.flxf$gh.nemsio'
+   fhbeg=00
+   ;;
+ esac
+
+# WFS
+elif [[ "$netwk" = "wfs" ]];then
+ if [ -z "$COMINwfs" ]; then
+   echo "getges.sh ERROR: The \$COMINwfs variable must be defined." >&2
+   exit 1
+ fi
+ if [ -z "$COMINwdas" ]; then
+   echo "getges.sh ERROR: The \$COMINwdas variable must be defined." >&2
+   exit 1
+ fi
+ fhend=48
+ case $typef in
+  natges) geslist='
+   $COMINwdas/wdas.t${cyc}z.atmf$gh'
+   ;;
+  pgbcur) geslist='
+   $COMINwfs/wfs.t${cyc}z.pgrbf$fh'
+   fhbeg=00
+   ;;
+  pg2cur) geslist='
+   $COMINwfs/wfs.t${cyc}z.pgrb2.0p25.f$gh'
+   fhbeg=00
+   ;;
+  prepqc) geslist='
+   $COMINwfs/wfs.t${cyc}z.prepbufr'
+   fhbeg=00
+   fhend=00
+   ;;
+  tcvitl) geslist='
+   $COMINwfs/wfs.t${cyc}z.syndata.tcvitals.tm00'
+   fhbeg=00
+   fhend=00
+   ;;
+  icegrb) geslist='
+   $COMINwfs/wfs.t${cyc}z.engicegrb'
+   fhbeg=00
+   fhinc=06
+   ;;
+  snogrb) geslist='
+   $COMINwfs/wfs.t${cyc}z.snogrb'
+   fhbeg=00
+   fhinc=06
+   ;;
+  snogrb_1534) geslist='
+   $COMINwfs/wfs.t${cyc}z.snogrb_t1534.3072.1536'
+   fhbeg=00
+   fhinc=06
+   ;;
+  sstgrb) geslist='
+   $COMINwfs/wfs.t${cyc}z.sstgrb'
+   fhbeg=00
+   fhinc=06
+   ;;
+  natcur) geslist='
+   $COMINwdas/wdas.t${cyc}z.atmf$gh'
+   getlist00='
+   $COMINwdas/wdas.t${cyc}z.atmanl'
+   fhbeg=00
+   ;;
+  nsfcur) geslist='
+   $COMINwdas/wdas.t${cyc}z.sfcf$gh'
+   getlist00='
+   $COMINwdas/wdas.t${cyc}z.sfcanl'
+   fhbeg=00
+   ;;
+  nstcur) geslist='
+   $COMINwfs/wfs.t${cyc}z.nstf$gh'
+   getlist00='
+   $COMINwfs/wfs.t${cyc}z.nstanl'
+   fhbeg=00
+   ;;
+  nflcur) geslist='
+   $COMINwfs/wfs.t${cyc}z.flxf$gh'
    fhbeg=00
    ;;
  esac
