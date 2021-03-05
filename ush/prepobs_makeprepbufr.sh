@@ -987,6 +987,10 @@ envir=${envir:-prod}
 envir_getges=${envir_getges:-$envir}
 if [ $NET = cfs ]; then 
    network_getges=${network_getges:-"cfs-cdas"}
+elif [ $NET = wdas ]; then
+   network_getges=${network_getges:-"wdas"}
+elif [ $NET = wfs ]; then
+   network_getges=${network_getges:-"wfs"}
 else
   if [ $modhr -eq 0 -o "$NEMSIO_IN" = .true. -o "$NETCDF_IN" = .true. ]; then
      network_getges=${network_getges:-global}
@@ -1119,8 +1123,8 @@ PRPC=${PRPC:-$PARMPREP/prepobs_prepdata.${NET}.parm}
 PRPT=${PRPT:-$FIXPREP/prepobs_prep.bufrtable}
 cp $PRPT prep.bufrtable
 LANDC=${LANDC:-$FIXPREP/prepobs_landc}
-if [ "$RUN" = 'gdas' -o "$RUN" = 'gfs' ]; then
-   PRVT=${PRVT:-$HOMEgfs/fix/fix_gsi/prepobs_errtable.global}
+if [ "$RUN" = 'wdas' -o "$RUN" = 'wfs' ]; then
+   PRVT=${PRVT:-$HOMEwfs/fix/fix_gsi/prepobs_errtable.global}
 elif [ "$NET" = 'cdas' ]; then
    PRVT=${PRVT:-$HOMEobsproc_network/fix/prepobs_errtable.cdas}
 elif [ "$NET" = 'nam' ]; then
@@ -1279,7 +1283,7 @@ elif [ "$RELOCATION_HAS_RUN" = 'YES' ]; then
 
    qual_last=".$tmmark"  # need this because gfs and gdas don't add $tmmark
                          #  qualifier to end of output atmos guess files
-   [ $RUN = gfs -o $RUN = gdas -o $NET = cfs ]  &&  qual_last=""
+   [ $RUN = wfs -o $RUN = wdas -o $NET = cfs ]  &&  qual_last=""
    for file in sgm3prep sgesprep sgp3prep tcvitals.relocate.$tmmark; do
       case $file in
         tcvitals.relocate.$tmmark) infile=$file; qual_last="";; #  already has $tmmark at end
@@ -1923,7 +1927,7 @@ export FORT15=$LANDC
 ##   export FORT18=$SGES
 ##   export FORT19=$SGESA
 
-# The PREPOBS_PREPDATA code opens GFS spectral coefficient guess files using 
+:x# The PREPOBS_PREPDATA code opens GFS spectral coefficient guess files using 
 # sigio routines or GFS gaussian grid guess files using nemsio routines (via
 # W3EMC routine GBLEVENTS) or NetCDF routines in a manner that may not recognize
 # the FORTxx variables above.  So, the above statements setting FORTxx vars for
