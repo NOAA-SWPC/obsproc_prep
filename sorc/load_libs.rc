@@ -70,9 +70,9 @@ elif [[ "$sys_tp" == HERA || "$SITE" =~ (hera|HERA) ]]; then
    module load nemsio/$nemsio_ver_hera
    module load sigio/$sigio_ver_hera
    module load sp/$sp_ver
-   #module load netcdf/$netcdf_ver_hera
-   module use /scratch1/NCEPDEV/nems/emc.nemspara/soft/modulefiles/
-   module load netcdf_parallel/4.7.4.release
+   module load netcdf/$netcdf_ver_hera
+   #module use /scratch1/NCEPDEV/nems/emc.nemspara/soft/modulefiles/
+   #module load netcdf_parallel/4.7.4.release
 
 elif [[ -n "$sys_tp" || -n "$SITE" ]]; then
   echo " **** UNEXEPECTED PLATFORM: sys_tp: ${sys_tp:-not set}  SITE: ${SITE:-not set} ***** "
