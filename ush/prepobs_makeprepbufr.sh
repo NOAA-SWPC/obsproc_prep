@@ -1124,7 +1124,7 @@ PRPT=${PRPT:-$FIXPREP/prepobs_prep.bufrtable}
 cp $PRPT prep.bufrtable
 LANDC=${LANDC:-$FIXPREP/prepobs_landc}
 if [ "$RUN" = 'wdas' -o "$RUN" = 'wfs' ]; then
-   PRVT=${PRVT:-$HOMEwfs/fix/fix_gsi/prepobs_errtable.global}
+   PRVT=${PRVT:-$HOMEwamipe/fix/fix_gsi/prepobs_errtable.global}
 elif [ "$NET" = 'cdas' ]; then
    PRVT=${PRVT:-$HOMEobsproc_network/fix/prepobs_errtable.cdas}
 elif [ "$NET" = 'nam' ]; then
@@ -2074,122 +2074,22 @@ set -x
 
    chmod 775 MP_PREPDATA
 
-   if [ "$PARALLEL" = 'YES' ]; then
-
 #  In the parallel environment, either cat the multiple MP_PREPDATA tasks
 #   into a poe command file (for poe/mpi/cfp) - or - set up a script that will
 #   fire off each MP_PREPDATA thread as a background process
 #  -----------------------------------------------------------------------
-      if [ "$POE" != 'NO' ]; then
-         multi=-1
-         while [ $((multi+=1)) -lt $NSPLIT ] ; do
-            echo "ksh $DATA/MP_PREPDATA $multi "|tee -a $DATA/prep_exec.cmd
-         done
-         if [ "$launcher_PREP" != cfp -a "$launcher_PREP" != aprun ]; then
-            # fill in empty tasks
-            multi=$((multi-=1))  #need to go back one
-            while [ $((multi+=1)) -lt $NPROCS ] ; do
-               echo "echo do-nothing" >> $DATA/prep_exec.cmd
-            done
-         fi
-      elif [ $BACK = 'YES' ] ; then
-         multi=-1
-         echo "#!/bin/ksh" > $DATA/prepthrds.sh
-         while [ $((multi+=1)) -lt $NSPLIT ] ; do
-            echo "$DATA/MP_PREPDATA $multi &" >> $DATA/prepthrds.sh
-            echo "echo $DATA/MP_PREPDATA $multi submitted in background" \
-                                                           >> $DATA/prepthrds.sh
-         done
-         echo "wait" >> $DATA/prepthrds.sh
-         chmod 775 $DATA/prepthrds.sh
-      fi
+   multi=0
+   command='mpirun -n 1 ksh -c ". $DATA/MP_PREPDATA 0"'
+   while [ $((multi+=1)) -lt $NSPLIT ] ; do
+      command="$command : -n 1 ksh -c '. $DATA/MP_PREPDATA $multi'"
+   done
+   eval $command
 
 #  In the parallel environment, next either execute the poe wrapper (for poe/
 #   mpi/cfp) (do not execute a time command with poe!) - or - run prepthrds.sh
 #   to kick off background processes and wait for them to complete
 #  --------------------------------------------------------------------------
-      if [ "$POE" != 'NO' ]; then
-         if [ "$launcher_PREP" = mpirun ]; then
-            chmod 755 $DATA/prep_exec.cmd
-            mpirun -l cfp $DATA/prep_exec.cmd
-            export err=$?; $DATA/err_chk
-            [ $err != 0 ] && exit 55  # for extra measure
-         elif [ "$launcher_PREP" = mpirun.lsf ]; then
-            export MP_CMDFILE=$DATA/prep_exec.cmd
-            export MP_PGMMODEL=mpmd
-            export MP_PULSE=0
-            export MP_DEBUG_NOTIMEOUT=yes
-            export MP_LABELIO=yes
-            export MP_STDOUTMODE=ordered
-            mpirun.lsf
-            export err=$?; $DATA/err_chk
-            [ $err != 0 ] && exit 55  # for extra measure
-         elif [ "$launcher_PREP" = cfp ]; then
-            export MP_CSS_INTERRUPT=yes
-            export MP_LABELIO=yes
-            export MP_STDOUTMODE=ordered
-            mpirun.lsf cfp $DATA/prep_exec.cmd
-            export err=$?; $DATA/err_chk
-            [ $err != 0 ] && exit 55  # for extra measure
-         elif [ "$launcher_PREP" = aprun ]; then
-            ## Determine tasks per node (PREPDATAtpn) and
-            ##    max number of concurrent procs (PREPDATAprocs) for cfp
-            typeset -i nodesall=$(echo -e "${LSB_HOSTS// /\\n}"|sort -u|wc -w)
-            typeset -i ncnodes=$(($nodesall-1)) # we want compute nodes only
-            if [ $ncnodes -lt 1 ]; then
-               set +x
-               echo
-               echo " ** Could not get positive compute node count for aprun **"
-               echo " ** Are we using LSF queue with compute node access? **"
-               echo
-               echo "ABNORMAL EXIT!!!!!!!!!!!"
-               echo
-               set -x
-               $DATA/err_exit
-               exit 55  # for extra measure
-            fi
-            if [[ -z ${PREPDATAtpn:-""} ]]; then
-               PREPDATAtpn=$((($NSPLIT+$ncnodes-1)/$ncnodes))
-               # cfp is faster with extra thread so add one if there is room.
-               #  (this logic needs an update to avoid hardwired 24)
-               [ $PREPDATAtpn -lt 24 ] && PREPDATAtpn=$(($PREPDATAtpn+1))
-            fi
-            if [[ -z ${PREPDATAprocs:-""} ]]; then
-              PREPDATAprocs=$(($ncnodes*$PREPDATAtpn))  # max concurrent processes
-            fi
-            aprun -j 1 -n${PREPDATAprocs} -N${PREPDATAtpn} -d1 cfp $DATA/prep_exec.cmd
-            export err=$?; $DATA/err_chk
-            [ $err != 0 ] && exit 55  # for extra measure
-         else  # unknown launcher and options (eg, for use on R&D system) 
-            $launcher_PREP
-            export err=$?; $DATA/err_chk
-            [ $err != 0 ] && exit 55  # for extra measure
-         fi
-      elif [ $BACK = 'YES' ] ; then
-         if [ "$sys_tp" = Cray-XC40 -o "$SITE" = SURGE -o "$SITE" = LUNA ]; then
-            aprun -n 1 -d $NSPLIT $DATA/prepthrds.sh
-         elif [ "$sys_tp" = Dell-p3 -o "$SITE" = VENUS -o "$SITE" = MARS ]; then
-            launcher_PREP=${launcher_PREP:-mpirun}
-            $launcher_PREP -n 1 $DATA/prepthrds.sh
-         else
-            $DATA/prepthrds.sh
-         fi
-      fi
-      totalt=$NSPLIT
-   else
-
-#  In the serial environment, just fire off a single thread of MP_PREPDATA
-#  -----------------------------------------------------------------------
-      multi=0
-      if [ "$sys_tp" = Cray-XC40 -o "$SITE" = SURGE -o "$SITE" = LUNA ]; then
-         aprun -n 1 -N 1 ksh $DATA/MP_PREPDATA $multi
-      else
-         $DATA/MP_PREPDATA $multi
-      fi
-      totalt=1
-
-   # fi for $PARALLEL = YES
-   fi
+   totalt=$NSPLIT
 
    set +x
    multi=0
