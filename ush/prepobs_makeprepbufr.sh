@@ -1927,7 +1927,7 @@ export FORT15=$LANDC
 ##   export FORT18=$SGES
 ##   export FORT19=$SGESA
 
-:x# The PREPOBS_PREPDATA code opens GFS spectral coefficient guess files using 
+# The PREPOBS_PREPDATA code opens GFS spectral coefficient guess files using 
 # sigio routines or GFS gaussian grid guess files using nemsio routines (via
 # W3EMC routine GBLEVENTS) or NetCDF routines in a manner that may not recognize
 # the FORTxx variables above.  So, the above statements setting FORTxx vars for

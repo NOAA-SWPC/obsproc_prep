@@ -45,7 +45,7 @@ FC = ifort
 #LDFLAGS = -Xlinker -t -mkl
 #LDFLAGS = -Xlinker -M -mkl
 LDFLAGS = -mkl
-LIBS = -I$(NETCDF)/include -L$(NETCDF)/lib -lnetcdff -lnetcdf ${W3EMC_LIB4} ${NEMSIO_LIB} ${BUFR_LIB4} ${W3NCO_LIB4} ${SIGIO_LIB4} ${SP_LIB4} ${BACIO_LIB4}
+LIBS = ${W3EMC_LIB4} ${NEMSIO_LIB} ${BUFR_LIB4} ${W3NCO_LIB4} ${SIGIO_LIB4} ${SP_LIB4} ${BACIO_LIB4} ${NETCDF_LDFLAGS}
 CMD = prepobs_prevents
 
 DEBUG =                -g -traceback

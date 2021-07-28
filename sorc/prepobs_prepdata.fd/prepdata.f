@@ -3106,7 +3106,7 @@ C  IN INTERFACE WITH SUBROUTINE IW3UNPBF
      $ FLACMS,IACFTH,SUBSKP,JPGPSD,GWINDO,RASS,TWINDO,JPWDSD,IWWNDO,
      $ FLDMFR,WRMISS,SKGP45,JPASCD,IAWNDO,npkrpt,SKGNSS
       NAMELIST/PARM/IUNIT
-      CALL W3TAGB('PREPOBS_PREPDATA',2020,0283,0050,'EMC')
+      CALL W3TAGB('PREPOBS_PREPDATA',2021,0175,0050,'EMC')
 C DETERMINE MACHINE WORD LENGTH (BYTES) FOR BOTH INTEGERS AND REALS
       CALL WORDLENGTH(LWI,LWR)
       PRINT 2213, LWI,LWR
@@ -3149,7 +3149,7 @@ C    CARDS FILE, JUST AFTER NAMELIST TASK, BY THE MAKE_PREPBUFR SCRIPT)
          PRINT 321, NET(1)
       END IF
   321 FORMAT(/37X,'WELCOME TO THE UNIVERSAL ',A14,' DATA PREPROCESSOR'/
-     $ 48X,'WCOSS VERSION CREATED 20 Aug 2020')
+     $ 48X,'WCOSS VERSION CREATED 24 Jun 2021 (BUFR ships/cman)')
       call bvers(cvstr)
       print 3211, cvstr
  3211 FORMAT(48X,'--BUFRLIB VERSION USED = v',a,/)
@@ -16505,7 +16505,13 @@ C    gauge data (read from SFCSHP dump, dump report type 534).
 C 2014-04-25  D. A. Keyser -- Invalid "other" (default) output "type"
 C    changed from 13 TO 30.  Invalid RECCO/DROPWINSONDE with no splash-
 C    level mass output type changed from 12 to 20.
-c 2019-12-05 JWhiting - added 563-4 (BUFR feed fixed/drift buoys)
+c 2019-12-05 JWhiting - added dump report types 563-4 in function 
+c    ISSEL() for BUFR feed fixed/drift buoys
+c 2021-03-30 JWhiting 
+c    - added dump report types 524-5 in function ISSEL() for BUFR-feed 
+c      ships named & unnamed reports, respecitvely.
+c    - added dump report type 530 in function ISSEL() for BUFR-feed 
+c      C-MAN reports
 C
 C USAGE:    XX = ISSEL(ITYPDMP)
 C   INPUT ARGUMENT LIST:
@@ -16550,9 +16556,13 @@ C$$$
 
       DATA  JTYPE/
 
-C      31         511 512     514       522 523       531 532  --> RTYPE
-C      --         --- ---     ---       --- ---       --- ---
-     $  5, 479*30,  1,  8, 30, 11, 7*30,  2,  2, 7*30,  6,  9,
+C      31         511 512     514       522 523                --> RTYPE
+C      --         --- ---     ---       --- ---
+     $  5, 479*30,  1,  8, 30, 11, 7*30,  2,  2,
+
+C                                       524 525       530 531 532  --> RTYPE
+c                                       --- ---       --- --- ---
+     $                                    2,  2, 4*30,  6,  6,  9,
 
 C          534        540        551         561 562 563 564  --> RTYPE
 C          ---        ---        ---         --- --- --- ---

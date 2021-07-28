@@ -518,7 +518,18 @@ C       (TPHR) FOR THE PAST WEATHER MEASUREMENTS.
 C 2020-09-14  S. Melchior -- In function R06UBF, added code to process
 C       new WMO BUFR format Meteosat AMV data from subsets: 005067,
 C       005068, 005069. 
-C       
+c 2020-10-15 JWhiting -- added trap to pull dump mnemonics specific to 
+c       BUFR feed buoy data streams so as to properly encode prepbufr 
+c       wave height & frequecy mnemonics (HOWV POWV).  
+c 2021-03-30 JWhiting - 
+C     - Fixed ambiguity in trap for buoy SST values (msg types 102-3)
+C     - Assigned input report type values of 524-5 to BUFR-feed ships 
+c       data, for named and unnamed obs, respectively (TAC-feeds remain 
+c       as 522-3).
+C     - Assigned input report type value of 530 to BUFR-feed C-MAN
+C       reports.
+C 2021-07-14 J. Dong -- In function R04UBF, added code to encode the 
+C       cloud data for the BUFR-feed ships data.
 C
 C
 C USAGE:    II = IW3UNPBF(NUNIT, OBS, STNID, CRES1, CRES2, CBULL, OBS2,
@@ -803,9 +814,12 @@ C          511 - Fixed land surface by block and station number
 C                 (synoptic, both unrestricted & restricted WMO Res. 40)
 C          512 - Fixed land surface by call letters (METAR)
 C          514 - Mobile land surface (synoptic)
-C          522 - Ship with name
-C          523 - Ship without name (report id set to "SHIP")
-C          531 - C-MAN platform (both TAC & BUFR data streams)
+C          522 - TAC format Ship with name
+C          523 - TAC format Ship w/o name (report id set to "SHIP")
+C          524 - FM94/BUFR format Ship with name
+C          525 - FM94/BUFR format Ship w/o name (rpt id set to "SHIP")
+C          530 - C-MAN platform (BUFR-feed data stream)
+C          531 - C-MAN platform (TAC-feed data stream)
 C          532 - Tide gauge
 C          534 - Coast Guard Tide gauge
 C          540 - Mesonet surface
@@ -1326,6 +1340,8 @@ C$$$
       data istart/3,200,223/,iend/5,209,223/
 
       IF(ITIMES.EQ.0)  THEN
+
+        PRINT'(" ===> IW3UNPBF - WCOSS VERSION: 06-24-2021")'
 
 C  THE FIRST TIME IN, INITIALIZE SOME DATA
 C  (NOTE: FORTRAN 77/90 STANDARD DOES NOT ALLOW COMMON BLOCK VARIABLES
@@ -2666,20 +2682,34 @@ C  ---------------
 
             ERTUBF = 540
          ELSE  IF(SUBSET(1:5).EQ.'NC001')  THEN
-            IF(SUBSET(6:8).EQ.'001'.OR.SUBSET(6:8).EQ.'013')  THEN
+
+!_ships     nem 001001  #> Ship - manual and automatic, restricted |
+!_shipsu    nem 001013  #> Ship - manual and automatic, unrestricted |
+!_shipsb    nem 001101  #> Ship - manual and automatic, restricted (BUFR) |
+!_shipub    nem 001113  #> Ship - manual and automatic, unrestricted (BUFR) |
+            IF(SUBSET(7:8).EQ.'01'.OR.SUBSET(7:8).EQ.'13')  THEN
                IF(RPID.NE.'SHIP')  THEN
 
 C  SHIP WITH NAME
 C  --------------
 
-                  ERTUBF = 522
+                  if(subset(6:8).eq.'001'.or.subset(6:8).eq.'013')then
+                    ERTUBF = 522   ! TAC-feed  -- ID not 'SHIP'
+                  else
+                    ERTUBF = 524   ! FM94/BUFR-feed -- ID not 'SHIP'
+                  endif
                ELSE
 
 C  SHIP WITHOUT NAME
 C  -----------------
 
-                  ERTUBF = 523
+                  if(subset(6:8).eq.'101'.or.subset(6:8).eq.'113')then
+                    ERTUBF = 523   ! TAC-feed -- ID = 'SHIP'
+                  else
+                    ERTUBF = 525   ! FM94/BUFR-feed --  ID = 'SHIP'
+                  endif
                END IF
+
             ELSE  IF(SUBSET(6:8).EQ.'002') THEN
 
 C  BUOYS ARRIVING IN WMO FM18 FORMAT (FIXED OR DRIFTING)
@@ -2703,13 +2733,18 @@ C  BUOYS ARRIVING IN WMO FM94/BUFR FORMAT (FIXED)
 C  ----------------------------------------------
     
                ERTUBF = 563
-            ELSE  IF(SUBSET(6:8).EQ.'004' 
-     +          .OR. SUBSET(6:8).EQ.'104') THEN
+            ELSE  IF(SUBSET(6:8).EQ.'004' ) THEN
 
-C  C-MAN PLATFORM
-C  --------------
+C  C-MAN PLATFORM (TAC-feed)
+C  -------------------------
 
                ERTUBF = 531
+            ELSE  IF(SUBSET(6:8).EQ.'104' ) THEN
+
+C  C-MAN PLATFORM (BUFR-feed)
+C  -------------------------
+
+               ERTUBF = 530
             ELSE  IF(SUBSET(6:8).EQ.'005') THEN
 
 C  TIDE GAUGE
@@ -3840,10 +3875,12 @@ CDONG -- BELOW NEED TO CHANGE IN THE FUTURE
          END IF
       ELSE IF(SUBSET(1:5).EQ.'NC001')  THEN        ! All surface marine
          IF(IBFMS(OBS2_8(4)).NE.0) THEN                  ! SST1 missing
-            IF(SUBSET(6:7).EQ.'10') THEN
+
+c -- Buoy SSTs
+            IF(SUBSET(6:8).EQ.'102'.or.SUBSET(6:8).EQ.'103') THEN ! buoys
 C         Retrieve field SST0 from buoy reports originating in BUFR form 
               CALL UFBINT(LUNIT,OBS2_8(4),1,1,IRET,'SST0')
-            ELSE
+            ELSE IF(SUBSET(6:8).EQ.'002') THEN
 C DBUOYs store sub-sfc temp, use 1st lvl if SST1 msg (unless > 10m down)
               CALL UFBINT(LUNIT,OBS2_8(4),2,1,IRET,'STMP DBSS')
               IF(OBS2_8(5).GT.10.)  THEN
@@ -3851,12 +3888,25 @@ C DBUOYs store sub-sfc temp, use 1st lvl if SST1 msg (unless > 10m down)
               END IF
             END IF ! subset(6:7) = 10  ! BUFR-feed types
          END IF ! obs2_8(4) ne 0 (SST1 missing)
+
          IF(IBFMS(OBS2_8(4)).EQ.0)  OBS2_8(41) = 2.0
          CALL UFBINT(LUNIT,OBS2_8( 6),1,1,IRET,'MSST')
-         CALL UFBINT(LUNIT,OBS2_8( 8),8,1,IRET,
-     $                'HOVI VTVI PSW1 PSW2 PKWDSP PKWDDR .DTMMXGS MXGS')
+
+c -- BUFR Ships reports need ufbint() mnemonics split up
+         CALL UFBINT(LUNIT,OBS2_8( 8),2,1,IRET,'HOVI VTVI')
+         CALL UFBINT(LUNIT,OBS2_8(10),2,1,IRET,'PSW1 PSW2')
+         CALL UFBINT(LUNIT,OBS2_8(12),4,1,IRET,
+     $                          'PKWDSP PKWDDR .DTMMXGS MXGS')
+
+
          CALL UFBINT(LUNIT,OBS2_8(23),4,1,IRET,'TOCC HBLCS XS10 XS20')
-         CALL UFBINT(LUNIT,OBS2_8(32),4,1,IRET,'HOWV POWV HOWW POWW')
+
+         if(subset(6:8).eq.'102'.or.subset(6:8).eq.'103') then ! BUFR buoys
+           CALL UFBINT(LUNIT,OBS2_8(32),2,1,IRET,'SGWH AVWP')
+         else ! TAC reports
+           CALL UFBINT(LUNIT,OBS2_8(32),4,1,IRET,'HOWV POWV HOWW POWW')
+         endif ! not 102 103
+
          CALL UFBINT(LUNIT,OBS2_8(36),5,1,IRET,
      $    'TDMP ASMP CHPT 3HPC 24PC')
          CALL UFBINT(LUNIT,OBS3_8(1,1,2),5,255,IRET,'PRWE')
@@ -3865,15 +3915,29 @@ C DBUOYs store sub-sfc temp, use 1st lvl if SST1 msg (unless > 10m down)
             IF(IBFMS(OBS3_8(1,1,2)).NE.0)  IRET = 0
          END IF
          NOBS3(2) = IRET
-         CALL UFBINT(LUNIT,OBS3_8(1,1,3),5,255,IRET,
-     $    'VSSO CLAM CLTP HOCB')
-         IF(IRET.EQ.1) THEN ! reset iret from 1 to 0 if all obs missing
+         IF(SUBSET(6:6).EQ.'1') THEN   ! SFCSHP in BUFR-Feed
+            CALL UFBSEQ(LUNIT,UFBINT2_8(1,1),12,255,IRET,'GENCLOUD')
+            I=1
+            OBS3_8(1,I,3)=UFBINT2_8(2,I)
+            OBS3_8(2,I,3)=UFBINT2_8(3,I)
+            OBS3_8(4,I,3)=UFBINT2_8(4,I)
+            OBS3_8(3,I,3)=UFBINT2_8(5,I)
+            OBS3_8(3,I+1,3)=UFBINT2_8(6,I)
+            OBS3_8(3,I+2,3)=UFBINT2_8(7,I)
+            NOBS3(3) = IRET
+            IF(UFBINT2_8(6,I).LT.BMISS) NOBS3(3) = 2
+            IF(UFBINT2_8(7,I).LT.BMISS) NOBS3(3) = 3
+         ELSE
+            CALL UFBINT(LUNIT,OBS3_8(1,1,3),5,255,IRET,
+     $       'VSSO CLAM CLTP HOCB')
+            IF(IRET.EQ.1) THEN ! reset iret from 1 to 0 if all obs missing
                             !  (iret can be 1 even if all obs missing)
-            AMINIMUM_8 = MIN(OBS3_8(1,1,3),OBS3_8(2,1,3),OBS3_8(3,1,3),
-     $       OBS3_8(4,1,3))
-            IF(IBFMS(AMINIMUM_8).NE.0)  IRET = 0
-         END IF
-         NOBS3(3) = IRET
+               AMINIMUM_8 = MIN(OBS3_8(1,1,3),OBS3_8(2,1,3),
+     $          OBS3_8(3,1,3),OBS3_8(4,1,3))
+               IF(IBFMS(AMINIMUM_8).NE.0)  IRET = 0
+            END IF
+            NOBS3(3) = IRET
+         ENDIF
          CALL UFBINT(LUNIT,OBS3_8(1,1,5),5,255,IRET,'DOSW HOSW POSW')
          IF(IRET.EQ.1) THEN ! reset iret from 1 to 0 if all obs missing
                             !  (iret can be 1 even if all obs missing)
