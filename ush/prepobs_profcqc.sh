@@ -74,7 +74,7 @@ echo
 set -x
 if [ $err -eq 4 ]; then
    msg="PREPBUFR DATA SET CONTAINS NO "PROFLR" TABLE A MESSAGES  --> non-fatal"
-   [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+   echo "$msg"
    err=0
 fi
 if [ -s $DATA/err_chk ]; then

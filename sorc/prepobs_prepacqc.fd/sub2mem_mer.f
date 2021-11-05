@@ -641,11 +641,10 @@ C ------------------------------------------------------------------------------
      + 'THIS PROFILE -- WILL CONTINUE ON PROCESSING ONLY ',I6,' LEVELS',
      + ' FOR THIS PROFILE'/)
                   write(cmxlv,'(i6)') mxlv
-                  call system('[ -n "$jlogfile" ] && $DATA/postmsg'//
-     +             ' "$jlogfile" "***WARNING:'//cmxlv//' AIRCRAFT '//
+                  write(6,*) '***WARNING:'//cmxlv//' AIRCRAFT '//
      +             'PROFILE LEVEL LIMIT EXCEEDED IN '//
      +             'PREPOBS_PREPACQC, ONLY '//cmxlv//' LEVELS '//
-     +             'PROCESSED"')
+     +             'PROCESSED'
                   exit loop1
 C.......................................................................
                 endif
@@ -1893,10 +1892,9 @@ c-------------------------------------------------------------------------------
      + 'PROFILE -- GO ON TO NEXT PROFILE'/)
           write(cnlv2wrt_tot,'(i3)') nlv2wrt_tot
           write(cnlv2wrt,'(i3)') nlv2wrt
-          call system('[ -n "$jlogfile" ] && $DATA/postmsg '//
-     +     '"$jlogfile" "***WARNING: LEVEL MISMATCH FOR PREPACQC '//
+          write(6,*) '***WARNING: LEVEL MISMATCH FOR PREPACQC '//
      +     'PROFILE: TOTAL WRITTEN '//cnlv2wrt_tot//' .ne. # PRESS '//
-     +     'LVLS WRITTEN '//cnlv2wrt//' - PROFILE SKIPPED"')
+     +     'LVLS WRITTEN '//cnlv2wrt//' - PROFILE SKIPPED'
           go to 9999
 C.......................................................................
         endif

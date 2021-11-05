@@ -82,7 +82,7 @@ sys_tp=${sys_tp:-$(getsystem.pl -tp)}
 getsystp_err=$?
 if [ $getsystp_err -ne 0 ]; then
    msg="***WARNING: error using getsystem.pl to determine system type and phase"
-   [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+   echo "$msg"
 fi
 echo sys_tp is set to: $sys_tp
 if [ "$sys_tp" = "Cray-XC40" -o "$SITE" = "SURGE" -o "$SITE" = "LUNA" ]; then
@@ -131,7 +131,7 @@ msg="WRNG: SOME OBS NOT QC'd BY PGM PREPOBS_OIQCBUFR - # OF OBS > LIMIT \
    echo "$msg"
    echo
    set -x
-   [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+   echo "$msg"
    err=0
 fi
 if [ -s $DATA/err_chk ]; then

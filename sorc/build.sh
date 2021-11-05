@@ -87,8 +87,8 @@ case $sys_tp in
  Cactus-p1 | Dogwood-p1)
    module load envvar/$envvar_ver
    module load PrgEnv-intel/$PrgEnv_intel_ver
-   module load intel/$intel_ver
    module load craype/$craype_ver
+   module load intel/$intel_ver
    module load cray-mpich/$cray_mpich_ver
    ;;
  HERA)

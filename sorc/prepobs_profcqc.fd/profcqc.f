@@ -2823,10 +2823,9 @@ C  --------------------------------------------------------------------
          NTIMES(N) = NT
          if(ifirst.eq.0) then
             write(cNT,'(i8)') NT
-            call system('[ -n "$jlogfile" ] && $DATA/postmsg'//
-     $       ' "$jlogfile" "***WARNING: THE NUMBER OF OB TIMES FOR 1'//
+             write(6,*) '***WARNING: THE NUMBER OF OB TIMES FOR 1'//
      $       ' OR MORE IDs EXCEEDS LIMIT OF '//cNT//', SOME REPORTS '//
-     $       'NOT PROCESSED - INCR. SIZE OF NT"')
+     $       'NOT PROCESSED - INCR. SIZE OF NT'
             ifirst = 1
          endif
          RETURN
