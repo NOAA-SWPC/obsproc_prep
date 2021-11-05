@@ -763,10 +763,9 @@ c ------------------------------------------------------------------------------
      + 'REPORTS IN INPUT FILE -- MUST INCREASE SIZE OF PARAMETER NAME',
      + ' "MAX_REPS" - WILL CONTINUE ON PROCESSING ONLY ',I6,' REPORTS'/)
               write(cmax_reps,'(i6)') max_reps
-              call system('[ -n "$jlogfile" ] && $DATA/postmsg'//
-     +         ' "$jlogfile" "***WARNING:'//cmax_reps//' AIRCRAFT '//
+              write(6,*) '***WARNING:'//cmax_reps//' AIRCRAFT '//
      +         'REPORT LIMIT EXCEEDED IN PREPOBS_PREPACQC, ONLY '//
-     +         cmax_reps//' RPTS PROCESSED"')
+     +         cmax_reps//' RPTS PROCESSED'
               exit loop2
 c.......................................................................
             endif
@@ -1926,9 +1925,9 @@ c ------------------------------------------------------------------------------
      +   'FILE ARE > 90% OF UPPER LIMIT OF ',I6,' -- INCREASE SIZE OF ',
      +   '"MAX_REPS" SOON!'/)
         write(cmax_reps,'(i6)') max_reps
-        call system('[ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" '//
-     +   '"***WARNING: HIT 90% OF '//cmax_reps//' AIRCRAFT REPORT '//
-     +   'LIMIT IN PREPOBS_PREPACQC, INCREASE SIZE OF PARM MAX_REPS"')
+        write(6,*) '***WARNING: HIT 90% OF '//cmax_reps//
+     +   ' AIRCRAFT REPORT '//
+     +   'LIMIT IN PREPOBS_PREPACQC, INCREASE SIZE OF PARM MAX_REPS'
       endif
 
       write(*,*)

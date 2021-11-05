@@ -71,6 +71,12 @@ c                      are enabled.  When t_prcn has a missing value,
 c                      1.0000000E+09, multiplying by 100 exceeds the
 c                      32-bit signed integer maximum, 2,147,483,647. 
 c
+c 2021-08-13  C. Hill / D. Stokes --
+c                    - Modified subroutine ordchk_qc to increase the 
+c                      array size of indx_save (from 200 to 1000).
+c                      A working limit of 200 for indx_save is retained as a defined
+c                      parameter for all quality checks preceding order_qc.
+c
 c   BEST VIEWED WITH 94-CHARACTER WIDTH WINDOW
 ccccc
 c
@@ -1173,9 +1179,8 @@ c ------------------------------------------------------------------------------
      + 'NMAE "MAXFLT" - STOP 98'/)
 
             write(cmaxflt,'(i6)') maxflt
-          call system('[ -n "$jlogfile" ] && $DATA/postmsg'//
-     +     ' "$jlogfile" "***WARNING:'//cmaxflt//' AIRCRAFT "FLIGHT" '//
-     +     'LIMIT EXCEEDED IN PREPOBS_PREPACQC, STOP 98"')
+            write(6,*) '***WARNING:'//cmaxflt//' AIRCRAFT "FLIGHT" '//
+     +     'LIMIT EXCEEDED IN PREPOBS_PREPACQC, STOP 98'
 
             call w3tage('PREPOBS_PREPACQC')
             call errexit(98)
@@ -3367,9 +3372,9 @@ c ------------------------------------------------------------------------------
      $   'AIRCRAFT FLIGHTS FROM INPUT FILE (',I6,') ARE > 90% OF UPPER',
      $   ' LIMIT OF ',I6,' -- INCREASE SIZE OF "MAXFLT" SOON!'/)
         write(cmaxflt,'(i6)') maxflt
-        call system('[ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" '//
-     +   '"***WARNING: HIT 90% OF '//cmaxflt//' AIRCRAFT FLIGHT LIMIT'//
-     +   ' IN PREPOBS_PREPACQC, INCREASE SIZE OF PARM MAXFLT"')
+        write(6,*) "***WARNING: HIT 90% OF "//cmaxflt//
+     +   " AIRCRAFT FLIGHT LIMIT"//
+     +   " IN PREPOBS_PREPACQC, INCREASE SIZE OF PARM MAXFLT"
       endif
 
 
@@ -8827,10 +8832,9 @@ c-----------------------------------
      + '"FLIGHTS" IN INPUT FILE -- MUST INCREASE SIZE OF PARAMETER ',
      +'NAME "MAXFLT" - WILL CONTINUE ON PROCESSING ONLY ',I6,' FLTS-1'/)
                     write(cmaxflt,'(i6)') maxflt
-      call system('[ -n "$jlogfile" ] && $DATA/postmsg'//
-     + ' "$jlogfile" "***WARNING:'//cmaxflt//' AIRCRAFT "FLIGHT" '//
-     + 'LIMIT EXCEEDED IN PREPOBS_PREPACQC, ONLY '//
-     + cmaxflt//' FLIGHTS PROCESSED-1"')
+                    write(6,*) '***WARNING:'//cmaxflt//
+     + ' AIRCRAFT "FLIGHT" LIMIT EXCEEDED IN PREPOBS_PREPACQC,'//
+     + ' ONLY '//cmaxflt//' FLIGHTS PROCESSED-1'
                   endif
 c-----------------------------------
                 endif
@@ -9037,10 +9041,9 @@ c-----------------------------------
      + '"FLIGHTS" IN INPUT FILE -- MUST INCREASE SIZE OF PARAMETER ',
      +'NAME "MAXFLT" - WILL CONTINUE ON PROCESSING ONLY ',I6,' FLTS-2'/)
                 write(cmaxflt,'(i6)') maxflt
-      call system('[ -n "$jlogfile" ] && $DATA/postmsg'//
-     + ' "$jlogfile" "***WARNING:'//cmaxflt//' AIRCRAFT "FLIGHT" '//
-     + 'LIMIT EXCEEDED IN PREPOBS_PREPACQC, ONLY '//
-     + cmaxflt//' FLIGHTS PROCESSED-2"')
+                write(6,*) '***WARNING:'//cmaxflt//
+     + ' AIRCRAFT "FLIGHT" LIMIT EXCEEDED IN PREPOBS_PREPACQC,'//
+     + ' ONLY '//cmaxflt//' FLIGHTS PROCESSED-2'
               endif
 c-----------------------------------
             endif
@@ -9073,10 +9076,9 @@ c-----------------------------------
      + '"FLIGHTS" IN INPUT FILE -- MUST INCREASE SIZE OF PARAMETER ',
      +'NAME "MAXFLT" - WILL CONTINUE ON PROCESSING ONLY ',I6,' FLTS-3'/)
                     write(cmaxflt,'(i6)') maxflt
-      call system('[ -n "$jlogfile" ] && $DATA/postmsg'//
-     + ' "$jlogfile" "***WARNING:'//cmaxflt//' AIRCRAFT "FLIGHT" '//
-     + 'LIMIT EXCEEDED IN PREPOBS_PREPACQC, ONLY '//
-     + cmaxflt//' FLIGHTS PROCESSED-3"')
+                    write(6,*) '***WARNING:'//cmaxflt//
+     + ' AIRCRAFT "FLIGHT" LIMIT EXCEEDED IN PREPOBS_PREPACQC,'//
+     + ' ONLY '//cmaxflt//' FLIGHTS PROCESSED-3'
                   endif
 c-----------------------------------
                 endif
@@ -18403,6 +18405,11 @@ c     As data resolution has increased, some aspects of the track (such
 c     as deciding a point is going backwards) have become less meaningful.
 c     Changes were made to reduce the number of false positives.
 c
+c     C. Hill/ D. Stokes 08/13/21
+c     The array size of indx_save is increased (from 200 to 1000).
+c     A working limit of 200 for indx_save is retained as a defined
+c     parameter for all quality checks preceding order_qc.
+c
       implicit none
 c
 c Declaration statements
@@ -18810,7 +18817,9 @@ c     $,            airdir_track        ! airspeed direction between first and l
       real         vspd_thresh         ! threshold vertical speed of aircraft
      $,            vspd_bounce         ! threshold vertical speed used in bounce test
 c
-      integer      indx_save(200)      ! pointer indices for rejected reports
+      integer      maxll,llim          ! parameterized limits for indx_save  CH 2021
+      parameter   (maxll=1000,llim=200)
+      integer      indx_save(maxll)    ! pointer indices for rejected reports
      $,            ll                  ! index for indx_save
      $,            keep                ! variable used in saving indices
      $,            knt_bad             ! number of reports in potential second flight
@@ -21046,7 +21055,7 @@ c ------------------------------------------------------
 c
                 c_qc(ii)(2:2) = 'K'
                 ll = ll + 1
-                if(ll.gt.200) then
+                if(ll.gt.llim) then
                   write(io8,*) 'll limit exceeded--indx not saved!',
      $              ii
                 else
@@ -21078,7 +21087,7 @@ c ---------------------------------------------------
 c
                 c_qc(iip1)(2:2) = 'K'
                 ll = ll + 1
-                if(ll.gt.200) then
+                if(ll.gt.llim) then
                   write(io8,*) 'll limit exceeded--indx not saved!',
      $              iip1
                 else
@@ -21124,7 +21133,7 @@ c
                 c_qc(iip1)(1:1) = 'p'
                 c_qc(iip1)(3:4) = 'II'
                 ll = ll + 1
-                if(ll.gt.200) then
+                if(ll.gt.llim) then
                   write(io8,*) 'll limit exceeded--indx not saved!',
      $              iip1
                 else
@@ -21205,7 +21214,7 @@ c
 c
                 else
                   ll = ll + 1
-                  if(ll.gt.200) then
+                  if(ll.gt.llim) then
                     write(io8,*) 'll limit exceeded--indx not saved!',
      $                ii
                   else
@@ -21284,7 +21293,7 @@ c
 c
                 else
                   ll = ll + 1
-                  if(ll.gt.200) then
+                  if(ll.gt.llim) then
                     write(io8,*) 'll limit exceeded--indx not saved!',
      $                iip1
                   else
@@ -21376,7 +21385,7 @@ c
                     c_qc(iip1)(5:5) = 'I'
                   endif
                   ll = ll + 1
-                  if(ll.gt.200) then
+                  if(ll.gt.llim) then
                     write(io8,*) 'll limit exceeded--indx not saved!',
      $                iip1
                   else
@@ -21422,7 +21431,7 @@ c
                   c_qc(ii)(1:1) = 'P'
                   c_qc(ii)(3:4) = 'II'
                   ll = ll + 1
-                  if(ll.gt.200) then
+                  if(ll.gt.llim) then
                     write(io8,*) 'll limit exceeded--indx not saved!',
      $                ii
                   else
@@ -21433,7 +21442,7 @@ c
                   c_qc(iip1)(1:1) = 'P'
                   c_qc(iip1)(3:4) = 'II'
                   ll = ll + 1
-                  if(ll.gt.200) then
+                  if(ll.gt.llim) then
                     write(io8,*) 'll limit exceeded--indx not saved!',
      $                iip1
                   else
@@ -22186,7 +22195,7 @@ c               --------------------------------------------
 c
                   c_qc(iip1)(2:2) = 'K'
                   ll = ll + 1
-                  if(ll.gt.200) then
+                  if(ll.gt.llim) then
                     write(io8,*) 'll limit exceeded--indx not saved!',
      $                iip1
                   else
@@ -22196,7 +22205,7 @@ c
 c
                   c_qc(iip2)(2:2) = 'K'
                   ll = ll + 1
-                  if(ll.gt.200) then
+                  if(ll.gt.llim) then
                     write(io8,*) 'll limit exceeded--indx not saved!'
      $                ,iip2
                   else
@@ -22267,7 +22276,7 @@ c
                   c_qc(ii)(3:4) = 'II'
 c
                   ll = ll + 1
-                  if(ll.gt.200) then
+                  if(ll.gt.llim) then
                     write(io8,*) 'll limit exceeded--indx not saved!',
      $                ii
                   else
@@ -22324,7 +22333,7 @@ c
                   c_qc(iip1)(3:4) = 'II'
 c
                   ll = ll + 1
-                  if(ll.gt.200) then
+                  if(ll.gt.llim) then
                     write(io8,*) 'll limit exceeded--indx not saved!',
      $                iip1
                   else
@@ -22422,7 +22431,7 @@ c
                   c_qc(iip1)(3:4) = 'II'
 c
                   ll = ll + 1
-                  if(ll.gt.200) then
+                  if(ll.gt.llim) then
                     write(io8,*) 'll limit exceeded--indx not saved!'
      $                ,iip1
                   else
@@ -22433,7 +22442,7 @@ c
                   c_qc(iip2)(1:1) = 'P'
                   c_qc(iip2)(3:4) = 'II'
                   ll = ll + 1
-                  if(ll.gt.200) then
+                  if(ll.gt.llim) then
                     write(io8,*) 'll limit exceeded--indx not saved!'
      $                ,iip2
                   else
@@ -22472,7 +22481,7 @@ c
                   c_qc(iip1)(3:4) = 'II'
 c
                   ll = ll + 1
-                  if(ll.gt.200) then
+                  if(ll.gt.llim) then
                     write(io8,*) 'll limit exceeded--indx not saved!',
      $                ii
                   else
@@ -22503,7 +22512,7 @@ c
                   c_qc(ii)(1:1) = 'P'
                   c_qc(ii)(3:4) = 'II'
                   ll = ll + 1
-                  if(ll.gt.200) then
+                  if(ll.gt.llim) then
                     write(io8,*) 'll limit exceeded--indx not saved!',
      $                ii
                   else
@@ -22514,7 +22523,7 @@ c
                   c_qc(iip1)(1:1) = 'P'
                   c_qc(iip1)(3:4) = 'II'
                   ll = ll + 1
-                  if(ll.gt.200) then
+                  if(ll.gt.llim) then
                     write(io8,*) 'll limit exceeded--indx not saved!',
      $                iip1
                   else
@@ -22561,7 +22570,7 @@ c
                   endif
 c
                   ll = ll + 1
-                  if(ll.gt.200) then
+                  if(ll.gt.llim) then
                     write(io8,*) 'll limit exceeded--indx not saved!',
      $                ii
                   else
@@ -22577,7 +22586,7 @@ c
                   endif
 c
                   ll = ll + 1
-                  if(ll.gt.200) then
+                  if(ll.gt.llim) then
                     write(io8,*) 'll limit exceeded--indx not saved!',
      $                iip1
                   else
@@ -22723,7 +22732,7 @@ c
                     c_qc(iip1)(5:5) = 'I'
                   endif
                   ll = ll + 1
-                  if(ll.gt.200) then
+                  if(ll.gt.llim) then
                     write(io8,*) 'll limit exceeded--indx not saved!',
      $                iip1
                   else
@@ -22738,7 +22747,7 @@ c
                     c_qc(iip2)(5:5) = 'I'
                   endif
                   ll = ll + 1
-                  if(ll.gt.200) then
+                  if(ll.gt.llim) then
                     write(io8,*) 'll limit exceeded--indx not saved!',
      $                iip2
                   else
@@ -22793,7 +22802,7 @@ c
                     c_qc(ii)(5:5) = 'I'
                   endif
                   ll = ll + 1
-                  if(ll.gt.200) then
+                  if(ll.gt.llim) then
                     write(io8,*) 'll limit exceeded--indx not saved!',
      $                ii
                   else
@@ -22849,7 +22858,7 @@ c
                     c_qc(iip1)(5:5) = 'I'
                   endif
                   ll = ll + 1
-                  if(ll.gt.200) then
+                  if(ll.gt.llim) then
                     write(io8,*) 'll limit exceeded--indx not saved!',
      $                iip1
                   else
@@ -22885,7 +22894,7 @@ c
                   endif
 c
                   ll = ll + 1
-                  if(ll.gt.200) then
+                  if(ll.gt.llim) then
                     write(io8,*) 'll limit exceeded--indx not saved!',
      $                ii
                   else
@@ -22901,7 +22910,7 @@ c
                   endif
 c
                   ll = ll + 1
-                  if(ll.gt.200) then
+                  if(ll.gt.llim) then
                     write(io8,*) 'll limit exceeded--indx not saved!',
      $                iip1
                   else
@@ -23315,6 +23324,8 @@ c
 c                write(io8,*) 'Skipping report from 2nd flt',ii
                 ll = ll + 1
                 indx_save(ll) = ii
+c                               Adding condition for ll increment CH 2021
+                if(ll.ge.maxll) cycle
 c
 c             If report not rejected...
 c             -------------------------

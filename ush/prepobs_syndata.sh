@@ -77,7 +77,7 @@ $CDATE10  --> non-fatal"
    echo "$msg"
    echo
    set -x
-   [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+   echo "$msg"
 
    exit
 fi
@@ -159,7 +159,7 @@ sys_tp=${sys_tp:-$(getsystem.pl -tp)}
 getsystp_err=$?
 if [ $getsystp_err -ne 0 ]; then
    msg="***WARNING: error using getsystem.pl to determine system type and phase"
-   [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+   echo "$msg"
 fi
 echo sys_tp is set to: $sys_tp
 if [ "$sys_tp" = "Cray-XC40" -o "$SITE" = "SURGE" -o "$SITE" = "LUNA" ]; then
@@ -190,7 +190,7 @@ if [ $err -eq 0 ]; then
    echo " --------------------------------------------- "
    set -x
    msg="$pgm completed normally for $CDATE10 - DO_BOGUS= $DO_BOGUS"
-   [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+   echo "$msg"
    mv $PRPI.syndata $PRPI
 
 else
@@ -202,7 +202,7 @@ msg="SYNDAT_SYNDATA TERMINATED ABNORMALLY WITH CONDITION CODE $err \
    echo "$msg"
    echo
    set -x
-   [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+   echo "$msg"
 
 fi
 

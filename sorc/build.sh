@@ -57,7 +57,7 @@ else
     module load prod_util               # non-Lua Modules system
   fi # if hname starts w/ [vmp][digit]
 
-  sys_tp=$(getsystem.pl -tp)
+  sys_tp=$(getsystem --phase)
   echo "$lab: running on $sys_tp"
 fi # if Theia
 
@@ -83,6 +83,13 @@ case $sys_tp in
  Dell-p3)
    module load ips/18.0.5.274    # req'd for bufr
    module load impi/18.0.1       # req'd for w3emc
+   ;;
+ Cactus-p1 | Dogwood-p1)
+   module load envvar/$envvar_ver
+   module load PrgEnv-intel/$PrgEnv_intel_ver
+   module load craype/$craype_ver
+   module load intel/$intel_ver
+   module load cray-mpich/$cray_mpich_ver
    ;;
  HERA)
    module load intel/18.0.5.274

@@ -3595,10 +3595,8 @@ C  THAT LAST INCOMPLETE BUFR MESSAGE SHOULD BE WRITTEN OUT
       if(i2many_lvls.gt.0) then
          WRITE(c2many_lvls,'(I4)') i2many_lvls
          WRITE(CMXLVL,'(I6)') MXLVL
-         CALL SYSTEM('[ -n "$jlogfile" ] && $DATA/postmsg'//
-     $    ' "$jlogfile" "***WARNING: '//c2many_lvls//' REPORT(S) '//
-     $    'SKIPPED DUE TO HAVING TOO MANY LEVELS (> '//
-     $    CMXLVL//' )"')
+         write(6,*) '***WARNING: '//c2many_lvls//' REPORT(S) '//
+     $    'SKIPPED DUE TO HAVING TOO MANY LEVELS (> '//CMXLVL
       end if
       GO TO 99
 C-----------------------------------------------------------------------
@@ -10114,10 +10112,9 @@ C  RADIOSONDE, PIBAL, DROPWINSONDE OR CLASS REPORT IN ADPUPA FILE
          PRINT 9823, STNID,LL_MASS,LL_WIND
  9823 FORMAT(/10X,'-->  WARNING: ID ',A8,' HAS ',I4,' MASS LEVELS AND ',
      $ I4,' WIND LEVELS - THESE SHOULD BE THE SAME AT THIS POINT!!!'/)
-         CALL SYSTEM('[ -n "$jlogfile" ] && $DATA/postmsg'//
-     $    ' "$jlogfile" "***WARNING: ID='//STNID//' HAS DIFFERENT '//
+      write(6,*) '***WARNING: ID='//STNID//' HAS DIFFERENT '//
      $    'NUMBER OF MASS AND WIND LEVELS AT POINT WHERE THEY SHOULD '//
-     $    'BE THE SAME"')
+     $    'BE THE SAME'
       END IF
 C***********************************************************************
       RETURN
@@ -19705,10 +19702,9 @@ C   MOVE ON TO NEXT REPORT
   102 FORMAT(/5X,'++++++ WARNING, TOO MANY REPORT LEVELS (> ',I4,') -',
      $ 'ID=',A8,' -- PROCESS BOTTOM ',I4,' LEVELS'/)
                WRITE(CMXBLVL,'(I5)') MXBLVL
-               CALL SYSTEM('[ -n "$jlogfile" ] && $DATA/postmsg'//
-     $          ' "$jlogfile" "***WARNING: TOO MANY REPORT LEVELS '//
+               write(6,*) '***WARNING: TOO MANY REPORT LEVELS '//
      $          '(> '//CMXBLVL//' ) -ID='//STNID//' -- PROCESS '//
-     $          'BOTTOM '//CMXBLVL//' LEVELS"')
+     $          'BOTTOM '//CMXBLVL//' LEVELS'
                EXIT
             END IF
          ENDDO

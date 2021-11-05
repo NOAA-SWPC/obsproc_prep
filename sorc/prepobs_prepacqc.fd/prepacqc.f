@@ -1224,10 +1224,9 @@ c-----------------------------------
      + '"FLIGHTS" IN INPUT FILE -- MUST INCREASE SIZE OF PARAMETER ',
      +'NAME "MAXFLT" - WILL CONTINUE ON PROCESSING ONLY ',I6,' FLTS-0'/)
       write(cmaxflt,'(i6)') maxflt
-      call system('[ -n "$jlogfile" ] && $DATA/postmsg'//
-     + ' "$jlogfile" "***WARNING:'//cmaxflt//' AIRCRAFT "FLIGHT" '//
+      write(6,*) '***WARNING:'//cmaxflt//' AIRCRAFT "FLIGHT" '//
      + 'LIMIT EXCEEDED IN PREPOBS_PREPACQC, ONLY '//
-     + cmaxflt//' FLIGHTS PROCESSED-0"')
+     + cmaxflt//' FLIGHTS PROCESSED-0'
 c-----------------------------------
 
    34 continue

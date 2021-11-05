@@ -958,10 +958,9 @@ C ------------------------------------------------------------------------------
      + 'THIS PROFILE -- WILL CONTINUE ON PROCESSING ONLY ',I6,' LEVELS',
      + ' FOR THIS PROFILE'/)
           write(cmxlv,'(i6)') mxlv
-          call system('[ -n "$jlogfile" ] && $DATA/postmsg'//
-     +     ' "$jlogfile" "***WARNING:'//cmxlv//' AIRCRAFT PROFILE '//
+          write(6,*) '***WARNING:'//cmxlv//' AIRCRAFT PROFILE '//
      +     'LEVEL LIMIT EXCEEDED IN PREPOBS_PREPACQC, ONLY '//
-     +     cmxlv//' LEVELS PROCESSED"')
+     +     cmxlv//' LEVELS PROCESSED'
           exit loop1
 C.......................................................................
         endif

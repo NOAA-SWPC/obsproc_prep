@@ -1523,9 +1523,6 @@ C  --------------------
           NUM        = NUM + 1
           if(num.ge.nrpt) then
             print *,'WARNING: NUM>=NRPT, can''t process anymore VAD obs'
-            call system('[ -n "$jlogfile" ] && $DATA/postmsg'//
-     $       ' "$jlogfile" "***WARNING: NUM >= NRPT, cannot process '//
-     $       'any more VAD reports"')
             iretsb = -1
             go to 5
           endif
@@ -1563,9 +1560,6 @@ c      decoder
       NUM2 = NUM
       if(num.ge.nrpt) then
         print *,'WARNING: NUM>=NRPT, can''t process anymore VAD obs'
-        call system('[ -n "$jlogfile" ] && $DATA/postmsg'//
-     $  ' "$jlogfile" "***WARNING: NUM >= NRPT, cannot process '//
-     $  'any more VAD reports"')
         iretsb = -1
         go to 5
       endif

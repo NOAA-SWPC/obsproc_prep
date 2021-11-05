@@ -921,7 +921,7 @@ sys_tp=${sys_tp:-$(getsystem.pl -tp)}
 getsystp_err=$?
 if [ $getsystp_err -ne 0 ]; then
    msg="***WARNING: error using getsystem.pl to determine system type and phase"
-   [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+   echo "$msg"
 fi
 echo sys_tp is set to: $sys_tp
 
@@ -1056,7 +1056,7 @@ echo "          parallel processing launcher other than cfp               "
 echo "********************************************************************"
             set -x
             msg="***FATAL ERROR:  Insufficient NPROCS for NSPLIT=$NSPLIT"
-            [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+            echo "$msg"
             $DATA/err_exit
             exit 55  # for extra measure
          fi
@@ -1124,7 +1124,7 @@ PRPT=${PRPT:-$FIXPREP/prepobs_prep.bufrtable}
 cp $PRPT prep.bufrtable
 LANDC=${LANDC:-$FIXPREP/prepobs_landc}
 if [ "$RUN" = 'wdas' -o "$RUN" = 'wfs' ]; then
-   PRVT=${PRVT:-$HOMEwamipe/fix/fix_gsi/prepobs_errtable.global}
+   PRVT=${PRVT:-$HOMEwfs/fix/fix_gsi/prepobs_errtable.global}
 elif [ "$NET" = 'cdas' ]; then
    PRVT=${PRVT:-$HOMEobsproc_network/fix/prepobs_errtable.cdas}
 elif [ "$NET" = 'nam' ]; then
@@ -1184,7 +1184,7 @@ else
    RELOCATION_HAS_RUN=NO
    msg="Tropical cyclone RELOCATION did NOT run prior to this job"
 fi
-[ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+echo "$msg"
 
 if [ -s ${COMSP}tropcy_relocation_status.$tmmark ]; then
    if [ "$SENDDBN" = "YES" ]; then
@@ -1523,7 +1523,7 @@ echo "will continue running but a GUESS will NOT be encoded in PREPBUFR file!!"
                   set -x
                   msg="PROBLEM OBTAINING ONE OR BOTH SPANNING ATMOS GUESS \
 FILES, GUESS NOT ENCODED IN PREPBUFR FILE  --> non-fatal"
-                  [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+                  echo "$msg"
                   GETGUESS=NO
                   SGES=/dev/null
                   SGESA=/dev/null
@@ -1715,7 +1715,7 @@ echo
          echo "   SUBSKP(004,004) = TRUE," > insert
          msg="***WARNING: Dump count for ARINC ACARS < AFWA ACARS; encode \
 backup AFWA ACARS into PREPBUFR"
-         [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+         echo "$msg"
       fi
    elif [ -s ${COMSP}aircar_status_flag.${tmmark}.bufr_d ]; then
       grep -q -Fe "004.007" ${COMSP}aircar_status_flag.${tmmark}.bufr_d
@@ -1724,7 +1724,7 @@ backup AFWA ACARS into PREPBUFR"
          echo "   SUBSKP(004,004) = TRUE," > insert
          msg="***WARNING: Dump count for ARINC ACARS < AFWA ACARS; encode \
 backup AFWA ACARS into PREPBUFR"
-         [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+         echo "$msg"
       fi
    fi
 
@@ -2543,7 +2543,7 @@ if [ "$err" -eq '0' ]; then
    echo "$msg"
    echo
    set -x
-   [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+   echo "$msg"
 fi
 
 exit 0

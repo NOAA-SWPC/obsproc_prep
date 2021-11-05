@@ -110,7 +110,7 @@ if [ $PROCESS_ACQC = YES ]; then
    set -x
    if [ $err -eq 4 ]; then
       msg="PREPBUFR DATA SET CONTAINS NO "AIRCAR" OR "AIRCFT" TABLE A MESSAGES  --> non-fatal"
-      [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+      echo "$msg"
       err=0
    fi
    if [ -s $DATA/err_chk ]; then
@@ -160,7 +160,7 @@ FILE NOT FOUND --> non-fatal"
       echo "$msg"
       echo
       set -x
-      [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+      echo "$msg"
       exit 0
    fi
 
@@ -201,7 +201,7 @@ FILE NOT FOUND --> non-fatal"
       echo "$msg"
       echo
       set -x
-      [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+      echo "$msg"
    else
       err=0
       [ -s $DATA/err_chk ]  &&  $DATA/err_chk

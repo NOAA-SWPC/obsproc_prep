@@ -61,42 +61,42 @@ elif [ -s ${TANK}/${PDYm1}/wtxtbul/glsea-temps.dat ] ; then
 dated by 1 day.  Missing lake temperature file is: \
 ${TANK}/${PDY}/wtxtbul/glsea-temps.dat."
 #   echo "$msg" | mail.py -c ${email_GLERL}
-    [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+    echo "$msg"
 elif [ -s ${TANK}/${PDYm2}/wtxtbul/glsea-temps.dat ] ; then
     export FORT11=${TANK}/${PDYm2}/wtxtbul/glsea-temps.dat
     msg="WARNING: Lake temperatures for RTMA GLERL adjustment ${PDY} ${cyc}Z \
 are dated by 2 days.  Missing lake temperature file is: \
 ${TANK}/${PDY}/wtxtbul/glsea-temps.dat."
     echo "$msg" | mail.py -c ${email_GLERL}
-    [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+    echo "$msg"
 elif [ -s ${TANK}/${PDYm3}/wtxtbul/glsea-temps.dat ] ; then
     export FORT11=${TANK}/${PDYm3}/wtxtbul/glsea-temps.dat
     msg="WARNING: Lake temperatures for RTMA GLERL adjustment ${PDY} ${cyc}Z \
 are dated by 3 days.  Missing lake temperature file is: \
 ${TANK}/${PDY}/wtxtbul/glsea-temps.dat."
     echo "$msg" | mail.py -c ${email_GLERL}
-    [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+    echo "$msg"
 
 #elif [ -s ${TANK}/${PDYm4}/wtxtbul/glsea-temps.dat ] ; then
 #    export FORT11=${TANK}/${PDYm4}/wtxtbul/glsea-temps.dat
 #    msg="WARNING: Lake temperatures for RTMA GLERL adjustment ${PDY} ${cyc}Z are dated by 4 days."
 #    echo "$msg" | mail.py
-#    [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+#    echo "$msg"
 #elif [ -s ${TANK}/${PDYm5}/wtxtbul/glsea-temps.dat ] ; then
 #    export FORT11=${TANK}/${PDYm5}/wtxtbul/glsea-temps.dat
 #    msg="WARNING: Lake temperatures for RTMA GLERL adjustment ${PDY} ${cyc}Z are dated by 5 days."
 #    echo "$msg" | mail.py
-#    [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+#    echo "$msg"
 #elif [ -s ${TANK}/${PDYm6}/wtxtbul/glsea-temps.dat ] ; then
 #    export FORT11=${TANK}/${PDYm6}/wtxtbul/glsea-temps.dat
 #    msg="WARNING: Lake temperatures for RTMA GLERL adjustment ${PDY} ${cyc}Z are dated by 6 days."
 #    echo "$msg" | mail.py
-#    [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+#    echo "$msg"
 #elif [ -s ${TANK}/${PDYm7}/wtxtbul/glsea-temps.dat ] ; then
 #    export FORT11=${TANK}/${PDYm7}/wtxtbul/glsea-temps.dat
 #    msg="WARNING: Lake temperatures for RTMA GLERL adjustment ${PDY} ${cyc}Z are dated by 7 days."
 #    echo "$msg" | mail.py
-#    [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+#    echo "$msg"
 else
 	#procesing can't run due to missing water temps - ABORT SILENTLY
     set +x
@@ -111,7 +111,7 @@ GLERL-adjusted obs."
 valid for ${PDY} is more than 3 days old, missing lake temperature file is: \
 ${TANK}/${PDY}/wtxtbul/glsea-temps.dat --> non-fatal"
     echo $msg | mail.py -c ${email_GLERL}
-    [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+    echo "$msg"
     exit 0
 fi
 YYYY=`echo $CDATE10 | cut -c1-4`
@@ -157,7 +157,7 @@ prepobs_makeprepbufr.sh --> non-fatal"
    echo $msg
    echo
    set -x
-   [ -n "$jlogfile" ] && $DATA/postmsg "$jlogfile" "$msg"
+   echo "$msg"
    exit 0
 fi
 
