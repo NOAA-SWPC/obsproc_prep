@@ -51,8 +51,6 @@ elif [[ "$sys_tp" == Cactus-p1 || "$sys_tp" == Dogwood-p1 ]]; then
    module load sp/$sp_ver
    module load hdf5/$hdf5_ver
    module load netcdf/$netcdf_ver
-   export SIGIO_INC4=$SIGIO_INC
-   export SIGIO_LIB4=$SIGIO_LIB
    export NETCDF_LDFLAGS="-L${NETCDF}/lib -lnetcdff -lnetcdf -L${HDF5_ROOT}/lib -lhdf5_hl -lhdf5 -lz"
 elif [[ "$sys_tp" =~ Cray-XC40 ]]; then
    module load w3nco-${lib_build}/$w3nco_ver

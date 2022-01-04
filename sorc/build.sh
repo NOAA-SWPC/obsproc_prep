@@ -39,7 +39,7 @@ elif [[ "$SITE" =~ (hera|HERA) ]]; then
 else
   ##  determine system/phase
 
-  module purge
+  module reset
 
   ## On Phase 3 with Lua Modules, loading prod_util without preloading
   ## dependent modules will fail.  This means that we need to know the
@@ -54,7 +54,7 @@ else
     module load prod_util/1.1.0
   else 
     ## On non-phase 3 systems, can simply load prod_util directly
-    module load prod_util               # non-Lua Modules system
+    module load prod_util/$prod_util_ver       # non-Lua Modules system
   fi # if hname starts w/ [vmp][digit]
 
   sys_tp=$(getsystem --phase)
